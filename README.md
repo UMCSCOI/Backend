@@ -3,7 +3,7 @@
 
 ### ⚙️ 기술 스택
 - Java 21
-- Spring Boot ""
+- Spring Boot 4.0.1
 - MySQL
 - Swagger 2.7.0
 
