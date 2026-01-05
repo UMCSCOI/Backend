@@ -15,7 +15,7 @@ public class MemberFcm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "fcm_token")
+    @Column(name = "fcm_token", nullable = false)
     private String fcmToken;
 
     // 연관관계

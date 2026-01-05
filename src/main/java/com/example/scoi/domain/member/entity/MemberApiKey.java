@@ -19,15 +19,15 @@ public class MemberApiKey {
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "exchange_type")
+    @Column(name = "exchange_type", nullable = false)
     @Enumerated(EnumType.STRING)
     private ExchangeType exchangeType;
 
-    @Column(name = "public_key")
+    @Column(name = "public_key", nullable = false)
     private String publicKey;
 
     // AesBytesEncryptor로 대칭키 암호화
-    @Column(name = "secret_key")
+    @Column(name = "secret_key", nullable = false)
     private String secretKey;
 
     // 연관관계

@@ -22,34 +22,38 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "english_name")
+    @Column(name = "english_name", length = 50, nullable = false)
     private String englishName;
 
-    @Column(name = "korean_name")
+    @Column(name = "korean_name", length = 5, nullable = false)
     private String koreanName;
 
-    @Column(name = "resident_number")
+    @Column(name = "resident_number", nullable = false)
     private String residentNumber;
 
     // BCrypt 단방향 암호화
-    @Column(name = "simple_password")
+    @Column(name = "simple_password", nullable = false)
     private String simplePassword;
 
-    @Column(name = "phone_number")
+    @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
-    @Column(name = "member_type")
+    // 기본값 = 개인 회원
+    @Column(name = "member_type", nullable = false)
     @Enumerated(EnumType.STRING)
-    private MemberType memberType;
+    @Builder.Default
+    private MemberType memberType = MemberType.INDIVIDUAL;
 
-    @Column(name = "is_bio_registered")
-    private Boolean isBioRegistered;
+    @Column(name = "is_bio_registered", nullable = false)
+    @Builder.Default
+    private Boolean isBioRegistered = false;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    @Column(name = "login_fail_count")
-    private Integer loginFailCount;
+    @Column(name = "login_fail_count", nullable = false)
+    @Builder.Default
+    private Integer loginFailCount = 0;
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;

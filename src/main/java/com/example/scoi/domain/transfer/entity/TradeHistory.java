@@ -24,34 +24,35 @@ public class TradeHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "target_member_id")
+    @Column(name = "target_member_id", nullable = false)
     private Long targetMemberId;
 
-    @Column(name = "target_wallet")
+    @Column(name = "target_wallet", nullable = false)
     private String targetWallet;
 
-    @Column(name = "is_favorite")
-    private Boolean isFavorite;
+    @Column(name = "is_favorite", nullable = false)
+    @Builder.Default
+    private Boolean isFavorite = false;
 
-    @Column(name = "exchange_type")
+    @Column(name = "exchange_type", nullable = false)
     @Enumerated(EnumType.STRING)
     private ExchangeType exchangeType;
 
-    @Column(name = "coin_count")
+    @Column(name = "coin_count", nullable = false)
     private Long coinCount;
 
     @Column(name = "created_at")
     @CreatedDate
     private LocalDateTime createdAt;
 
-    @Column(name = "total_balance")
+    @Column(name = "total_balance", nullable = false)
     private Long totalBalance;
 
-    @Column(name = "trade_type")
+    @Column(name = "trade_type", nullable = false)
     @Enumerated(EnumType.STRING)
     private TradeType tradeType;
 
-    @Column(name = "coin_type")
+    @Column(name = "coin_type", nullable = false)
     @Enumerated(EnumType.STRING)
     private CoinType coinType;
 
