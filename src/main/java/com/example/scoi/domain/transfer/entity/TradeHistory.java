@@ -6,6 +6,8 @@ import com.example.scoi.domain.transfer.enums.CoinType;
 import com.example.scoi.domain.transfer.enums.TradeType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "trade_history")
+@EntityListeners(AuditingEntityListener.class)
 public class TradeHistory {
 
     @Id
@@ -38,6 +41,7 @@ public class TradeHistory {
     private Long coinCount;
 
     @Column(name = "created_at")
+    @CreatedDate
     private LocalDateTime createdAt;
 
     @Column(name = "total_balance")
