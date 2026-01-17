@@ -32,7 +32,6 @@ public class UpbitApiClient implements ExchangeApiClient {
     public ChargeResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType) {
         try {
             // JWT 토큰 생성 (Bearer 포함)
-            // GET /v1/accounts는 쿼리 파라미터 없음
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
             log.info("업비트 API 호출 시작 - phoneNumber: {}", phoneNumber);
             log.debug("업비트 JWT 토큰: {}", authorization);
@@ -44,7 +43,8 @@ public class UpbitApiClient implements ExchangeApiClient {
             
             HttpEntity<String> entity = new HttpEntity<>(headers);
             
-            //  실제 업비트 API 호출
+            // 실제 업비트 API 호출 (계정 잔고 조회)
+            // 참고: https://docs.upbit.com/kr/reference/get-balance
             ResponseEntity<String> response = restTemplate.exchange(
                 "https://api.upbit.com/v1/accounts",
                 HttpMethod.GET,
@@ -69,7 +69,8 @@ public class UpbitApiClient implements ExchangeApiClient {
     
     private ChargeResDTO.BalanceDTO parseBalanceResponse(String responseBody) {
         try {
-            // 실제 업비트 API 응답 형식에 맞게 파싱
+            // 업비트 API 응답 형식에 맞게 파싱
+            // 참고: https://docs.upbit.com/kr/reference/get-balance
             
             List<Map<String, Object>> accounts = objectMapper.readValue(
                 responseBody, 
