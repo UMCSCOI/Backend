@@ -10,7 +10,26 @@ import org.springframework.http.HttpStatus;
 public enum ChargeErrorCode implements BaseErrorCode {
 
     // 도메인별 실패 코드 정의
-    ;
+ // 400 에러
+    EXCHANGE_API_ERROR(HttpStatus.BAD_REQUEST, 
+            "CHARGE400_1", 
+            "거래소에 요청을 처리하지 못했습니다."),
+    
+    INVALID_EXCHANGE_TYPE(HttpStatus.BAD_REQUEST, 
+            "CHARGE400_2", 
+            "잘못된 거래소 타입입니다."),
+    
+    // 403 에러
+    INSUFFICIENT_API_PERMISSION(HttpStatus.FORBIDDEN, 
+            "CHARGE403_1", 
+            "거래소의 API키의 권한이 부족합니다."),
+    
+    // 404 에러
+    API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, 
+            "CHARGE404_1", 
+            "거래소의 퍼블릭 키, 시크릿 키가 없습니다.");
+
+    
 
     private final HttpStatus status;
     private final String code;
