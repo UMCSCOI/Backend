@@ -3,7 +3,7 @@ package com.example.scoi.domain.charge.controller;
 
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
 import com.example.scoi.domain.charge.exception.ChargeException;
-import com.example.sco.domain.charge.exception.code.ChargeErrorCode;
+import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 import com.example.scoi.domain.charge.exception.code.ChargeSuccessCode;
 import com.example.scoi.domain.charge.service.ChargeService;
 import com.example.scoi.domain.member.enums.ExchangeType;
@@ -25,7 +25,7 @@ public class ChargeController {
  private final ChargeService chargeService;
 
     @GetMapping("/balances")
-    @Operation(summary = "보유 자산 조회", description = "현재 보유 자산을 조회합니다. 충전 메인 화면을 위한 API로 스냅샷 형태입니다! 실시간 아닙니다!!")
+    @Operation(summary = "보유 자산 조회", description = "현재 보유 자산을 조회합니다.")
     @SecurityRequirement(name = "JWT TOKEN")
     public ApiResponse<ChargeResDTO.BalanceDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,

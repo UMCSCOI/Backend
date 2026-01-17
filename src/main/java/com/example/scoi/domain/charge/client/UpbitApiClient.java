@@ -31,20 +31,20 @@ public class UpbitApiClient implements ExchangeApiClient {
     @Override
     public ChargeResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType) {
         try {
-            // ✅ JWT 토큰 생성 (Bearer 포함)
+            // JWT 토큰 생성 (Bearer 포함)
             // GET /v1/accounts는 쿼리 파라미터 없음
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
             log.info("업비트 API 호출 시작 - phoneNumber: {}", phoneNumber);
             log.debug("업비트 JWT 토큰: {}", authorization);
             
-            // ✅ HTTP 헤더 설정
+            // HTTP 헤더 설정
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", authorization);
             headers.setContentType(MediaType.APPLICATION_JSON);
             
             HttpEntity<String> entity = new HttpEntity<>(headers);
             
-            // ✅ 실제 업비트 API 호출
+            //  실제 업비트 API 호출
             ResponseEntity<String> response = restTemplate.exchange(
                 "https://api.upbit.com/v1/accounts",
                 HttpMethod.GET,
@@ -55,7 +55,7 @@ public class UpbitApiClient implements ExchangeApiClient {
             log.info("업비트 API 응답 상태: {}", response.getStatusCode());
             log.debug("업비트 API 응답 본문: {}", response.getBody());
             
-            // ✅ 응답 파싱 및 변환
+            // 응답 파싱 및 변환
             return parseBalanceResponse(response.getBody());
             
         } catch (GeneralSecurityException e) {
@@ -70,7 +70,6 @@ public class UpbitApiClient implements ExchangeApiClient {
     private ChargeResDTO.BalanceDTO parseBalanceResponse(String responseBody) {
         try {
             // 실제 업비트 API 응답 형식에 맞게 파싱
-            // 예시 응답: [{"currency": "KRW", "balance": "100000.0", "locked": "0.0", ...}, ...]
             
             List<Map<String, Object>> accounts = objectMapper.readValue(
                 responseBody, 
