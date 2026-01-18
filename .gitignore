@@ -9,6 +9,7 @@
 *.pem
 *.env
 data.sql
+**/SecretKeyEncryptor.java
 
 HELP.md
 .gradle

@@ -30,6 +30,10 @@ public class BinanceApiClient implements ExchangeApiClient {
     
     @Override
     public ChargeResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType) {
+        // TODO: 바이낸스 API 구현 예정 - JwtApiUtil에 createBinanceAuth 메서드 추가 필요
+        throw new RuntimeException("바이낸스 API는 아직 구현되지 않았습니다.");
+        
+        /* 임시 주석 처리 - 바이낸스 구현 시 주석 해제
         try {
             // 바이낸스 API 호출
             // 참고: https://developers.binance.com/docs/wallet/asset/user-assets
@@ -74,6 +78,7 @@ public class BinanceApiClient implements ExchangeApiClient {
             log.error("바이낸스 API 호출 실패", e);
             throw new RuntimeException("바이낸스 API 호출 실패: " + e.getMessage(), e);
         }
+        */
     }
     
     private ChargeResDTO.BalanceDTO parseBalanceResponse(String responseBody) {
