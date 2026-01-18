@@ -1,5 +1,6 @@
 package com.example.scoi.domain.invest.controller;
 
+import com.example.scoi.domain.invest.dto.InvestReqDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
 import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
@@ -12,6 +13,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,7 +59,7 @@ public class InvestController {
     @Operation(summary = "주문 가능 여부 확인", description = "주문 직전 해당 주문이 가능한지 여부를 확인합니다.")
     @SecurityRequirement(name = "JWT TOKEN")
     public ApiResponse<Void> checkOrderAvailability(
-            @RequestBody InvestReqDTO.OrderTestDTO request,
+            @RequestBody InvestReqDTO.CheckOrderAvailabilityDTO request,
             /* 임시 파라미터: JWT 인증 필터/인터셉터 구현 전까지 사용
                             이후 이 파라미터를 제거 JWT 토큰에서 memberId를 추출하여 사용
              */
