@@ -24,16 +24,6 @@ public class TradeHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "target_member_id", nullable = false)
-    private Long targetMemberId;
-
-    @Column(name = "target_wallet", nullable = false)
-    private String targetWallet;
-
-    @Column(name = "is_favorite", nullable = false)
-    @Builder.Default
-    private Boolean isFavorite = false;
-
     @Column(name = "exchange_type", nullable = false)
     @Enumerated(EnumType.STRING)
     private ExchangeType exchangeType;
@@ -58,6 +48,10 @@ public class TradeHistory {
 
     // 연관관계
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
+    @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_id", nullable = false)
+    private Recipient recipient;
 }
