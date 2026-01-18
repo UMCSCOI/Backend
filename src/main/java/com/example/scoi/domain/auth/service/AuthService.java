@@ -2,135 +2,80 @@ package com.example.scoi.domain.auth.service;
 
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
-import com.example.scoi.domain.auth.exception.AuthException;
-import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
-import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AuthService {
 
     private final MemberRepository memberRepository;
     // TODO: 다음 PR에서 추가 예정
-    // private final MemberTokenRepository memberTokenRepository;
-    // private final RedisService redisService;
     // private final JwtUtil jwtUtil;
+    // private final RedisService redisService;
     // private final BCryptPasswordEncoder passwordEncoder;
-    // private final SmsService smsService;
 
-    /**
-     * SMS 발송
-     */
-    public void sendSms(AuthReqDTO.SmsSendRequest request) {
-        String phoneNumber = request.phoneNumber();
-
-        // TODO: 1. 인증번호 생성 (6자리)
-        // TODO: 2. Redis에 저장 (3분 TTL) - SMS 인증번호는 Redis 사용
-        // TODO: 3. SMS 발송 (CoolSMS 등)
-
-        log.info("[SMS 발송] 휴대폰: {}", phoneNumber);
+    public AuthResDTO.SmsSendResponse sendSms(AuthReqDTO.SmsSendRequest request) {
+        // TODO: SMS 발송 구현
+        // 1. 인증번호 생성 (6자리)
+        // 2. Redis에 저장 (key: phoneNumber, value: code, TTL: 3분)
+        // 3. CoolSMS API 호출
+        // 4. expiredAt 반환 (현재시간 + 3분)
+        return null;
     }
 
-    /**
-     * SMS 검증 (result: null, isExistingMember 삭제)
-     */
     public AuthResDTO.SmsVerifyResponse verifySms(AuthReqDTO.SmsVerifyRequest request) {
-        String phoneNumber = request.phoneNumber();
-        String verificationCode = request.verificationCode();
-
-        // TODO: 1. Redis에서 인증번호 조회
-        // TODO: 2. 일치 여부 확인
-        // TODO: 3. 일치하면 Redis에서 삭제
-
-        log.info("[SMS 검증] 휴대폰: {}, 인증번호: {}", phoneNumber, verificationCode);
-
-        return new AuthResDTO.SmsVerifyResponse();
+        // TODO: SMS 검증 구현
+        // 1. Redis에서 인증번호 조회
+        // 2. 일치 여부 확인
+        // 3. 일치하면 Redis에서 삭제
+        // 4. result: null 반환
+        return null;
     }
 
-    /**
-     * 회원가입 (result: null)
-     */
-    @Transactional
-    public void signup(AuthReqDTO.SignupRequest request) {
-        String phoneNumber = request.phoneNumber();
-
-        // 1. 중복 체크 (409로 기존회원 판단)
-        if (memberRepository.existsByPhoneNumber(phoneNumber)) {
-            throw new AuthException(AuthErrorCode.ALREADY_REGISTERED_PHONE);
-        }
-
-        // TODO: 2. 영문 이름 대문자 변환 (서버에서 자동 처리)
-        // TODO: 3. 간편비밀번호 BCrypt 암호화
-        // TODO: 4. Member 엔티티 생성 및 저장
-
-        log.info("[회원가입] 휴대폰: {}, 이름: {}", phoneNumber, request.koreanName());
+    public AuthResDTO.SignupResponse signup(AuthReqDTO.SignupRequest request) {
+        // TODO: 회원가입 구현
+        // 1. SMS 인증 완료 여부 확인 (Redis)
+        // 2. 전화번호 중복 체크 (409 에러)
+        // 3. 영문 이름 대문자 변환
+        // 4. 간편비밀번호 BCrypt 암호화
+        // 5. Member 저장
+        // 6. memberId, koreanName 반환
+        return null;
     }
 
-    /**
-     * 로그인 (isBioRegistered 삭제)
-     */
-    @Transactional
     public AuthResDTO.LoginResponse login(AuthReqDTO.LoginRequest request) {
-        String phoneNumber = request.phoneNumber();
-        String simplePassword = request.simplePassword();
-
-        // 1. 회원 조회
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new AuthException(AuthErrorCode.MEMBER_NOT_FOUND));
-
+        // TODO: 로그인 구현
+        // 1. 전화번호로 Member 조회
         // 2. 로그인 실패 5회 체크
-        if (member.getLoginFailCount() >= 5) {
-            // TODO: RT 블랙리스트 등록 (Redis)
-            throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
-        }
-
-        // TODO: 3. 비밀번호 검증 (BCrypt)
-        // TODO: 4. 로그인 실패 시 실패 횟수 증가
-        // TODO: 5. 로그인 성공 시 실패 횟수 초기화, lastLoginAt 업데이트
-        // TODO: 6. Access Token, Refresh Token 생성
-        // TODO: 7. Refresh Token DB 저장 (MemberToken 테이블, 만료기간: 비활성 14일/최대 30일)
-
-        log.info("[로그인 성공] 휴대폰: {}", phoneNumber);
-
-        // 임시 반환
-        return new AuthResDTO.LoginResponse("tempAccessToken", "tempRefreshToken");
+        //    if (member.getLoginFailCount() >= 5) {
+        //        throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
+        //    }
+        // 3. BCrypt 비밀번호 검증
+        // 4. 실패 시: loginFailCount++, 성공 시: loginFailCount=0, lastLoginAt 업데이트
+        // 5. JWT 토큰 생성 (AT, RT)
+        // 6. RT를 DB(member_token)에 저장
+        // 7. AT, RT 반환
+        return null;
     }
 
-    /**
-     * 토큰 재발급 (AT + RT 둘 다 재발급)
-     */
-    @Transactional
     public AuthResDTO.ReissueResponse reissue(AuthReqDTO.ReissueRequest request) {
-        String refreshToken = request.refreshToken();
-
-        // TODO: 1. Refresh Token 검증
-        // TODO: 2. DB에서 RT 조회 및 일치 확인 (MemberToken 테이블)
-        // TODO: 3. 만료 여부 확인 (expirationDate)
-        // TODO: 4. 새로운 AT, RT 생성
-        // TODO: 5. 기존 RT 삭제, 새 RT DB 저장 (RT 회전)
-
-        log.info("[토큰 재발급]");
-
-        // 임시 반환
-        return new AuthResDTO.ReissueResponse("newAccessToken", "newRefreshToken");
+        // TODO: 토큰 재발급 구현
+        // 1. RT 검증
+        // 2. DB에서 RT 조회 (member_token)
+        // 3. RT 만료 확인
+        // 4. 새 AT, RT 생성
+        // 5. 기존 RT 삭제 (회전)
+        // 6. 새 RT DB 저장
+        // 7. 새 AT, RT 반환
+        return null;
     }
 
-    /**
-     * 로그아웃 (블랙리스트 처리)
-     */
-    @Transactional
     public void logout(String phoneNumber, String accessToken) {
-        // TODO: 다음 PR에서 구현
-        // 1. DB에서 RT 삭제 (MemberToken 테이블)
-        // 2. Redis 블랙리스트에 Access Token 등록 (남은 시간만큼 TTL)
-
-        log.info("[로그아웃] 휴대폰: {}", phoneNumber);
+        // TODO: 로그아웃 구현
+        // 1. DB에서 RT 삭제 (member_token 테이블에서 phoneNumber로 조회 후 삭제)
+        // 2. Redis에 AT 블랙리스트 등록 (key: accessToken, TTL: AT 남은 시간)
+        //    ※ RT는 DB에서 삭제되므로 재발급 불가 → 별도 블랙리스트 불필요
     }
 }
