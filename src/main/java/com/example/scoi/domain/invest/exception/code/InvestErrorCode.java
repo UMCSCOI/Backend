@@ -18,6 +18,14 @@ public enum InvestErrorCode implements BaseErrorCode {
     INVALID_EXCHANGE_TYPE(HttpStatus.BAD_REQUEST,
             "INVEST400_2",
             "잘못된 거래소 타입입니다."),
+
+ INSUFFICIENT_BALANCE(HttpStatus.BAD_REQUEST,
+            "INVEST400_3",
+            "계좌에 잔고가 부족합니다."),
+    
+    INSUFFICIENT_COIN_AMOUNT(HttpStatus.BAD_REQUEST,
+            "INVEST400_4",
+            "보유 수량을 초과할 수 없습니다."),
     
     // 403 에러
     INSUFFICIENT_API_PERMISSION(HttpStatus.FORBIDDEN,

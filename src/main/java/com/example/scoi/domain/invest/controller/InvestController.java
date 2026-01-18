@@ -51,4 +51,38 @@ public class InvestController {
         
         return ApiResponse.onSuccess(InvestSuccessCode.MAX_ORDER_INFO_SUCCESS, result);
     }
+
+    @PostMapping("/orders/test")
+    @Operation(summary = "주문 가능 여부 확인", description = "주문 직전 해당 주문이 가능한지 여부를 확인합니다.")
+    @SecurityRequirement(name = "JWT TOKEN")
+    public ApiResponse<Void> checkOrderAvailability(
+            @RequestBody InvestReqDTO.OrderTestDTO request,
+            /* 임시 파라미터: JWT 인증 필터/인터셉터 구현 전까지 사용
+                            이후 이 파라미터를 제거 JWT 토큰에서 memberId를 추출하여 사용
+             */
+            @RequestParam Long memberId
+    ) {
+        // exchangeType String을 ExchangeType enum으로 변환
+        ExchangeType exchangeType;
+        try {
+            exchangeType = ExchangeType.fromString(request.getExchangeType());
+        } catch (IllegalArgumentException e) {
+            throw new InvestException(InvestErrorCode.INVALID_EXCHANGE_TYPE);
+        }
+        
+        // 주문 가능 여부 확인
+        investService.checkOrderAvailability(
+                memberId,
+                exchangeType,
+                request.getMarket(),
+                request.getSide(),
+                request.getOrderType(),
+                request.getPrice(),
+                request.getVolume()
+        );
+        
+        return ApiResponse.onSuccess(InvestSuccessCode.ORDER_AVAILABLE);
+    }
+
+
 }
