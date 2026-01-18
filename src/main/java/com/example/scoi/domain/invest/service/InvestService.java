@@ -4,7 +4,7 @@ import com.example.scoi.domain.invest.client.BithumbApiClient;
 import com.example.scoi.domain.invest.client.UpbitApiClient;
 import com.example.scoi.domain.invest.client.BinanceApiClient;
 import com.example.scoi.domain.invest.client.ExchangeApiClient;
-import com.example.scoi.domain.invest.dto.InvestResDTO;
+import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
 import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.member.entity.Member;
@@ -30,7 +30,7 @@ public class InvestService {
      * 최대 주문 개수 조회
      * 로직은 노션에 있는 API 명세서 기준.
      */
-    public InvestResDTO.MaxOrderInfoDTO getMaxOrderInfo(Long memberId, ExchangeType exchangeType, String coinType) {
+    public MaxOrderInfoDTO getMaxOrderInfo(Long memberId, ExchangeType exchangeType, String coinType) {
         // 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));

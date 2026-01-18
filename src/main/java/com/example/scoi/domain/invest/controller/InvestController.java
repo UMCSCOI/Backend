@@ -1,6 +1,6 @@
 package com.example.scoi.domain.invest.controller;
 
-import com.example.scoi.domain.invest.dto.InvestResDTO;
+import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
 import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.invest.exception.code.InvestSuccessCode;
@@ -27,7 +27,7 @@ public class InvestController {
     @GetMapping("/orders/info")
     @Operation(summary = "최대 주문 개수 조회", description = "주문 생성 전, 가능한 금액과 정보를 조회합니다.")
     @SecurityRequirement(name = "JWT TOKEN")
-    public ApiResponse<InvestResDTO.MaxOrderInfoDTO> getMaxOrderInfo(
+    public ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
             @RequestParam String exchangeType,
             @RequestParam String coinType,
             /* 임시 파라미터: JWT 인증 필터/인터셉터 구현 전까지 사용
@@ -47,7 +47,7 @@ public class InvestController {
         }
         
         // 정상 버전: Member 조회 후 phoneNumber 사용
-        InvestResDTO.MaxOrderInfoDTO result = investService.getMaxOrderInfo(memberId, exchangeTypeEnum, coinType);
+        MaxOrderInfoDTO result = investService.getMaxOrderInfo(memberId, exchangeTypeEnum, coinType);
         
         return ApiResponse.onSuccess(InvestSuccessCode.MAX_ORDER_INFO_SUCCESS, result);
     }
