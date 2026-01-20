@@ -10,7 +10,9 @@ import org.springframework.http.HttpStatus;
 public enum MemberErrorCode implements BaseErrorCode {
 
     // 도메인별 실패 코드 정의
-    ;
+    NOT_FOUND(HttpStatus.NOT_FOUND,
+            "MEMBER404_0",
+            "사용자를 찾지 못했습니다.");
 
     private final HttpStatus status;
     private final String code;
