@@ -1,7 +1,31 @@
 package com.example.scoi.domain.transfer.repository;
 
 import com.example.scoi.domain.transfer.entity.TradeHistory;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 public interface TradeHistoryRepository extends JpaRepository<TradeHistory,Long> {
+
+    @Query("SELECT th FROM TradeHistory th " +
+            "JOIN FETCH th.recipient r " +
+            "WHERE th.member.id = :memberId " +
+            "AND th.id IN (" +
+            "    SELECT MAX(th2.id) FROM TradeHistory th2 " +
+            "    WHERE th2.member.id = :memberId " +
+            "    GROUP BY th2.recipient" +
+            ") " +
+            "AND (:lastTime IS NULL OR (th.createdAt < :lastTime) " +
+            "     OR (th.createdAt = :lastTime AND th.id < :lastId)) " +
+            "ORDER BY th.createdAt DESC, th.id DESC")
+    List<TradeHistory> findRecentUniqueRecipients(
+            @Param("memberId") Long memberId,
+            @Param("lastTime") LocalDateTime lastTime,
+            @Param("lastId") Long lastId,
+            Pageable pageable
+    );
 }

@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum TransferErrorCode implements BaseErrorCode {
 
-    // 도메인별 실패 코드 정의
+    INVALID_CURSOR(HttpStatus.BAD_REQUEST, "TRANSFER400_1", "cursor가 올바르지 않습니다.")
     ;
 
     private final HttpStatus status;
