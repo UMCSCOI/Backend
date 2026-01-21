@@ -12,6 +12,7 @@ import com.example.scoi.domain.transfer.utils.TransferCursorUtils;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,9 +24,20 @@ public class TransferService {
     private final TradeHistoryRepository tradeHistoryRepository;
     private final MemberRepository memberRepository;
 
-    // 최근 수취인 조회 로직
-    public TransferResDTO.RecipientListDTO getRecentRecipients(
-            Member member, String cursor, int limit
+    // 최근 수취인 조회 메서드
+    public TransferResDTO.RecipientListDTO findRecentRecipients(Member member, String cursor, int limit){
+        return getRecipients(member, cursor, false, limit);
+    }
+
+    // 즐겨찾기 수취인 조회 메서드
+    public TransferResDTO.RecipientListDTO findFavoriteRecipients(Member member, String cursor, int limit){
+
+        return getRecipients(member, cursor, true, limit);
+    }
+
+    // 수취인 조회 로직
+    public TransferResDTO.RecipientListDTO getRecipients(
+            Member member, String cursor, boolean isFavorite, int limit
     ) {
         // 테스트 용
         if (member == null) {
@@ -33,31 +45,31 @@ public class TransferService {
                     .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
         }
 
-        // 1. 커서 디코딩 (Base64 형태의 커서에서 시간과 ID 추출)
+        // 커서 디코딩 (Base64 형태의 커서에서 시간과 historyID 추출)
         LocalDateTime lastTime = null;
         Long lastId = null;
         if (cursor != null && !cursor.isEmpty()) {
             TransferCursorUtils.CursorContents contents = TransferCursorUtils.decode(cursor);
-            lastTime = contents.getTimestamp();
-            lastId = contents.getId();
+            lastTime = contents.getTimestamp(); // 마지막 조회 시간
+            lastId = contents.getId(); // 마지막 거래 내역
         }
 
-        // 2. DB 조회 (limit + 1을 가져와서 다음 페이지 여부를 확인)
-        PageRequest pageRequest = PageRequest.of(0, limit + 1);
-        List<TradeHistory> histories = tradeHistoryRepository.findRecentUniqueRecipients(
-                member.getId(), lastTime, lastId, pageRequest);
+        // DB 조회
+        PageRequest pageRequest = PageRequest.of(0, limit);
+        Slice<TradeHistory> histories = tradeHistoryRepository.findRecentUniqueRecipients(
+                member.getId(), lastTime, lastId, isFavorite, pageRequest);
 
-        // 3. 페이징 데이터 처리
-        boolean hasNext = histories.size() > limit;
-        List<TradeHistory> resultItems = hasNext ? histories.subList(0, limit) : histories;
+        // 수취인 목록 3개와 다음이 있는지 확인
+        List<TradeHistory> content = histories.getContent();
+        boolean hasNext = histories.hasNext();
 
-        // 4. 다음 커서 생성
-        String nextCursor = (hasNext && !resultItems.isEmpty())
-                ? TransferCursorUtils.encode(resultItems.get(resultItems.size() - 1).getCreatedAt(),
-                resultItems.get(resultItems.size() - 1).getId())
+        // 다음 커서 인코딩(없다면 null)
+        String nextCursor = (hasNext && !content.isEmpty())
+                ? TransferCursorUtils.encode( content.getLast().getCreatedAt(),
+                content.getLast().getId() )
                 : null;
 
         // DTO로 변환 및 반환
-        return TransferConverter.toRecentRecipientListDTO(resultItems, nextCursor, hasNext);
+        return TransferConverter.toRecentRecipientListDTO(content, nextCursor, hasNext);
     }
 }

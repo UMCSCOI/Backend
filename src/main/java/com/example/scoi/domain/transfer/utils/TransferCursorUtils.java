@@ -14,15 +14,15 @@ import java.util.Base64;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TransferCursorUtils {
 
-    // 날짜 포맷 (나노초까지 포함하여 정밀도 유지)
+    // 날짜 포맷 (나노초까지 포함)
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final String SEPARATOR = "_";
 
     // 인코딩: LocalDateTime + TradeHistoryID -> Base64 String
     public static String encode(LocalDateTime timestamp, Long id) {
         if (timestamp == null || id == null) return null;
-        String rawCursor = timestamp.format(formatter) + SEPARATOR + id;
-        return Base64.getEncoder().encodeToString(rawCursor.getBytes());
+        String cursor = timestamp.format(formatter) + SEPARATOR + id;
+        return Base64.getEncoder().encodeToString(cursor.getBytes());
     }
 
     // 디코딩: Base64 String -> 내부 객체 (Timestamp, ID)
