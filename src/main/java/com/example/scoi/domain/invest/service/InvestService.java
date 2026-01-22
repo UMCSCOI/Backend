@@ -1,8 +1,8 @@
 package com.example.scoi.domain.invest.service;
 
-import com.example.scoi.domain.invest.client.BithumbApiClient;
-import com.example.scoi.domain.invest.client.UpbitApiClient;
-import com.example.scoi.domain.invest.client.BinanceApiClient;
+import com.example.scoi.domain.invest.client.adapter.BithumbApiClient;
+import com.example.scoi.domain.invest.client.adapter.UpbitApiClient;
+import com.example.scoi.domain.invest.client.adapter.BinanceApiClient;
 import com.example.scoi.domain.invest.client.ExchangeApiClient;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
@@ -25,8 +25,6 @@ public class InvestService {
     private final BithumbApiClient bithumbApiClient;
     private final UpbitApiClient upbitApiClient;
     private final BinanceApiClient binanceApiClient;
-//거래소 클라이언트 API 구현 완료 필요 -수정 단계!!
-   //최대 주문 개수 조회
     
     public MaxOrderInfoDTO getMaxOrderInfo(Long memberId, ExchangeType exchangeType, String coinType) {
         // 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)

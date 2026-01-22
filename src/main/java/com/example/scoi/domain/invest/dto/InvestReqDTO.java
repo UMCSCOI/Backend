@@ -5,17 +5,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 public class InvestReqDTO {
-    // 요청 DTO 정의
-    @Getter  
+    
+    @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class CheckOrderAvailabilityDTO {
-        private String exchangeType;  // 거래소 타입
-        private String market;        // 마켓 타입
+    public static class OrderDTO {
+        private String exchangeType;  
+        private String market;        // 마켓 타입 
         private String side;          // 주문 타입 
-        private String orderType;     // 주문 방식 
-        private String price;         // 주문 가격 
+        private String orderType;     // 주문 방식 (지정가, 시장가 매수, 시장가 매도)
+        private String price;          
         private String volume;        // 주문 수량 
+        private String password;      // 간편 비밀번호
     }
 
 }

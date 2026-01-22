@@ -12,11 +12,13 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
+import lombok.Getter;
+import lombok.AllArgsConstructor;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Map;
@@ -146,6 +148,54 @@ public class JwtApiUtil {
         }
 
         return "Bearer "+jwt;
+    }
+
+    /**
+     * 바이낸스 API 통신을 위한 인증 정보를 생성합니다.
+     * 바이낸스는 HMAC-SHA256 서명을 사용합니다.
+     * @param phoneNumber 사용자의 휴대전화 번호
+     * @return BinanceApiAuthInfo (apiKey, queryString 포함)
+     */
+    public BinanceApiAuthInfo createBinanceAuth(
+            @NotNull String phoneNumber
+    ) throws GeneralSecurityException {
+
+        // API키 객체 찾기
+        MemberApiKey apiKey = memberApiKeyRepository
+                .findByMemberPhoneNumberAndExchangeType(phoneNumber, ExchangeType.BINANCE)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
+
+        // 시크릿키 복호화
+        Cipher cipher = Cipher.getInstance(ALGORITHM);
+        SecretKey aesKey = new SecretKeySpec(key.getBytes(), ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, aesKey);
+        byte[] secretKey = cipher.doFinal(Base64.getDecoder().decode(apiKey.getSecretKey()));
+
+        // 바이낸스는 timestamp와 signature를 query string에 포함
+        long timestamp = System.currentTimeMillis();
+        String queryString = "timestamp=" + timestamp;
+
+        // HMAC-SHA256 서명 생성
+        Mac hmacSha256 = Mac.getInstance("HmacSHA256");
+        SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey, "HmacSHA256");
+        hmacSha256.init(secretKeySpec);
+        byte[] signatureBytes = hmacSha256.doFinal(queryString.getBytes());
+        String signature = HexFormat.of().formatHex(signatureBytes);
+
+        // query string에 signature 추가
+        queryString += "&signature=" + signature;
+
+        return new BinanceApiAuthInfo(apiKey.getPublicKey(), queryString);
+    }
+
+    /**
+     * 바이낸스 API 인증 정보 DTO
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class BinanceApiAuthInfo {
+        private String apiKey;
+        private String queryString;
     }
 
     // query SHA512 암호화
