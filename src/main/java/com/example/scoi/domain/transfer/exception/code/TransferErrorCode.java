@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 public enum TransferErrorCode implements BaseErrorCode {
 
     INVALID_CURSOR(HttpStatus.BAD_REQUEST, "TRANSFER400_1", "cursor가 올바르지 않습니다.")
+    INVALID_CURSOR(HttpStatus.BAD_REQUEST, "TRANSFER400_1", "cursor가 올바르지 않습니다."),
+    EXIST_FAVORITE_RECIPIENT(HttpStatus.BAD_REQUEST, "TRANSFER400_2", "이미 즐겨찾기로 등록된 사용자입니다."),
     ;
 
     private final HttpStatus status;

@@ -23,6 +23,7 @@ import java.util.List;
 public class TransferService {
     private final TradeHistoryRepository tradeHistoryRepository;
     private final MemberRepository memberRepository;
+    private final RecipientRepository recipientRepository;
 
     // 최근 수취인 조회 메서드
     public TransferResDTO.RecipientListDTO findRecentRecipients(Member member, String cursor, int limit){
@@ -57,7 +58,7 @@ public class TransferService {
         // DB 조회
         PageRequest pageRequest = PageRequest.of(0, limit);
         Slice<TradeHistory> histories = tradeHistoryRepository.findRecentUniqueRecipients(
-                member.getId(), lastTime, lastId, isFavorite, pageRequest);
+                member.getId(), lastTime, lastId, pageRequest);
 
         // 수취인 목록 3개와 다음이 있는지 확인
         List<TradeHistory> content = histories.getContent();
@@ -71,5 +72,37 @@ public class TransferService {
 
         // DTO로 변환 및 반환
         return TransferConverter.toRecentRecipientListDTO(content, nextCursor, hasNext);
+    }
+
+    // 즐겨찾기 수취인 조회 메서드
+    public TransferResDTO.RecipientListDTO findFavoriteRecipients(Member member, String cursor, int limit){
+        // 테스트 용
+        if (member == null) {
+            member = memberRepository.findById(1L) // DB에 미리 생성해둔 1번 유저 사용
+                    .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
+        }
+
+        // 커서 디코딩 (Base64 형태의 RecipientID 추출)
+        Long lastId = null;
+        if (cursor != null && !cursor.isEmpty()) {
+            TransferCursorUtils.CursorContents contents = TransferCursorUtils.decode(cursor);
+            lastId = contents.getId(); // 마지막 거래 내역
+        }
+
+        // DB 조회
+        PageRequest pageRequest = PageRequest.of(0, limit);
+        Slice<Recipient> recipients = recipientRepository.findByMemberIdAndIsFavoriteTrue(member.getId(), lastId, pageRequest);
+
+        // 수취인 목록 3개와 다음이 있는지 확인
+        List<Recipient> content = recipients.getContent();
+        boolean hasNext = recipients.hasNext();
+
+        // 다음 커서 인코딩 (없다면 null)
+        String nextCursor = (hasNext && !content.isEmpty())
+                ? TransferCursorUtils.encode( content.getLast().getId() )
+                : null;
+
+        // DTO로 변환 및 반환
+        return TransferConverter.toFavoriteRecipientListDTO(content, nextCursor, hasNext);
     }
 }

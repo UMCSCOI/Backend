@@ -14,7 +14,6 @@ public interface TradeHistoryRepository extends JpaRepository<TradeHistory,Long>
     @Query("SELECT th FROM TradeHistory th " +
             "JOIN FETCH th.recipient r " +
             "WHERE th.member.id = :memberId " +
-            "AND (:onlyFavorite = false OR r.isFavorite = true)" + // false인 경우 항상 참, true인 경우는 isFavorite 값이 참인 경우만 가져옴
             "AND th.id IN (" +
             "    SELECT MAX(th2.id) FROM TradeHistory th2 " +
             "    WHERE th2.member.id = :memberId " +
@@ -27,7 +26,6 @@ public interface TradeHistoryRepository extends JpaRepository<TradeHistory,Long>
             @Param("memberId") Long memberId,
             @Param("lastTime") LocalDateTime lastTime,
             @Param("lastId") Long lastId,
-            @Param("onlyFavorite") boolean onlyFavorite,
             Pageable pageable
     );
 }

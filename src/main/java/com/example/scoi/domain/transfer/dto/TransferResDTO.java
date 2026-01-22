@@ -38,11 +38,6 @@ public class TransferResDTO {
 
         private String walletAddress;
 
-        private TradeType tradeType;
-        private ExchangeType exchangeType;
-
-        private String network;
-
         private Boolean isFavorite;
     }
 }
