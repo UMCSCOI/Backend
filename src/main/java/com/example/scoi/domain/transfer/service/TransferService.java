@@ -105,4 +105,78 @@ public class TransferService {
         // DTO로 변환 및 반환
         return TransferConverter.toFavoriteRecipientListDTO(content, nextCursor, hasNext);
     }
+
+
+    // 즐겨찾기 등록 메서드
+    @Transactional
+    public Long addFavoriteRecipient(Member member, TransferReqDTO.RecipientInformation recipientInformation) {
+
+        // 테스트 용
+        if (member == null) {
+            member = memberRepository.findById(1L)
+                    .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
+        }
+
+        // 이미 즐겨찾기로 등록된 사용자는 그대로 반환
+        if(recipientRepository.existsByMemberIdAndWalletAddress(member.getId(), recipientInformation.walletAddress())){
+            throw new TransferException(TransferErrorCode.EXIST_FAVORITE_RECIPIENT);
+        }
+
+        // 수취인 입력 정보가 부족한 경우(지갑 주소, 수취인 이름)
+        if(recipientInformation.walletAddress().isBlank() || recipientInformation.recipientName().isBlank()){
+            throw new TransferException(TransferErrorCode.INVALID_RECIPIENT_INFORMATION);
+        }
+
+        // 지갑 주소 형식이 올바르지 않은 경우
+        if(!WalletUtils.isValidAddress(recipientInformation.walletAddress())){
+            throw new TransferException(TransferErrorCode.INVALID_WALLET_ADDRESS);
+        }
+
+        Recipient recipient = TransferConverter.toFavoriteRecipient(recipientInformation, member);
+        Recipient saved = recipientRepository.save(recipient);
+
+        return saved.getId();
+    }
+
+
+    // 즐겨찾기 수취인으로 변경
+    public Long changeToFavoriteRecipient(Long recipientId) {
+
+        // id로 수취인 조회
+        Recipient recipient = recipientRepository.findById(recipientId)
+                .orElseThrow(() -> new TransferException(TransferErrorCode.MEMBER_NOT_FOUND));
+
+        // 이미 즐겨찾기로 등록된 사용자
+        if(recipient.getIsFavorite() == true){
+            return recipientId;
+        }
+
+        // 해당하는 수취인의 좋아요 정보를 true로 변경
+        recipient.changeToFavoriteTrue();
+
+        Recipient changed = recipientRepository.save(recipient);
+
+        return changed.getId();
+    }
+
+
+    // 즐겨찾기 수취인 등록 해제
+    public Long changeToNotFavoriteRecipient(Long recipientId) {
+
+        // id로 수취인 조회
+        Recipient recipient = recipientRepository.findById(recipientId)
+                .orElseThrow(() -> new TransferException(TransferErrorCode.MEMBER_NOT_FOUND));
+
+        // 이미 즐겨찾기가 해제된 사용자
+        if(recipient.getIsFavorite() == false){
+            return recipientId;
+        }
+
+        // 해당하는 수취인의 좋아요 정보를 false로 변경
+        recipient.changeToFavoriteFalse();
+
+        Recipient changed = recipientRepository.save(recipient);
+
+        return changed.getId();
+    }
 }
