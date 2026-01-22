@@ -1,6 +1,7 @@
 package com.example.scoi.domain.transfer.controller;
 
 import com.example.scoi.domain.member.entity.Member;
+import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;
 import com.example.scoi.domain.transfer.service.TransferService;
@@ -54,5 +55,52 @@ public class TransferController {
 
         return ApiResponse.onSuccess(
                 TransferSuccessCode.TRANSFER200_2, transferService.findFavoriteRecipients(member, cursor, limit));
+    }
+
+    @Operation(
+            summary = "즐겨찾기 수취인 등록 API By 김민규",
+            description = "수취인의 정보(성명, 지갑주소, 거래소, 맴버타입(개인/기업)을 입력하여 즐겨찾기 수취인을 등록합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "TRANSFER201_1", description = "즐겨찾기 수취인 등록에 성공했습니다."),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "TRANSFER404_1", description = "현재 사용중인 사용자를 찾을 수 없습니다.")
+    })
+    @PostMapping("/recipients/favorites")
+    public ApiResponse<Long> addFavoriteRecipient(
+            @AuthenticationPrincipal Member member,
+            @RequestBody TransferReqDTO.RecipientInformation recipientInformation
+            ){
+
+        return ApiResponse.onSuccess(
+                TransferSuccessCode.TRANSFER201_1, transferService.addFavoriteRecipient(member, recipientInformation));
+    }
+
+    @Operation(
+            summary = "별 모양 클릭 시 즐겨찾기 수취인으로 등록 API By 김민규",
+            description = "최근 거래 내역에서 별모양을 눌러 즐겨찾기 수취인으로 등록합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "TRANSFER200_3", description = "즐겨찾기 수취인 등록 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "TRANSFER404_1", description = "현재 사용중인 사용자를 찾을 수 없습니다.")
+    })
+    @PostMapping("/recipients/favorites/{recipientId}/register")
+    public ApiResponse<Long> changeToFavorite(
+            @PathVariable Long recipientId
+    ){
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_3,
+                transferService.changeToFavoriteRecipient(recipientId));
+    }
+
+    @Operation(
+            summary = "별 모양 클릭 시 즐겨찾기 수취인으로 해제 API By 김민규",
+            description = "최근 거래 내역에서 별모양을 눌러 즐겨찾기 수취인으로 등록을 해제합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "TRANSFER200_4", description = "즐겨찾기 수취인 등록 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "TRANSFER404_1", description = "현재 사용중인 사용자를 찾을 수 없습니다.")
+    })
+    @PostMapping("/recipients/favorites/{recipientId}/unregister")
+    public ApiResponse<Long> changeToNotFavorite(
+            @PathVariable Long recipientId
+    ){
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_4,
+                transferService.changeToNotFavoriteRecipient(recipientId));
     }
 }

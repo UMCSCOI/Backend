@@ -24,22 +24,37 @@ public class TransferCursorUtils {
         String cursor = timestamp.format(formatter) + SEPARATOR + id;
         return Base64.getEncoder().encodeToString(cursor.getBytes());
     }
+    // 인코딩: 즐겨찾기 수취인(RecipientId)
+    public static String encode(Long id) {
+        if (id == null) return null;
+        return Base64.getEncoder().encodeToString(
+                id.toString().getBytes()
+        );
+    }
 
     // 디코딩: Base64 String -> 내부 객체 (Timestamp, ID)
     public static CursorContents decode(String cursor) {
         if (cursor == null || cursor.isEmpty()) return null;
 
         try {
-            byte[] decodedBytes = Base64.getDecoder().decode(cursor);
-            String rawCursor = new String(decodedBytes);
-            String[] parts = rawCursor.split(SEPARATOR);
+            String raw = new String(Base64.getDecoder().decode(cursor));
+            String[] parts = raw.split(SEPARATOR);
 
-            LocalDateTime timestamp = LocalDateTime.parse(parts[0], formatter);
-            Long id = Long.parseLong(parts[1]);
+            if (parts.length == 1) {
+                // id-only cursor (즐겨찾기)
+                Long id = Long.parseLong(parts[0]);
+                return new CursorContents(null, id);
+            }
 
-            return new CursorContents(timestamp, id);
+            if (parts.length == 2) {
+                LocalDateTime timestamp =
+                        LocalDateTime.parse(parts[0], formatter);
+                Long id = Long.parseLong(parts[1]);
+                return new CursorContents(timestamp, id);
+            }
+
+            throw new TransferException(TransferErrorCode.INVALID_CURSOR);
         } catch (Exception e) {
-            // 커서 형식이 올바르지 않을 때 예외 처리
             throw new TransferException(TransferErrorCode.INVALID_CURSOR);
         }
     }

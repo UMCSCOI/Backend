@@ -5,15 +5,22 @@ import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.domain.transfer.converter.TransferConverter;
+import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
+import com.example.scoi.domain.transfer.entity.Recipient;
 import com.example.scoi.domain.transfer.entity.TradeHistory;
+import com.example.scoi.domain.transfer.exception.TransferException;
+import com.example.scoi.domain.transfer.exception.code.TransferErrorCode;
+import com.example.scoi.domain.transfer.repository.RecipientRepository;
 import com.example.scoi.domain.transfer.repository.TradeHistoryRepository;
 import com.example.scoi.domain.transfer.utils.TransferCursorUtils;
+import com.example.scoi.domain.transfer.utils.WalletUtils;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,25 +28,13 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class TransferService {
+
     private final TradeHistoryRepository tradeHistoryRepository;
     private final MemberRepository memberRepository;
     private final RecipientRepository recipientRepository;
 
     // 최근 수취인 조회 메서드
     public TransferResDTO.RecipientListDTO findRecentRecipients(Member member, String cursor, int limit){
-        return getRecipients(member, cursor, false, limit);
-    }
-
-    // 즐겨찾기 수취인 조회 메서드
-    public TransferResDTO.RecipientListDTO findFavoriteRecipients(Member member, String cursor, int limit){
-
-        return getRecipients(member, cursor, true, limit);
-    }
-
-    // 수취인 조회 로직
-    public TransferResDTO.RecipientListDTO getRecipients(
-            Member member, String cursor, boolean isFavorite, int limit
-    ) {
         // 테스트 용
         if (member == null) {
             member = memberRepository.findById(1L) // DB에 미리 생성해둔 1번 유저 사용
