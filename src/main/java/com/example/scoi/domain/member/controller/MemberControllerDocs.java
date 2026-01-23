@@ -63,4 +63,10 @@ public interface MemberControllerDocs {
             description = "연동된 거래소의 API키를 삭제합니다."
     )
     ApiResponse<Void> deleteApiKey(@AuthenticationPrincipal AuthUser user, @RequestBody MemberReqDTO.DeleteApiKey dto);
+
+    @Operation(
+            summary = "FCM 토큰 등록 API By 김주헌",
+            description = "FCM 토큰을 등록합니다."
+    )
+    ApiResponse<Void> postFcmToken(@AuthenticationPrincipal AuthUser user, @RequestBody MemberReqDTO.PostFcmToken dto);
 }
