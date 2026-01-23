@@ -76,7 +76,7 @@ public class MemberController implements MemberControllerDocs{
 
     // 간편 비밀번호 변경
     @PatchMapping("/members/me/password")
-    public ApiResponse<?> changePassword(
+    public ApiResponse<Map<String, String>> changePassword(
             @RequestBody MemberReqDTO.ChangePassword dto,
             @AuthenticationPrincipal AuthUser user // 임시
     ) throws GeneralSecurityException {
@@ -86,7 +86,7 @@ public class MemberController implements MemberControllerDocs{
             return ApiResponse.onFailure(code, result.get());
         } else {
             BaseSuccessCode code = MemberSuccessCode.CHANGE_SIMPLE_PASSWORD;
-            return ApiResponse.onSuccess(code);
+            return ApiResponse.onSuccess(code, null);
         }
     }
 
