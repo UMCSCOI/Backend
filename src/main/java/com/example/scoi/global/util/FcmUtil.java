@@ -5,6 +5,7 @@ import com.example.scoi.domain.member.entity.MemberFcm;
 import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberFcmRepository;
+import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -36,10 +37,18 @@ public class FcmUtil {
         MemberFcm memberFcm = memberFcmRepository.findByMember(member)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.FCM_TOKEN_NOT_FOUND));
 
+        // 안드로이드 설정
+        AndroidConfig androidConfig = AndroidConfig.builder()
+                .setPriority(AndroidConfig.Priority.HIGH)
+                .build();
+
         // 보낼 알림 구성
         Message message = Message.builder()
+                // payLoad는 Data만
                 .putData("title", title)
                 .putData("body", body)
+                // 우선순위는 high
+                .setAndroidConfig(androidConfig)
                 .setToken(memberFcm.getFcmToken())
                 .build();
 
