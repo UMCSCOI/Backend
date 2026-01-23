@@ -1,12 +1,10 @@
 package com.example.scoi.global.apiPayload.handler;
 
-import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseErrorCode;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.apiPayload.exception.ScoiException;
 import jakarta.validation.ConstraintViolationException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

@@ -8,6 +8,4 @@ import java.util.Optional;
 
 public interface MemberFcmRepository extends JpaRepository<MemberFcm, Long>{
     Optional<MemberFcm> findByMember(Member member);
-
-    boolean existsByMember(Member member);
 }
