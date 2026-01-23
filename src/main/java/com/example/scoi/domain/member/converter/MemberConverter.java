@@ -3,6 +3,7 @@ package com.example.scoi.domain.member.converter;
 import com.example.scoi.domain.member.dto.MemberResDTO;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.entity.MemberApiKey;
+import com.example.scoi.domain.member.entity.MemberFcm;
 import com.example.scoi.domain.member.enums.ExchangeType;
 
 public class MemberConverter {
@@ -58,6 +59,17 @@ public class MemberConverter {
                 .exchangeType(exchangeType)
                 .publicKey(publicKey)
                 .secretKey(secretKey)
+                .member(member)
+                .build();
+    }
+
+    // MemberFcm
+    public static MemberFcm toMemberFcm(
+            String fcmToken,
+            Member member
+    ){
+        return MemberFcm.builder()
+                .fcmToken(fcmToken)
                 .member(member)
                 .build();
     }

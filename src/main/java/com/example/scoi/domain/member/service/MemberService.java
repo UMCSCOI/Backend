@@ -7,10 +7,12 @@ import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.dto.MemberResDTO;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.entity.MemberApiKey;
+import com.example.scoi.domain.member.entity.MemberFcm;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberApiKeyRepository;
+import com.example.scoi.domain.member.repository.MemberFcmRepository;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.auth.entity.AuthUser;
@@ -36,6 +38,7 @@ public class MemberService {
     private final JwtApiUtil jwtApiUtil;
     private final BithumbClient bithumbClient;
     private final UpbitClient upbitClient;
+    private final MemberFcmRepository memberFcmRepository;
 
     // JwtApiUtil 테스트
     public Void apiTest(
@@ -255,6 +258,23 @@ public class MemberService {
 
         // 있다면 지우기
         memberApiKeyRepository.deleteByMember_PhoneNumberAndExchangeType(user.getPhoneNumber(), dto.exchangeType());
+
+        return null;
+    }
+
+    // FCM 토큰 등록
+    @Transactional
+    public Void postFcmToken(
+            AuthUser user,
+            MemberReqDTO.PostFcmToken dto
+    ) {
+
+        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        // FCM 토큰 저장 (로그인 -> 추가, 디바이스당 추가)
+        MemberFcm memberFcm = MemberConverter.toMemberFcm(dto.token(), member);
+        memberFcmRepository.save(memberFcm);
 
         return null;
     }

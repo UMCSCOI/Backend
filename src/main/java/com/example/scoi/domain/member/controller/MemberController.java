@@ -145,4 +145,14 @@ public class MemberController implements MemberControllerDocs{
         BaseSuccessCode code = MemberSuccessCode.DELETE_API_KEY;
         return ApiResponse.onSuccess(code, memberService.deleteApiKey(user, dto));
     }
+
+    // FCM 토큰 등록
+    @PostMapping("/members/me/fcm")
+    public ApiResponse<Void> postFcmToken(
+            @AuthenticationPrincipal AuthUser user,
+            @RequestBody MemberReqDTO.PostFcmToken dto
+    ){
+        BaseSuccessCode code = MemberSuccessCode.POST_PATCH_FCM_TOKEN;
+        return ApiResponse.onSuccess(code, memberService.postFcmToken(user, dto));
+    }
 }

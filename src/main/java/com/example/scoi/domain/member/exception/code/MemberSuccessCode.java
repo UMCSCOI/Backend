@@ -30,6 +30,9 @@ public enum MemberSuccessCode implements BaseSuccessCode {
     DELETE_API_KEY(HttpStatus.OK,
             "MEMBER200_7",
             "API 키가 삭제되었습니다."),
+    POST_PATCH_FCM_TOKEN(HttpStatus.OK,
+            "MEMBER200_8",
+            "FCM 토큰이 추가되었습니다."),
 
     EXCHANGE_LIST(HttpStatus.OK,
             "EXCHANGE200_1",

@@ -34,6 +34,11 @@ public class MemberReqDTO {
             ExchangeType exchangeType
     ){}
 
+    // FCM 토큰 등록
+    public record PostFcmToken(
+            String token
+    ){}
+
     // JWTAPIUtil 테스트
     @Builder
     public record Test(
