@@ -25,15 +25,6 @@ public class MemberConverter {
                 .build();
     }
 
-    // 휴대폰 번호 변경
-    public static MemberResDTO.ChangePhone toChangePhone(
-            String phoneNumber
-    ){
-        return MemberResDTO.ChangePhone.builder()
-                .phoneNumber(phoneNumber)
-                .build();
-    }
-
     // 거래소 목록 조회
     public static MemberResDTO.ExchangeList toExchangeList(
             String exchangeType,

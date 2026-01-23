@@ -78,6 +78,4 @@ public class Member {
     }
 
     public void updateSimplePassword(String simplePassword){ this.simplePassword = simplePassword; }
-
-    public void updatePhoneNumber(String phoneNumber){ this.phoneNumber = phoneNumber; }
 }

@@ -16,7 +16,6 @@ import com.example.scoi.global.apiPayload.code.GeneralSuccessCode;
 import com.example.scoi.global.auth.entity.AuthUser;
 import com.example.scoi.global.auth.userDetails.CustomUserDetails;
 import com.example.scoi.global.util.JwtUtil;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -71,7 +70,7 @@ public class MemberController implements MemberControllerDocs{
     public ApiResponse<Map<String, String>> changePassword(
             @RequestBody MemberReqDTO.ChangePassword dto,
             @AuthenticationPrincipal AuthUser user // 임시
-    ) throws GeneralSecurityException {
+    ){
         Optional<Map<String, String>> result = memberService.changePassword(dto, user);
         if (result.isPresent()){
             BaseErrorCode code = GeneralErrorCode.VALIDATION_FAILED;
