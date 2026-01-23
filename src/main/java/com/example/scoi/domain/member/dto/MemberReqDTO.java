@@ -1,14 +1,10 @@
 package com.example.scoi.domain.member.dto;
 
 import com.example.scoi.domain.member.enums.ExchangeType;
+import jakarta.validation.constraints.Pattern;
 import lombok.Builder;
 
 public class MemberReqDTO {
-
-    // 휴대폰 번호 변경
-    public record ChangePhone(
-            String phoneNumber
-    ){}
 
     // 간편 비밀번호 변경
     public record ChangePassword(
@@ -18,6 +14,7 @@ public class MemberReqDTO {
 
     // 간편 비밀번호 재설정
     public record ResetPassword(
+            @Pattern(regexp = "^\\d{11}$")
             String phoneNumber,
             String newPassword
     ){}

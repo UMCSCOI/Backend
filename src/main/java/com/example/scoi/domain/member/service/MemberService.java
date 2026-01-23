@@ -18,6 +18,7 @@ import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.auth.entity.AuthUser;
 import com.example.scoi.global.util.HashUtil;
 import com.example.scoi.global.util.JwtApiUtil;
+import com.example.scoi.global.util.RedisUtil;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,12 @@ public class MemberService {
     private final BithumbClient bithumbClient;
     private final UpbitClient upbitClient;
     private final MemberFcmRepository memberFcmRepository;
+    private final RedisUtil redisUtil;
+
+    // 인증 완료된 전화번호 접두사
+    private static final String VERIFICATION_PREFIX = "verification:";
+    // 간편 비밀번호 정규표현식
+    private static final String SIMPLE_PASSWORD_REGEX = "^[0-9]{6}$";
 
     // JwtApiUtil 테스트
     public Void apiTest(
@@ -89,45 +96,50 @@ public class MemberService {
         return MemberConverter.toMemberInfo(member);
     }
 
-    // 휴대폰 번호 변경
-    public MemberResDTO.ChangePhone changePhone(
-            MemberReqDTO.ChangePhone dto,
-            AuthUser user
-    ) {
-        // SMS 인증번호 검증을 어떻게 처리할지 물어보기!
-        return null;
-    }
-
     // 간편 비밀번호 변경
     @Transactional
     public Optional<Map<String, String>> changePassword(
             MemberReqDTO.ChangePassword dto,
             AuthUser user
-    ) throws GeneralSecurityException {
+    ){
 
         // JWT 토큰 사용자 불러오기
         Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // DTO로 온 간편 비밀번호 암호화 풀기 (AES)
-        byte[] oldSimplePassword = hashUtil.decryptAES(dto.oldPassword());
-        byte[] newSimplePassword = hashUtil.decryptAES(dto.newPassword());
+        String oldSimplePassword;
+        String newSimplePassword;
+
+        try {
+             oldSimplePassword = new String(hashUtil.decryptAES(dto.oldPassword()));
+             newSimplePassword = new String(hashUtil.decryptAES(dto.newPassword()));
+
+            // DTO 비밀번호 포맷 체크
+            if (
+                    !oldSimplePassword.matches(SIMPLE_PASSWORD_REGEX)
+                    || !newSimplePassword.matches(SIMPLE_PASSWORD_REGEX)
+            ) {
+                throw new IllegalArgumentException();
+            }
+
+        } catch (GeneralSecurityException e) {
+            Map<String, String> binding = new HashMap<>();
+            binding.put("password", "간편 비밀번호 복호화에 실패했습니다.");
+            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> binding = new HashMap<>();
+            binding.put("password", "6자리 숫자만 입력 가능합니다.");
+            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
+        }
 
         // 로그인 횟수가 5 이상인지 확인
         if (member.getLoginFailCount() >= 4){
             throw new MemberException(MemberErrorCode.LOCKED);
         }
 
-        // DTO 비밀번호 포맷 체크
-        String regex = "^[0-9]{6}$";
-        if (!new String(oldSimplePassword).matches(regex) || !new String(newSimplePassword).matches(regex)) {
-            Map<String, String> binding = new HashMap<>();
-            binding.put("password", "6자리 숫자만 입력 가능합니다.");
-            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
-        }
-
         // 기존 비밀번호가 맞는지 확인: 틀렸을 경우 로그인 실패 횟수 증가
-        if (!passwordEncoder.matches(new String(oldSimplePassword), member.getSimplePassword())) {
+        if (!passwordEncoder.matches(oldSimplePassword, member.getSimplePassword())) {
             member.increaseLoginFailCount();
             Map<String, String> binding = new HashMap<>();
             binding.put("loginFailCount", member.getLoginFailCount().toString());
@@ -135,17 +147,50 @@ public class MemberService {
         }
 
         // 간편 비밀번호 변경: 새 비밀번호 DB 저장 & LoginFailCount = 0
-        member.updateSimplePassword(passwordEncoder.encode(new String(newSimplePassword)));
+        member.updateSimplePassword(passwordEncoder.encode(newSimplePassword));
         member.resetLoginFailCount();
         return Optional.empty();
     }
 
     // 간편 비밀번호 재설정
+    @Transactional
     public Void resetPassword(
             MemberReqDTO.ResetPassword dto,
             AuthUser user
     ) {
-        // SMS 인증 방식에 따라 결정!
+
+        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        // 인증된 전화번호인지 확인
+        if (!redisUtil.hasKey(VERIFICATION_PREFIX+dto.phoneNumber())){
+            throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
+        }
+
+        // 새 간편 비밀번호 검증
+        String newPassword;
+        try {
+            newPassword = new String(hashUtil.decryptAES(dto.newPassword()));
+
+            // 6자리 숫자가 아닌 경우
+            if (!newPassword.matches(SIMPLE_PASSWORD_REGEX)) {
+                throw new IllegalArgumentException();
+            }
+        } catch (GeneralSecurityException e ) {
+            Map<String, String> binding = new HashMap<>();
+            binding.put("password", "간편 비밀번호 복호화에 실패했습니다.");
+            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> binding = new HashMap<>();
+            binding.put("password", "6자리 숫자만 입력 가능합니다.");
+            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
+        }
+
+        // 간편 비밀번호 변경
+        member.updateSimplePassword(passwordEncoder.encode(newPassword));
+
+        // 로그인 횟수 -> 0
+        member.resetLoginFailCount();
         return null;
     }
 
@@ -250,7 +295,8 @@ public class MemberService {
             MemberReqDTO.DeleteApiKey dto
     ) {
         // 해당 연동 정보가 없다면
-        if (!memberApiKeyRepository.existsByMember_phoneNumberAndExchangeType(
+        if (
+                !memberApiKeyRepository.existsByMember_phoneNumberAndExchangeType(
                 user.getPhoneNumber(), dto.exchangeType())
         ){
             throw new MemberException(MemberErrorCode.API_KEY_NOT_FOUND);

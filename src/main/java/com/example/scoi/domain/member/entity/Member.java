@@ -77,7 +77,7 @@ public class Member {
         this.loginFailCount = 0;
     }
 
-    public void updateSimplePassword(String simplePassword){
-        this.simplePassword = simplePassword;
-    }
+    public void updateSimplePassword(String simplePassword){ this.simplePassword = simplePassword; }
+
+    public void updatePhoneNumber(String phoneNumber){ this.phoneNumber = phoneNumber; }
 }

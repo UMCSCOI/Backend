@@ -16,8 +16,10 @@ import com.example.scoi.global.apiPayload.code.GeneralSuccessCode;
 import com.example.scoi.global.auth.entity.AuthUser;
 import com.example.scoi.global.auth.userDetails.CustomUserDetails;
 import com.example.scoi.global.util.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.GeneralSecurityException;
@@ -64,16 +66,6 @@ public class MemberController implements MemberControllerDocs{
         return ApiResponse.onSuccess(code, memberService.getMemberInfo(user));
     }
 
-    // 휴대폰 번호 변경
-    @PatchMapping("/members/me/phone")
-    public ApiResponse<MemberResDTO.ChangePhone> changePhone(
-            @RequestBody MemberReqDTO.ChangePhone dto,
-            @AuthenticationPrincipal AuthUser user // 임시
-    ){
-        BaseSuccessCode code = MemberSuccessCode.CHANGE_PHONE_NUMBER;
-        return ApiResponse.onSuccess(code, memberService.changePhone(dto, user));
-    }
-
     // 간편 비밀번호 변경
     @PatchMapping("/members/me/password")
     public ApiResponse<Map<String, String>> changePassword(
@@ -93,7 +85,7 @@ public class MemberController implements MemberControllerDocs{
     // 간편 비밀번호 재설정
     @PostMapping("/members/me/password/reset")
     public ApiResponse<Void> resetPassword(
-            @RequestBody MemberReqDTO.ResetPassword dto,
+            @Validated @RequestBody MemberReqDTO.ResetPassword dto,
             @AuthenticationPrincipal AuthUser user // 임시
     ){
         BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;

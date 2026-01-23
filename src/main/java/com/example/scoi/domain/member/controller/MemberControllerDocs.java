@@ -23,19 +23,13 @@ public interface MemberControllerDocs {
     ApiResponse<MemberResDTO.MemberInfo> getMemberInfo(@AuthenticationPrincipal AuthUser user);
 
     @Operation(
-            summary = "휴대폰 번호 변경 API By 김주헌 (개발 중)",
-            description = "SMS 인증 완료 후 휴대폰 번호 변경합니다."
-    )
-    ApiResponse<MemberResDTO.ChangePhone> changePhone(@RequestBody MemberReqDTO.ChangePhone dto, @AuthenticationPrincipal AuthUser user);
-
-    @Operation(
             summary = "간편 비밀번호 변경 API By 김주헌",
             description = "간편 비밀번호를 변경합니다."
     )
     ApiResponse<Map<String, String>> changePassword(@RequestBody MemberReqDTO.ChangePassword dto, @AuthenticationPrincipal AuthUser user) throws GeneralSecurityException;
 
     @Operation(
-            summary = "간편 비밀번호 재설정 API By 김주헌 (개발 중)",
+            summary = "간편 비밀번호 재설정 API By 김주헌",
             description = "비밀번호 분실 또는 5회 실패 시 재설정을 합니다."
     )
     ApiResponse<Void> resetPassword(@RequestBody MemberReqDTO.ResetPassword dto, @AuthenticationPrincipal AuthUser user);

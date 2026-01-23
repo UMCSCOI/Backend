@@ -9,7 +9,6 @@ import com.example.scoi.domain.member.enums.ExchangeType;
 public class MemberConverter {
 
     // 내 정보 조회
-    // Member -> MemberInfo
     public static MemberResDTO.MemberInfo toMemberInfo(
             Member member
     ){
@@ -23,6 +22,15 @@ public class MemberConverter {
                 .profileImageUrl(member.getProfileImageUrl())
                 .isBioRegistered(member.getIsBioRegistered())
                 .createdAt(member.getCreatedAt())
+                .build();
+    }
+
+    // 휴대폰 번호 변경
+    public static MemberResDTO.ChangePhone toChangePhone(
+            String phoneNumber
+    ){
+        return MemberResDTO.ChangePhone.builder()
+                .phoneNumber(phoneNumber)
                 .build();
     }
 
