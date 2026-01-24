@@ -4,6 +4,7 @@ import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,10 +12,11 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final MemberRepository memberRepository;
+    
     // TODO: 다음 PR에서 추가 예정
     // private final JwtUtil jwtUtil;
-    // private final RedisService redisService;
-    // private final BCryptPasswordEncoder passwordEncoder;
+    // private final RedisUtil redisUtil;
+    private final PasswordEncoder passwordEncoder;
 
     public AuthResDTO.SmsSendResponse sendSms(AuthReqDTO.SmsSendRequest request) {
         // TODO: SMS 발송 구현

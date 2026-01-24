@@ -1,7 +1,7 @@
 package com.example.scoi.global.security.filter;
 
 import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
-import com.example.scoi.global.redis.RedisService;
+import com.example.scoi.global.redis.RedisUtil;
 import com.example.scoi.global.security.jwt.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -25,11 +25,12 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final RedisService redisService;
+    private final RedisUtil redisUtil;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String ERROR_CODE_ATTRIBUTE = "authErrorCode";
+    private static final String BLACKLIST_PREFIX = "blacklist:";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -53,7 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         // Redis 블랙리스트 확인
-        if (redisService.isBlacklisted(token)) {
+        if (redisUtil.exists(BLACKLIST_PREFIX + token)) {
             log.warn("블랙리스트 토큰 접근 시도: {}", requestURI);
             handleAuthenticationError(request, response, AuthErrorCode.BLACKLISTED_TOKEN);
             return;
