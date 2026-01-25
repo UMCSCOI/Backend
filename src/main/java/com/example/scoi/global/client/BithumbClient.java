@@ -6,8 +6,6 @@ import com.example.scoi.global.client.dto.BithumbResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @FeignClient(
         name = "bithumbClient",
         url = "https://api.bithumb.com"

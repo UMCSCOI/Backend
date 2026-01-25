@@ -6,8 +6,6 @@ import com.example.scoi.global.client.dto.UpbitResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @FeignClient(
         name = "upbitClient",
         url = "https://api.upbit.com"
