@@ -31,7 +31,7 @@ public class TradeHistory {
     @Column(name = "coin_count", nullable = false)
     private Long coinCount;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", columnDefinition = "DATETIME(6)")
     @CreatedDate
     private LocalDateTime createdAt;
 
