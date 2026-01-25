@@ -34,4 +34,10 @@ public class MemberApiKey {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
+
+    // 업데이트
+    public void updateApiKey(String publicKey, String secretKey){
+        this.publicKey = publicKey;
+        this.secretKey = secretKey;
+    }
 }

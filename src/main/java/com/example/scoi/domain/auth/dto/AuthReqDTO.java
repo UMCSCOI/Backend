@@ -45,6 +45,7 @@ public class AuthReqDTO {
             String residentNumber,
 
             @NotBlank(message = "간편비밀번호는 필수입니다.")
+            @Pattern(regexp = "^\\d{6}$", message = "간편비밀번호는 6자리 숫자입니다.")
             String simplePassword
     ) {}
 
@@ -55,6 +56,7 @@ public class AuthReqDTO {
             String phoneNumber,
 
             @NotBlank(message = "간편비밀번호는 필수입니다.")
+            @Pattern(regexp = "^\\d{6}$", message = "간편비밀번호는 6자리 숫자입니다.")
             String simplePassword
     ) {}
 

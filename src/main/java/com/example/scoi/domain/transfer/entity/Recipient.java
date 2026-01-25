@@ -44,4 +44,12 @@ public class Recipient {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    public void changeToFavoriteFalse(){
+        isFavorite = false;
+    }
+
+    public void changeToFavoriteTrue(){
+        isFavorite = true;
+    }
 }
