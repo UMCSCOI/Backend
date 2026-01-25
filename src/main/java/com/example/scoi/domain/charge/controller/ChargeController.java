@@ -19,7 +19,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-public class ChargeController {
+public class ChargeController implements ChargeControllerDocs{
 
     private final ChargeService chargeService;
     private final JwtApiUtil jwtApiUtil;
