@@ -9,7 +9,6 @@ import com.example.scoi.domain.member.enums.ExchangeType;
 public class MemberConverter {
 
     // 내 정보 조회
-    // Member -> MemberInfo
     public static MemberResDTO.MemberInfo toMemberInfo(
             Member member
     ){

@@ -12,6 +12,9 @@ public enum MemberErrorCode implements BaseErrorCode {
     INVALIDED_PASSWORD(HttpStatus.BAD_REQUEST,
             "MEMBER400_1",
             "간편 비밀번호가 틀렸습니다."),
+    UNVERIFIED_PHONE_NUMBER(HttpStatus.BAD_REQUEST,
+            "MEMBER400_2",
+            "인증되지 않은 전화번호입니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND,
             "MEMBER404_1",
             "사용자를 찾지 못했습니다."),
@@ -21,9 +24,13 @@ public enum MemberErrorCode implements BaseErrorCode {
     FCM_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND,
             "MEMBER404_3",
             "FCM토큰을 찾을 수 없습니다."),
+    USED_PHONE_NUMBER(HttpStatus.CONFLICT,
+            "MEMBER409_1",
+            "이미 사용 중인 전화번호입니다."),
     ALREADY_REGISTER_API_KEY(HttpStatus.CONFLICT,
             "MEMBER409_2",
             "이미 등록된 거래소입니다."),
+
     // 임시
     LOCKED(HttpStatus.FORBIDDEN,
             "AUTH403_1",
