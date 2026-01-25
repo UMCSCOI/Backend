@@ -1,9 +1,9 @@
 package com.example.scoi.domain.charge.service;
 
-import com.example.scoi.domain.charge.client.BithumbApiClient;
-import com.example.scoi.domain.charge.client.UpbitApiClient;
-import com.example.scoi.domain.charge.client.BinanceApiClient;
-import com.example.scoi.domain.charge.client.ExchangeApiClient;
+import com.example.scoi.global.client.adapter.BithumbAdapter;
+import com.example.scoi.global.client.adapter.UpbitAdapter;
+import com.example.scoi.global.client.adapter.BinanceAdapter;
+import com.example.scoi.global.client.adapter.ExchangeApiClient;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
 import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
@@ -22,27 +22,30 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChargeService {
 
     private final MemberRepository memberRepository;
-    private final BithumbApiClient bithumbApiClient;
-    private final UpbitApiClient upbitApiClient;
-    private final BinanceApiClient binanceApiClient;
+    private final BithumbAdapter bithumbAdapter;
+    private final UpbitAdapter upbitAdapter;
+    private final BinanceAdapter binanceAdapter;
 
     /**
-     * 정상 버전: Member 조회 후 phoneNumber 사용
-     * 로직은 노션에 있는 API 명세서 기준.
+     * 보유 자산 조회
+     * 
+     * 지금 버전: Member 조회 후 phoneNumber 사용
+     * dev로 최신화 후 병합하면 AuthUser 구현 후 파라미터를 AuthUser로 변경 예정
+     * 현재는 memberId를 받아서 Member를 조회하는 방식 사용
      */
     public ChargeResDTO.BalanceDTO getBalances(Long memberId, ExchangeType exchangeType) {
-        // 로직 1: 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)
+        // 1: 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ChargeException(ChargeErrorCode.API_KEY_NOT_FOUND));
         
         String phoneNumber = member.getPhoneNumber();
 
-        // 로직 2: 시크릿 키 복호화하기 (JwtApiUtil 내부에서 처리)
-        // 로직 3: 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기
+        // 2: 시크릿 키 복호화하기 (JwtApiUtil 내부에서 처리)
+        // 3: 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기
         ExchangeApiClient apiClient = getApiClient(exchangeType);
         
         try {
-            // 로직 4: 빗썸, 업비트 서버 응답 정제해 보내기
+            // 4: 빗썸, 업비트 서버 응답 
             return apiClient.getBalance(phoneNumber, exchangeType);
         } catch (Exception e) {
             log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, error: {}", 
@@ -51,32 +54,11 @@ public class ChargeService {
         }
     }
 
-    /**
-     * 임시 테스트용: phoneNumber 직접 사용 (Member 조회 생략) => dev 최신화되면 삭제 예정정
-     * 위 메서드 주석 처리하고 이 메서드 주석 해제하여 사용
-     */
-    /*
-    public ChargeResDTO.BalanceDTO getBalances(String phoneNumber, ExchangeType exchangeType) {
-        // 임시 테스트용: Member 조회 생략, phoneNumber 직접 사용
-        
-        // 로직 2: 시크릿 키 복호화하기 (JwtApiUtil 내부에서 처리)
-        // 로직 3: 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기
-        ExchangeApiClient apiClient = getApiClient(exchangeType);
-        
-        try {
-            // 로직 4: 빗썸, 업비트 서버 응답 정제해 보내기
-            return apiClient.getBalance(phoneNumber, exchangeType);
-        } catch (Exception e) {
-            throw new ChargeException(ChargeErrorCode.EXCHANGE_API_ERROR);
-        }
-    }
-    */
-
     private ExchangeApiClient getApiClient(ExchangeType exchangeType) {
         return switch (exchangeType) {
-            case BITHUMB -> bithumbApiClient;
-            case UPBIT -> upbitApiClient;
-            case BINANCE -> binanceApiClient;
+            case BITHUMB -> bithumbAdapter;
+            case UPBIT -> upbitAdapter;
+            case BINANCE -> binanceAdapter;
         };
     }
 }
