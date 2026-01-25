@@ -104,12 +104,21 @@ public class GeneralExceptionAdvice {
 
     // 애플리케이션에서 발생하는 커스텀 예외를 처리
     @ExceptionHandler(ScoiException.class)
-    public ResponseEntity<ApiResponse<Void>> handleCustomException(
+    public ResponseEntity<ApiResponse<?>> handleCustomException(
             ScoiException ex
     ) {
-        //예외가 발생하면 로그 기록
+        // 예외가 발생하면 로그 기록
         log.warn("[ ScoiException ]: {}", ex.getCode().getMessage());
-        //커스텀 예외에 정의된 에러 코드와 메시지를 포함한 응답 제공
+
+        // 바인딩이 존재하는 경우
+        if (ex.getBind() != null) {
+            return ResponseEntity.status(ex.getCode().getStatus())
+                    .body(ApiResponse.onFailure(
+                            ex.getCode(),
+                            ex.getBind()
+                    ));
+        }
+        // 커스텀 예외에 정의된 에러 코드와 메시지를 포함한 응답 제공
         return ResponseEntity.status(ex.getCode().getStatus())
                 .body(ApiResponse.onFailure(
                                 ex.getCode(),

@@ -2,6 +2,10 @@ package com.example.scoi.domain.member.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -9,6 +13,7 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "member_fcm")
+@EntityListeners(AuditingEntityListener.class)
 public class MemberFcm {
 
     @Id
@@ -17,6 +22,10 @@ public class MemberFcm {
 
     @Column(name = "fcm_token", nullable = false)
     private String fcmToken;
+
+    @Column(name = "created_at")
+    @CreatedDate
+    private LocalDateTime createdAt;
 
     // 연관관계
     @ManyToOne(fetch = FetchType.LAZY)
