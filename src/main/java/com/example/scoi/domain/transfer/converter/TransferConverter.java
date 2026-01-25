@@ -5,7 +5,6 @@ import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.entity.Recipient;
 import com.example.scoi.domain.transfer.entity.TradeHistory;
-import com.example.scoi.domain.transfer.enums.CoinType;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,8 +16,9 @@ public class TransferConverter {
             List<TradeHistory> histories, String nextCursor, boolean hasNext) {
 
         List<TransferResDTO.RecipientDTO> items = histories.stream()
-                .map(TransferConverter::toRecentRecipientDTO)
-                .collect(Collectors.toList());
+                .map(TradeHistory::getRecipient)
+                .map(TransferConverter::toRecentRecipientDTO) // recipient 넘겨주기
+                .toList();
 
         return TransferResDTO.RecipientListDTO.builder()
                 .items(items)
@@ -28,9 +28,7 @@ public class TransferConverter {
     }
 
     // 단일 엔티티 -> DTO 변환
-    public static TransferResDTO.RecipientDTO toRecentRecipientDTO(TradeHistory history) {
-        Recipient recipient = history.getRecipient();
-
+    public static TransferResDTO.RecipientDTO toRecentRecipientDTO(Recipient recipient) {
         return TransferResDTO.RecipientDTO.builder()
                 .recipientId(recipient.getId())
                 .recipientType(recipient.getRecipientType())
