@@ -10,12 +10,9 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import javax.crypto.*;
-import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
 import lombok.Getter;
 import lombok.AllArgsConstructor;
@@ -29,11 +26,7 @@ import java.util.UUID;
 public class JwtApiUtil {
 
     private final MemberApiKeyRepository memberApiKeyRepository;
-
-    private static final String ALGORITHM = "AES";
-
-    @Value("${jwt.key}")
-    private String key;
+    private final HashUtil hashUtil;
 
     /**
      * 업비트 API 통신을 위한 JWT를 생성합니다.
@@ -54,43 +47,16 @@ public class JwtApiUtil {
         // API키 객체 찾기
         MemberApiKey apiKey = memberApiKeyRepository
                 .findByMemberPhoneNumberAndExchangeType(phoneNumber, ExchangeType.UPBIT)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         String queryHash = getQueryHash(query, body);
 
-        // 시크릿키 키 세팅 (복호화)
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        SecretKey aesKey = new SecretKeySpec(key.getBytes(), ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, aesKey);
-
         // Base64 디코딩 -> AES 복호화 -> 해당 Secret Key로 Signing
-        byte[] secretKey = cipher.doFinal(Base64.getDecoder().decode(apiKey.getSecretKey()));
+        byte[] secretKey = hashUtil.decryptAES(apiKey.getSecretKey());
 
-        String jwt;
         Key secret = Keys.hmacShaKeyFor(secretKey);
 
-        // JWT 생성
-        // Query Parameter 혹은 Request Body가 없는 경우 -> query_hash 빼고 생성
-        if (queryHash.isEmpty()){
-            jwt = Jwts.builder()
-                    .header().add("typ","JWT")
-                    .and()
-                    .claim("access_key", apiKey.getPublicKey())
-                    .claim("nonce", UUID.randomUUID())
-                    .signWith(secret)
-                    .compact();
-        } else {
-            jwt = Jwts.builder()
-                    .header().add("typ","JWT")
-                    .and()
-                    .claim("access_key", apiKey.getPublicKey())
-                    .claim("nonce", UUID.randomUUID())
-                    .claim("query_hash", queryHash)
-                    .signWith(secret)
-                    .compact();
-        }
-
-        return "Bearer "+jwt;
+        return "Bearer " + createUpbitJwt(queryHash, apiKey.getPublicKey(), secret);
     }
 
     /**
@@ -112,90 +78,45 @@ public class JwtApiUtil {
         // API키 객체 찾기
         MemberApiKey apiKey = memberApiKeyRepository
                 .findByMemberPhoneNumberAndExchangeType(phoneNumber, ExchangeType.BITHUMB)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // query SHA512 암호화
         String queryHash = getQueryHash(query, body);
 
-        // 시크릿키 키 세팅 (복호화)
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        SecretKey aesKey = new SecretKeySpec(key.getBytes(), ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, aesKey);
+        byte[] secretKey = hashUtil.decryptAES(apiKey.getSecretKey());
 
-        // Base64 디코딩 -> AES 복호화 -> 해당 Secret Key로 Signing
-        byte[] secretKey = cipher.doFinal(Base64.getDecoder().decode(apiKey.getSecretKey()));
-
-        String jwt;
         Key secret = Keys.hmacShaKeyFor(secretKey);
 
-        // JWT 생성
-        // Query Parameter 혹은 Request Body가 없는 경우 -> query_hash 빼고 생성
-        if (queryHash.isEmpty()){
-            jwt = Jwts.builder()
-                    .claim("access_key", apiKey.getPublicKey())
-                    .claim("nonce", UUID.randomUUID())
-                    .claim("timestamp", System.currentTimeMillis())
-                    .signWith(secret)
-                    .compact();
-        } else {
-            jwt = Jwts.builder()
-                    .claim("access_key", apiKey.getPublicKey())
-                    .claim("nonce", UUID.randomUUID())
-                    .claim("timestamp", System.currentTimeMillis())
-                    .claim("query_hash", queryHash)
-                    .signWith(secret)
-                    .compact();
+        return "Bearer " + createBithumbJwt(queryHash,apiKey.getPublicKey(),secret);
+    }
+
+    /**
+     * API키를 테스트하기 위한 JWT를 생성합니다.
+     * @param publicKey 퍼블릭키
+     * @param secretKey 시크릿키
+     * @return JWT를 반환합니다.
+     * @throws GeneralSecurityException JWT 변환에 실패했을 경우
+     * @throws IllegalArgumentException 거래소 타입이 잘못된 경우
+     */
+    public String createJwtWithApiKeys(
+            @NotNull String publicKey,
+            @NotNull String secretKey,
+            @NotNull ExchangeType exchangeType
+    ) throws GeneralSecurityException, IllegalArgumentException{
+
+        byte[] decryptedSecretKey = hashUtil.decryptAES(secretKey);
+
+        Key secret = Keys.hmacShaKeyFor(decryptedSecretKey);
+
+        switch (exchangeType){
+            case UPBIT -> {
+                return "Bearer "+createUpbitJwt("",publicKey,secret);
+            }
+            case BITHUMB -> {
+                return "Bearer "+createBithumbJwt("",publicKey,secret);
+            }
+            default -> throw new IllegalArgumentException();
         }
-
-        return "Bearer "+jwt;
-    }
-
-    /**
-     * 바이낸스 API 통신을 위한 인증 정보를 생성합니다.
-     * 바이낸스는 HMAC-SHA256 서명을 사용합니다.
-     * @param phoneNumber 사용자의 휴대전화 번호
-     * @return BinanceApiAuthInfo (apiKey, queryString 포함)
-     */
-    public BinanceApiAuthInfo createBinanceAuth(
-            @NotNull String phoneNumber
-    ) throws GeneralSecurityException {
-
-        // API키 객체 찾기
-        MemberApiKey apiKey = memberApiKeyRepository
-                .findByMemberPhoneNumberAndExchangeType(phoneNumber, ExchangeType.BINANCE)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
-
-        // 시크릿키 복호화
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        SecretKey aesKey = new SecretKeySpec(key.getBytes(), ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, aesKey);
-        byte[] secretKey = cipher.doFinal(Base64.getDecoder().decode(apiKey.getSecretKey()));
-
-        // 바이낸스는 timestamp와 signature를 query string에 포함
-        long timestamp = System.currentTimeMillis();
-        String queryString = "timestamp=" + timestamp;
-
-        // HMAC-SHA256 서명 생성
-        Mac hmacSha256 = Mac.getInstance("HmacSHA256");
-        SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey, "HmacSHA256");
-        hmacSha256.init(secretKeySpec);
-        byte[] signatureBytes = hmacSha256.doFinal(queryString.getBytes());
-        String signature = HexFormat.of().formatHex(signatureBytes);
-
-        // query string에 signature 추가
-        queryString += "&signature=" + signature;
-
-        return new BinanceApiAuthInfo(apiKey.getPublicKey(), queryString);
-    }
-
-    /**
-     * 바이낸스 API 인증 정보 DTO
-     */
-    @Getter
-    @AllArgsConstructor
-    public static class BinanceApiAuthInfo {
-        private String apiKey;
-        private String queryString;
     }
 
     // query SHA512 암호화
@@ -226,5 +147,53 @@ public class JwtApiUtil {
             queryHash = HexFormat.of().formatHex(digest.digest());
         }
         return queryHash;
+    }
+
+    private String createBithumbJwt(
+            String queryHash,
+            String publicKey,
+            Key secretKey
+    ){
+        if (queryHash.isEmpty()){
+            return Jwts.builder()
+                    .claim("access_key", publicKey)
+                    .claim("nonce", UUID.randomUUID())
+                    .claim("timestamp", System.currentTimeMillis())
+                    .signWith(secretKey)
+                    .compact();
+        } else {
+            return Jwts.builder()
+                    .claim("access_key", publicKey)
+                    .claim("nonce", UUID.randomUUID())
+                    .claim("timestamp", System.currentTimeMillis())
+                    .claim("query_hash", queryHash)
+                    .signWith(secretKey)
+                    .compact();
+        }
+    }
+
+    private String createUpbitJwt(
+            @NotNull String queryHash,
+            @NotNull String publicKey,
+            @NotNull Key secretKey
+    ){
+        if (queryHash.isEmpty()){
+            return Jwts.builder()
+                    .header().add("typ","JWT")
+                    .and()
+                    .claim("access_key", publicKey)
+                    .claim("nonce", UUID.randomUUID())
+                    .signWith(secretKey)
+                    .compact();
+        } else {
+            return Jwts.builder()
+                    .header().add("typ","JWT")
+                    .and()
+                    .claim("access_key", publicKey)
+                    .claim("nonce", UUID.randomUUID())
+                    .claim("query_hash", queryHash)
+                    .signWith(secretKey)
+                    .compact();
+        }
     }
 }
