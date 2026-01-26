@@ -194,6 +194,24 @@ public class ChargeService {
         }
     }
 
+    /**
+     * 보유 자산 조회 (phone 파라미터로 직접 조회)
+     * 테스트용
+     */
+    public BalanceResDTO.BalanceDTO getBalancesByPhone(String phoneNumber, ExchangeType exchangeType) {
+        // 시크릿 키 복호화하기 -JwtApiUtil
+        //쿼리 파라미터에 따라 빗썸 /업비트 API 조회하기
+        ExchangeApiClient apiClient = getApiClient(exchangeType);
+
+        try {//응답
+            return apiClient.getBalance(phoneNumber, exchangeType);
+        } catch (Exception e) {
+            log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, error: {}",
+                    exchangeType, phoneNumber, e.getMessage(), e);
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+        }
+    }
+
     private ExchangeApiClient getApiClient(ExchangeType exchangeType) {
         return switch (exchangeType) {
             case BITHUMB -> bithumbAdapter;
