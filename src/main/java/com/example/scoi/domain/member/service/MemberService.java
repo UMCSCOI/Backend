@@ -1,7 +1,5 @@
 package com.example.scoi.domain.member.service;
 
-import com.example.scoi.domain.member.client.BithumbClient;
-import com.example.scoi.domain.member.client.UpbitClient;
 import com.example.scoi.domain.member.converter.MemberConverter;
 import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.dto.MemberResDTO;
@@ -15,10 +13,11 @@ import com.example.scoi.domain.member.repository.MemberApiKeyRepository;
 import com.example.scoi.domain.member.repository.MemberFcmRepository;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
-import com.example.scoi.global.auth.entity.AuthUser;
+import com.example.scoi.global.client.BithumbClient;
+import com.example.scoi.global.client.UpbitClient;
+import com.example.scoi.global.redis.RedisUtil;
 import com.example.scoi.global.util.HashUtil;
 import com.example.scoi.global.util.JwtApiUtil;
-import com.example.scoi.global.util.RedisUtil;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -47,50 +46,12 @@ public class MemberService {
     // 간편 비밀번호 정규표현식
     private static final String SIMPLE_PASSWORD_REGEX = "^[0-9]{6}$";
 
-    // JwtApiUtil 테스트
-    public Void apiTest(
-            AuthUser user
-    ) throws GeneralSecurityException {
-        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        // 빗썸
-        // 쿼리파라미터 X & Request Body X
-        String token = jwtApiUtil.createBithumbJwt(member.getPhoneNumber(),null,null);
-        bithumbClient.getAccount(token);
-
-        // 쿼리파라미터 O
-        token = jwtApiUtil.createBithumbJwt(member.getPhoneNumber(),"market=KRW-BTC",null);
-        bithumbClient.getOrderChance(token,"KRW-BTC");
-
-        // Request Body O
-        MemberReqDTO.Test dto = MemberReqDTO.Test.builder().currency("BTC").net_type("BTC").build();
-        token = jwtApiUtil.createBithumbJwt(member.getPhoneNumber(), null, dto);
-        bithumbClient.getDepositAddress(token, dto);
-
-        // 업비트
-        // 쿼리퍼라미터 X & Request Body X
-        token = jwtApiUtil.createUpBitJwt(member.getPhoneNumber(), null, null);
-        upbitClient.getAccount(token);
-
-        // 쿼리파라미터 O
-        token = jwtApiUtil.createUpBitJwt(member.getPhoneNumber(), "market=KRW-BTC", null);
-        upbitClient.getOrderChance(token, "KRW-BTC");
-
-        // Request Body O
-        dto = MemberReqDTO.Test.builder().currency("BTC").net_type("BTC").build();
-        token = jwtApiUtil.createUpBitJwt(member.getPhoneNumber(), null, dto);
-        upbitClient.getDepositAddress(token, dto);
-
-        return null;
-    }
-
     // 내 정보 조회
     public MemberResDTO.MemberInfo getMemberInfo(
-            AuthUser user
+            String phoneNumber
     ) {
         // JWT 토큰의 유저 정보 가져오기: 임시
-        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         return MemberConverter.toMemberInfo(member);
@@ -100,11 +61,11 @@ public class MemberService {
     @Transactional
     public Optional<Map<String, String>> changePassword(
             MemberReqDTO.ChangePassword dto,
-            AuthUser user
+            String phoneNumber
     ){
 
         // JWT 토큰 사용자 불러오기
-        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // DTO로 온 간편 비밀번호 암호화 풀기 (AES)
@@ -156,14 +117,14 @@ public class MemberService {
     @Transactional
     public Void resetPassword(
             MemberReqDTO.ResetPassword dto,
-            AuthUser user
+            String phoneNumber
     ) {
 
-        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 인증된 전화번호인지 확인
-        if (!redisUtil.hasKey(VERIFICATION_PREFIX+dto.phoneNumber())){
+        if (!redisUtil.exists(VERIFICATION_PREFIX+dto.phoneNumber())){
             throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
         }
 
@@ -196,10 +157,10 @@ public class MemberService {
 
     // 거래소 목록 조회
     public List<MemberResDTO.ExchangeList> getExchangeList(
-            AuthUser user
+            String phoneNumber
     ){
         // JWT 토큰 사용자 API 키 불러오기
-        List<MemberApiKey> memberApiKeyList = memberApiKeyRepository.findAllByMember_PhoneNumber(user.getPhoneNumber());
+        List<MemberApiKey> memberApiKeyList = memberApiKeyRepository.findAllByMember_PhoneNumber(phoneNumber);
 
         List<MemberResDTO.ExchangeList> result = new ArrayList<>();
         for (ExchangeType exchangeType : ExchangeType.values()) {
@@ -217,9 +178,9 @@ public class MemberService {
 
     // API키 목록 조회
     public List<MemberResDTO.ApiKeyList> getApiKeyList(
-            AuthUser user
+            String phoneNumber
     ) {
-        List<MemberApiKey> memberApiKeyList = memberApiKeyRepository.findAllByMember_PhoneNumber(user.getPhoneNumber());
+        List<MemberApiKey> memberApiKeyList = memberApiKeyRepository.findAllByMember_PhoneNumber(phoneNumber);
 
         return memberApiKeyList.stream()
                 .map(MemberConverter::toApiKeyList)
@@ -228,11 +189,11 @@ public class MemberService {
 
     // API키 등록 & 수정
     public List<String> postPatchApiKey(
-            AuthUser user,
+            String phoneNumber,
             List<MemberReqDTO.PostPatchApiKey> dto
     ) {
 
-        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 기존 등록한 API 리스트 조회
@@ -291,19 +252,19 @@ public class MemberService {
     // API키 삭제
     @Transactional
     public Void deleteApiKey(
-            AuthUser user,
+            String phoneNumber,
             MemberReqDTO.DeleteApiKey dto
     ) {
         // 해당 연동 정보가 없다면
         if (
                 !memberApiKeyRepository.existsByMember_phoneNumberAndExchangeType(
-                user.getPhoneNumber(), dto.exchangeType())
+                phoneNumber, dto.exchangeType())
         ){
             throw new MemberException(MemberErrorCode.API_KEY_NOT_FOUND);
         }
 
         // 있다면 지우기
-        memberApiKeyRepository.deleteByMember_PhoneNumberAndExchangeType(user.getPhoneNumber(), dto.exchangeType());
+        memberApiKeyRepository.deleteByMember_PhoneNumberAndExchangeType(phoneNumber, dto.exchangeType());
 
         return null;
     }
@@ -311,11 +272,11 @@ public class MemberService {
     // FCM 토큰 등록
     @Transactional
     public Void postFcmToken(
-            AuthUser user,
+            String phoneNumber,
             MemberReqDTO.PostFcmToken dto
     ) {
 
-        Member member = memberRepository.findByPhoneNumber(user.getPhoneNumber())
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // FCM 토큰 저장 (로그인 -> 추가, 디바이스당 추가)

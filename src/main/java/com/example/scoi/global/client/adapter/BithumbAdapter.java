@@ -1,6 +1,6 @@
 package com.example.scoi.global.client.adapter;
 
-import com.example.scoi.domain.charge.dto.ChargeResDTO;
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.client.converter.BithumbConverter;
 import com.example.scoi.global.client.feign.BithumbFeignClient;
@@ -33,7 +33,7 @@ public class BithumbAdapter implements ExchangeApiClient {
     private final JwtApiUtil jwtApiUtil;
 
     @Override
-    public ChargeResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType) {
+    public BalanceResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType) {
         try {
             // JWT 토큰 생성
             String jwt = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);

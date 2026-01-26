@@ -1,6 +1,6 @@
 package com.example.scoi.global.client.adapter;
 
-import com.example.scoi.domain.charge.dto.ChargeResDTO;
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.client.converter.UpbitConverter;
 import com.example.scoi.global.client.feign.UpbitFeignClient;
@@ -21,7 +21,7 @@ public class UpbitAdapter implements ExchangeApiClient {
     private final JwtApiUtil jwtApiUtil;
 
     @Override
-    public ChargeResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType) {
+    public BalanceResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType) {
         try {
       
             String jwt = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);

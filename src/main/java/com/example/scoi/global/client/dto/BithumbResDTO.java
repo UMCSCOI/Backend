@@ -1,5 +1,7 @@
 package com.example.scoi.global.client.dto;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,7 +10,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * 빗썸 API 응답 DTO
- * 
+ *
  * 역할:
  * - 빗썸 API의 원본 응답 형식을 그대로 받아오는 DTO
  * - 공식 문서의 모든 필드를 포함
@@ -16,12 +18,57 @@ import lombok.NoArgsConstructor;
  */
 public class BithumbResDTO {
 
+
+    // 원화 입금
+    public record ChargeKrw(
+            String type,
+            String uuid,
+            String currency,
+            String txid,
+            String status,
+            LocalDateTime created_at,
+            LocalDateTime done_at,
+            Long amount,
+            Long fee,
+            String transaction_type
+    ){}
+
+    // 개별 주문 조회
+    public record GetOrder(
+            String uuid,
+            String side,
+            String ord_type,
+            String price,
+            String state,
+            String market,
+            String created_at,
+            String volume,
+            String remaining_volume,
+            String reserved_fee,
+            String remaining_fee,
+            String paid_fee,
+            String locked,
+            String executed_volume,
+            String trades_count,
+            List<Trades> trades
+    ){}
+
+    // 개별 주문 조회
+    public record Trades(
+            String market,
+            String uuid,
+            String price,
+            String volume,
+            String funds,
+            String side,
+            String created_at
+    ){}
     /**
      * 빗썸 전체 계좌 조회 응답 (배열)
-     * 
+     *
      * 공식 문서: https://apidocs.bithumb.com/reference/전체-계좌-조회
      * 엔드포인트: GET /v1/accounts
-     * 
+     *
      * 공식 문서 응답 형식 (Response 200):
      * array of objects
      * [
@@ -41,20 +88,20 @@ public class BithumbResDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class BalanceResponse {
-        
-        private String currency; 
-        
-        private String balance;  
-        
-        private String locked;  
-        
+
+        private String currency;
+
+        private String balance;
+
+        private String locked;
+
         @JsonProperty("avg_buy_price")
         private String avgBuyPrice;
-        
+
         @JsonProperty("avg_buy_price_modified")
-        private Boolean avgBuyPriceModified;  
-        
+        private Boolean avgBuyPriceModified;
+
         @JsonProperty("unit_currency")
-        private String unitCurrency; 
+        private String unitCurrency;
     }
 }

@@ -34,12 +34,10 @@ public class TransferService {
     private final RecipientRepository recipientRepository;
 
     // 최근 수취인 조회 메서드
-    public TransferResDTO.RecipientListDTO findRecentRecipients(Member member, String cursor, int limit){
-        // 테스트 용
-        if (member == null) {
-            member = memberRepository.findById(1L) // DB에 미리 생성해둔 1번 유저 사용
-                    .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
-        }
+    public TransferResDTO.RecipientListDTO findRecentRecipients(String phoneNumber, String cursor, int limit){
+
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 커서 디코딩 (Base64 형태의 커서에서 시간과 historyID 추출)
         LocalDateTime lastTime = null;
@@ -70,12 +68,10 @@ public class TransferService {
     }
 
     // 즐겨찾기 수취인 조회 메서드
-    public TransferResDTO.RecipientListDTO findFavoriteRecipients(Member member, String cursor, int limit){
-        // 테스트 용
-        if (member == null) {
-            member = memberRepository.findById(1L) // DB에 미리 생성해둔 1번 유저 사용
-                    .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
-        }
+    public TransferResDTO.RecipientListDTO findFavoriteRecipients(String phoneNumber, String cursor, int limit){
+
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 커서 디코딩 (Base64 형태의 RecipientID 추출)
         Long lastId = null;
@@ -104,13 +100,10 @@ public class TransferService {
 
     // 즐겨찾기 등록 메서드
     @Transactional
-    public Long addFavoriteRecipient(Member member, TransferReqDTO.RecipientInformation recipientInformation) {
+    public Long addFavoriteRecipient(String phoneNumber, TransferReqDTO.RecipientInformation recipientInformation) {
 
-        // 테스트 용
-        if (member == null) {
-            member = memberRepository.findById(1L)
-                    .orElseThrow(() -> new MemberException(MemberErrorCode.NOT_FOUND));
-        }
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 이미 즐겨찾기로 등록된 사용자는 그대로 반환
         if(recipientRepository.existsByMemberIdAndWalletAddress(member.getId(), recipientInformation.walletAddress())){

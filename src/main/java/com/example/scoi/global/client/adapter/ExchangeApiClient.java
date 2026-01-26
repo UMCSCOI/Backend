@@ -1,6 +1,6 @@
 package com.example.scoi.global.client.adapter;
 
-import com.example.scoi.domain.charge.dto.ChargeResDTO;
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.member.enums.ExchangeType;
 
 /**
@@ -18,5 +18,5 @@ public interface ExchangeApiClient {
      * @param exchangeType 거래소 타입
      * @return 표준화된 BalanceDTO
      */
-    ChargeResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType);
+    BalanceResDTO.BalanceDTO getBalance(String phoneNumber, ExchangeType exchangeType);
 }

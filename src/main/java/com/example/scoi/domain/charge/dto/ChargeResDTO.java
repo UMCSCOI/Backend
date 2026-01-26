@@ -1,21 +1,14 @@
 package com.example.scoi.domain.charge.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 public class ChargeResDTO {
-    // 응답 DTO 정의
 
-    @Getter
+    // 원화 충전 요청하기
     @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BalanceDTO {
-        private String currency;  
-        private String balance;  
-        private String locked;    // 출금이나 주문을 못하는 잔액
-    }
-
+    public record ChargeKrw(
+            String currency,
+            String uuid,
+            String txid
+    ){}
 }
