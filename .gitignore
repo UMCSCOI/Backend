@@ -8,8 +8,6 @@
 ### 민감한 개인 정보 제거 ###
 *.pem
 *.env
-data.sql
-**/SecretKeyEncryptor.java
 
 ### Firebase JSON 제거 ###
 firebase-scoi.json
