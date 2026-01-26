@@ -7,7 +7,6 @@ import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
-import com.example.scoi.global.auth.entity.AuthUser;
 import com.example.scoi.global.client.BithumbClient;
 import com.example.scoi.global.client.UpbitClient;
 import com.example.scoi.global.client.converter.BithumbConverter;
@@ -31,7 +30,7 @@ public class ChargeService {
 
     // 원화 충전 요청하기
     public ChargeResDTO.ChargeKrw chargeKrw(
-            AuthUser user,
+            String phoneNumber,
             ChargeReqDTO.ChargeKrw dto
     ) {
         // 거래소별 지원 2차 인증서인지 확인
@@ -46,14 +45,14 @@ public class ChargeService {
             switch (dto.exchangeType()) {
                 case UPBIT :
                     UpbitReqDTO.ChargeKrw upbitDto = UpbitConverter.toChargeKrw(dto);
-                    token = jwtApiUtil.createUpBitJwt(user.getPhoneNumber(),null, upbitDto);
+                    token = jwtApiUtil.createUpBitJwt(phoneNumber,null, upbitDto);
                     UpbitResDTO.ChargeKrw upbitResult = upbitClient.chargeKrw(token,upbitDto);
                     uuid = upbitResult.uuid();
                     txid = upbitResult.txid();
                     break;
                 case BITHUMB :
                     BithumbReqDTO.ChargeKrw bithumbDto = BithumbConverter.toChargeKrw(dto);
-                    token = jwtApiUtil.createBithumbJwt(user.getPhoneNumber(), null, bithumbDto);
+                    token = jwtApiUtil.createBithumbJwt(phoneNumber, null, bithumbDto);
                     BithumbResDTO.ChargeKrw bithumbResult = bithumbClient.chargeKrw(token,bithumbDto);
                     uuid = bithumbResult.uuid();
                     txid = bithumbResult.txid();
@@ -105,7 +104,7 @@ public class ChargeService {
 
     // 특정 주문 확인하기
     public String getOrders(
-            AuthUser user,
+            String phoneNumber,
             ChargeReqDTO.GetOrder dto
     ) {
         // 거래소별 분기
@@ -114,12 +113,12 @@ public class ChargeService {
         try {
             switch (dto.exchangeType()){
                 case UPBIT:
-                    token = jwtApiUtil.createUpBitJwt(user.getPhoneNumber(), "uuid="+dto.uuid(), null);
+                    token = jwtApiUtil.createUpBitJwt(phoneNumber, "uuid="+dto.uuid(), null);
                     UpbitResDTO.GetOrder upbitResult = upbitClient.getOrder(token, dto.uuid());
                     result = upbitResult.state();
                     break;
                 case BITHUMB:
-                    token = jwtApiUtil.createBithumbJwt(user.getPhoneNumber(), "uuid="+dto.uuid(), null);
+                    token = jwtApiUtil.createBithumbJwt(phoneNumber, "uuid="+dto.uuid(), null);
                     BithumbResDTO.GetOrder bithumbResult = bithumbClient.getOrder(token, dto.uuid());
                     result = bithumbResult.state();
                     break;

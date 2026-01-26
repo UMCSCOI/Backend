@@ -19,34 +19,34 @@ public class TransferController implements TransferControllerDocs{
 
     @GetMapping("/recipients/recent")
     public ApiResponse<TransferResDTO.RecipientListDTO> getRecentRecipients(
-            @AuthenticationPrincipal Member member,
+            @AuthenticationPrincipal String phoneNumber,
             @RequestParam(name = "cursor", required = false) String cursor,
             @RequestParam(name = "limit", defaultValue = "3") int limit
     ){
 
         return ApiResponse.onSuccess(
-                TransferSuccessCode.TRANSFER200_1, transferService.findRecentRecipients(member, cursor, limit));
+                TransferSuccessCode.TRANSFER200_1, transferService.findRecentRecipients(phoneNumber, cursor, limit));
     }
 
     @GetMapping("/recipients/favorites")
     public ApiResponse<TransferResDTO.RecipientListDTO> getFavoriteRecipients(
-            @AuthenticationPrincipal Member member,
+            @AuthenticationPrincipal String phoneNumber,
             @RequestParam(name = "cursor", required = false) String cursor,
             @RequestParam(name = "limit", defaultValue = "3") int limit
     ){
 
         return ApiResponse.onSuccess(
-                TransferSuccessCode.TRANSFER200_2, transferService.findFavoriteRecipients(member, cursor, limit));
+                TransferSuccessCode.TRANSFER200_2, transferService.findFavoriteRecipients(phoneNumber, cursor, limit));
     }
 
     @PostMapping("/recipients/favorites")
     public ApiResponse<Long> addFavoriteRecipient(
-            @AuthenticationPrincipal Member member,
+            @AuthenticationPrincipal String phoneNumber,
             @RequestBody TransferReqDTO.RecipientInformation recipientInformation
             ){
 
         return ApiResponse.onSuccess(
-                TransferSuccessCode.TRANSFER201_1, transferService.addFavoriteRecipient(member, recipientInformation));
+                TransferSuccessCode.TRANSFER201_1, transferService.addFavoriteRecipient(phoneNumber, recipientInformation));
     }
 
     @PostMapping("/recipients/favorites/{recipientId}/register")
