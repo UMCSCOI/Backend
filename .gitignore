@@ -52,6 +52,3 @@ out/
 ### VS Code ###
 .vscode/
 app.log
-
-### Local Configuration ###
-src/main/resources/application.yml

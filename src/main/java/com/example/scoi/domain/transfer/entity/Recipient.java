@@ -20,7 +20,7 @@ public class Recipient {
     private String walletAddress; // 출금 주소
 
     // 수취인 기본 정보
-    @Column(name = "recipient_en_name", length = 50)
+    @Column(name = "recipient_en_name", length = 50, nullable = false)
     private String recipientEnName;
     @Column(name = "recipient_ko_name", length = 5, nullable = false)
     private String recipientKoName;
