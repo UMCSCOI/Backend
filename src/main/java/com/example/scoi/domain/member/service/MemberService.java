@@ -1,7 +1,5 @@
 package com.example.scoi.domain.member.service;
 
-import com.example.scoi.domain.member.client.BithumbClient;
-import com.example.scoi.domain.member.client.UpbitClient;
 import com.example.scoi.domain.member.converter.MemberConverter;
 import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.dto.MemberResDTO;
@@ -16,6 +14,8 @@ import com.example.scoi.domain.member.repository.MemberFcmRepository;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.auth.entity.AuthUser;
+import com.example.scoi.global.client.BithumbClient;
+import com.example.scoi.global.client.UpbitClient;
 import com.example.scoi.global.util.HashUtil;
 import com.example.scoi.global.util.JwtApiUtil;
 import com.example.scoi.global.util.RedisUtil;
