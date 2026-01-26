@@ -21,7 +21,6 @@ import com.example.scoi.global.util.JwtApiUtil;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -46,44 +45,6 @@ public class MemberService {
     private static final String VERIFICATION_PREFIX = "verification:";
     // 간편 비밀번호 정규표현식
     private static final String SIMPLE_PASSWORD_REGEX = "^[0-9]{6}$";
-
-    // JwtApiUtil 테스트
-    public Void apiTest(
-            String phoneNumber
-    ) throws GeneralSecurityException {
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        // 빗썸
-        // 쿼리파라미터 X & Request Body X
-        String token = jwtApiUtil.createBithumbJwt(member.getPhoneNumber(),null,null);
-        bithumbClient.getAccount(token);
-
-        // 쿼리파라미터 O
-        token = jwtApiUtil.createBithumbJwt(member.getPhoneNumber(),"market=KRW-BTC",null);
-        bithumbClient.getOrderChance(token,"KRW-BTC");
-
-        // Request Body O
-        MemberReqDTO.Test dto = MemberReqDTO.Test.builder().currency("BTC").net_type("BTC").build();
-        token = jwtApiUtil.createBithumbJwt(member.getPhoneNumber(), null, dto);
-        bithumbClient.getDepositAddress(token, dto);
-
-        // 업비트
-        // 쿼리퍼라미터 X & Request Body X
-        token = jwtApiUtil.createUpBitJwt(member.getPhoneNumber(), null, null);
-        upbitClient.getAccount(token);
-
-        // 쿼리파라미터 O
-        token = jwtApiUtil.createUpBitJwt(member.getPhoneNumber(), "market=KRW-BTC", null);
-        upbitClient.getOrderChance(token, "KRW-BTC");
-
-        // Request Body O
-        dto = MemberReqDTO.Test.builder().currency("BTC").net_type("BTC").build();
-        token = jwtApiUtil.createUpBitJwt(member.getPhoneNumber(), null, dto);
-        upbitClient.getDepositAddress(token, dto);
-
-        return null;
-    }
 
     // 내 정보 조회
     public MemberResDTO.MemberInfo getMemberInfo(

@@ -1,6 +1,5 @@
 package com.example.scoi.domain.transfer.controller;
 
-import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;

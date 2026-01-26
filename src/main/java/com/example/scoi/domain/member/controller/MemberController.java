@@ -2,11 +2,7 @@ package com.example.scoi.domain.member.controller;
 
 import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.dto.MemberResDTO;
-import com.example.scoi.domain.member.entity.Member;
-import com.example.scoi.domain.member.exception.MemberException;
-import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.exception.code.MemberSuccessCode;
-import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.domain.member.service.MemberService;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseErrorCode;
@@ -16,7 +12,6 @@ import com.example.scoi.global.apiPayload.code.GeneralSuccessCode;
 import com.example.scoi.global.security.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,25 +26,6 @@ import java.util.Optional;
 public class MemberController implements MemberControllerDocs{
 
     private final MemberService memberService;
-    private final MemberRepository memberRepository;
-    private final JwtUtil jwtUtil;
-
-    // 임시
-    @GetMapping("/login")
-    public ApiResponse<String> login(
-            @RequestParam(defaultValue = "01012341234") String phoneNumber
-    ){
-        BaseSuccessCode code = GeneralSuccessCode.OK;
-        return ApiResponse.onSuccess(code, jwtUtil.createAccessToken(phoneNumber));
-    }
-
-    // 임시
-    @GetMapping("/api-test")
-    public ApiResponse<Void> apiTest(
-            @AuthenticationPrincipal String phoneNumber
-    ) throws GeneralSecurityException {
-        return ApiResponse.onSuccess(MemberSuccessCode.OK, memberService.apiTest(phoneNumber));
-    }
 
     // 내 정보 조회
     @GetMapping("/members/me")
