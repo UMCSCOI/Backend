@@ -2,82 +2,248 @@ package com.example.scoi.domain.auth.service;
 
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
+import com.example.scoi.domain.auth.exception.AuthException;
+import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
+import com.example.scoi.domain.member.entity.Member;
+import com.example.scoi.domain.member.entity.MemberToken;
 import com.example.scoi.domain.member.repository.MemberRepository;
+import com.example.scoi.domain.member.repository.MemberTokenRepository;
+import com.example.scoi.global.client.CoolSmsClient;
+import com.example.scoi.global.client.dto.CoolSmsDTO;
+import com.example.scoi.global.redis.RedisUtil;
+import com.example.scoi.global.security.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final MemberRepository memberRepository;
-    
-    // TODO: 다음 PR에서 추가 예정
-    // private final JwtUtil jwtUtil;
-    // private final RedisUtil redisUtil;
+    private final MemberTokenRepository memberTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final RedisUtil redisUtil;
+    private final CoolSmsClient coolSmsClient;
+
+    @Value("${coolsms.from-number}")
+    private String fromNumber;
+
+    // Redis 키 접두사
+    private static final String SMS_PREFIX = "sms:";
+    private static final String VERIFICATION_PREFIX = "verification:";
+    private static final String BLACKLIST_PREFIX = "blacklist:";
+
+    // 상수
+    private static final int SMS_CODE_LENGTH = 6;
+    private static final long SMS_EXPIRATION_MINUTES = 3;
+    private static final long VERIFICATION_EXPIRATION_MINUTES = 10;
 
     public AuthResDTO.SmsSendResponse sendSms(AuthReqDTO.SmsSendRequest request) {
-        // TODO: SMS 발송 구현
         // 1. 인증번호 생성 (6자리)
-        // 2. Redis에 저장 (key: phoneNumber, value: code, TTL: 3분)
-        // 3. CoolSMS API 호출
-        // 4. expiredAt 반환 (현재시간 + 3분)
-        return null;
+        String verificationCode = String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
+
+        // 2. Redis 저장
+        String redisKey = SMS_PREFIX + request.phoneNumber();
+        redisUtil.set(redisKey, verificationCode, SMS_EXPIRATION_MINUTES, TimeUnit.MINUTES);
+
+        // 3. CoolSMS 발송
+        try {
+            CoolSmsDTO.SendRequest smsRequest = new CoolSmsDTO.SendRequest(
+                request.phoneNumber(),
+                fromNumber,
+                "[SCOI] 인증번호: " + verificationCode
+            );
+            coolSmsClient.sendMessage(smsRequest);
+            log.info("SMS 발송 성공: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
+        } catch (Exception e) {
+            log.error("SMS 발송 실패: {}", e.getMessage());
+            throw new AuthException(AuthErrorCode.SMS_SEND_FAILED);
+        }
+
+        // 4. 응답
+        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(SMS_EXPIRATION_MINUTES);
+        return new AuthResDTO.SmsSendResponse(expiredAt);
     }
 
     public AuthResDTO.SmsVerifyResponse verifySms(AuthReqDTO.SmsVerifyRequest request) {
-        // TODO: SMS 검증 구현
-        // 1. Redis에서 인증번호 조회
-        // 2. 일치 여부 확인
-        // 3. 일치하면 Redis에서 삭제
-        // 4. result: null 반환
-        return null;
+        // 1. Redis 조회
+        String redisKey = SMS_PREFIX + request.phoneNumber();
+        String storedCode = redisUtil.get(redisKey);
+
+        if (storedCode == null) {
+            throw new AuthException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
+        }
+
+        // 2. 검증
+        if (!storedCode.equals(request.verificationCode())) {
+            throw new AuthException(AuthErrorCode.INVALID_VERIFICATION_CODE);
+        }
+
+        // 3. SMS 코드 삭제
+        redisUtil.delete(redisKey);
+
+        // 4. Verification Token 발급
+        String verificationToken = jwtUtil.createVerificationToken(request.phoneNumber());
+
+        // 5. Redis 저장 (10분 TTL)
+        String tokenKey = VERIFICATION_PREFIX + verificationToken;
+        redisUtil.set(tokenKey, request.phoneNumber(), VERIFICATION_EXPIRATION_MINUTES, TimeUnit.MINUTES);
+
+        log.info("SMS 인증 성공: phoneNumber={}", request.phoneNumber());
+        return new AuthResDTO.SmsVerifyResponse(verificationToken);
     }
 
+    @Transactional
     public AuthResDTO.SignupResponse signup(AuthReqDTO.SignupRequest request) {
-        // TODO: 회원가입 구현
-        // 1. SMS 인증 완료 여부 확인 (Redis)
-        // 2. 전화번호 중복 체크 (409 에러)
-        // 3. 영문 이름 대문자 변환
-        // 4. 간편비밀번호 BCrypt 암호화
-        // 5. Member 저장
-        // 6. memberId, koreanName 반환
-        return null;
+        // 1. Verification Token 검증
+        String tokenKey = VERIFICATION_PREFIX + request.verificationToken();
+        String verifiedPhoneNumber = redisUtil.get(tokenKey);
+
+        if (verifiedPhoneNumber == null) {
+            throw new AuthException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
+        }
+
+        if (!verifiedPhoneNumber.equals(request.phoneNumber())) {
+            throw new AuthException(AuthErrorCode.INVALID_TOKEN);
+        }
+
+        // 2. 중복 체크
+        if (memberRepository.existsByPhoneNumber(request.phoneNumber())) {
+            throw new AuthException(AuthErrorCode.ALREADY_REGISTERED_PHONE);
+        }
+
+        // 3. 간편비밀번호 BCrypt 해싱 (평문 → 해시)
+        String hashedPassword = passwordEncoder.encode(request.simplePassword());
+
+        // 4. Member 생성
+        Member member = Member.builder()
+            .phoneNumber(request.phoneNumber())
+            .englishName(request.englishName().toUpperCase())
+            .koreanName(request.koreanName())
+            .residentNumber(request.residentNumber())
+            .simplePassword(hashedPassword)
+            .build();
+
+        memberRepository.save(member);
+
+        // 5. Verification Token 삭제 (일회용)
+        redisUtil.delete(tokenKey);
+
+        log.info("회원가입 성공: memberId={}, phoneNumber={}", member.getId(), member.getPhoneNumber());
+        return new AuthResDTO.SignupResponse(member.getId(), member.getKoreanName());
     }
 
+    @Transactional
     public AuthResDTO.LoginResponse login(AuthReqDTO.LoginRequest request) {
-        // TODO: 로그인 구현
-        // 1. 전화번호로 Member 조회
-        // 2. 로그인 실패 5회 체크
-        //    if (member.getLoginFailCount() >= 5) {
-        //        throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
-        //    }
-        // 3. BCrypt 비밀번호 검증
-        // 4. 실패 시: loginFailCount++, 성공 시: loginFailCount=0, lastLoginAt 업데이트
-        // 5. JWT 토큰 생성 (AT, RT)
-        // 6. RT를 DB(member_token)에 저장
-        // 7. AT, RT 반환
-        return null;
+        // 1. 회원 조회
+        Member member = memberRepository.findByPhoneNumber(request.phoneNumber())
+            .orElseThrow(() -> new AuthException(AuthErrorCode.MEMBER_NOT_FOUND));
+
+        // 2. 계정 잠금 체크
+        if (member.getLoginFailCount() >= 5) {
+            throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
+        }
+
+        // 3. 비밀번호 검증 (평문 vs BCrypt 해시)
+        if (!passwordEncoder.matches(request.simplePassword(), member.getSimplePassword())) {
+            member.increaseLoginFailCount();
+            memberRepository.save(member);
+            log.warn("로그인 실패: phoneNumber={}, failCount={}", request.phoneNumber(), member.getLoginFailCount());
+            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        }
+
+        // 4. 성공 처리
+        member.resetLoginFailCount();
+        member.updateLastLoginAt(LocalDateTime.now());
+        memberRepository.save(member);
+
+        // 5. 토큰 생성
+        String accessToken = jwtUtil.createAccessToken(request.phoneNumber());
+        String refreshToken = jwtUtil.createRefreshToken(request.phoneNumber());
+
+        // 6. RT DB 저장 (기존 있으면 업데이트)
+        MemberToken memberToken = memberTokenRepository.findByMemberPhoneNumber(request.phoneNumber())
+            .orElse(null);
+
+        if (memberToken != null) {
+            memberToken.updateToken(refreshToken, LocalDateTime.now().plusDays(14));
+        } else {
+            memberToken = MemberToken.builder()
+                .member(member)
+                .refreshToken(refreshToken)
+                .expirationDate(LocalDateTime.now().plusDays(14))
+                .build();
+        }
+
+        memberTokenRepository.save(memberToken);
+
+        log.info("로그인 성공: phoneNumber={}", request.phoneNumber());
+        return new AuthResDTO.LoginResponse(accessToken, refreshToken);
     }
 
+    @Transactional
     public AuthResDTO.ReissueResponse reissue(AuthReqDTO.ReissueRequest request) {
-        // TODO: 토큰 재발급 구현
         // 1. RT 검증
-        // 2. DB에서 RT 조회 (member_token)
-        // 3. RT 만료 확인
-        // 4. 새 AT, RT 생성
-        // 5. 기존 RT 삭제 (회전)
-        // 6. 새 RT DB 저장
-        // 7. 새 AT, RT 반환
-        return null;
+        if (!jwtUtil.validateToken(request.refreshToken())) {
+            throw new AuthException(AuthErrorCode.INVALID_TOKEN);
+        }
+
+        // 2. phoneNumber 추출
+        String phoneNumber = jwtUtil.getPhoneNumberFromToken(request.refreshToken());
+
+        // 3. DB 조회
+        MemberToken memberToken = memberTokenRepository.findByRefreshToken(request.refreshToken())
+            .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND));
+
+        // 4. 만료 확인
+        if (memberToken.getExpirationDate().isBefore(LocalDateTime.now())) {
+            memberTokenRepository.delete(memberToken);
+            throw new AuthException(AuthErrorCode.EXPIRED_REFRESH_TOKEN);
+        }
+
+        // 5. 새 토큰 생성
+        String newAccessToken = jwtUtil.createAccessToken(phoneNumber);
+        String newRefreshToken = jwtUtil.createRefreshToken(phoneNumber);
+
+        // 6. 기존 RT 삭제 (Rotation)
+        memberTokenRepository.delete(memberToken);
+
+        // 7. 새 RT 저장
+        MemberToken newMemberToken = MemberToken.builder()
+            .member(memberToken.getMember())
+            .refreshToken(newRefreshToken)
+            .expirationDate(LocalDateTime.now().plusDays(14))
+            .build();
+
+        memberTokenRepository.save(newMemberToken);
+
+        log.info("토큰 재발급 성공: phoneNumber={}", phoneNumber);
+        return new AuthResDTO.ReissueResponse(newAccessToken, newRefreshToken);
     }
 
+    @Transactional
     public void logout(String phoneNumber, String accessToken) {
-        // TODO: 로그아웃 구현
-        // 1. DB에서 RT 삭제 (member_token 테이블에서 phoneNumber로 조회 후 삭제)
-        // 2. Redis에 AT 블랙리스트 등록 (key: accessToken, TTL: AT 남은 시간)
-        //    ※ RT는 DB에서 삭제되므로 재발급 불가 → 별도 블랙리스트 불필요
+        // 1. RT 삭제
+        memberTokenRepository.deleteByMemberPhoneNumber(phoneNumber);
+
+        // 2. AT 블랙리스트 등록
+        long remainingTime = jwtUtil.getRemainingTime(accessToken);
+
+        if (remainingTime > 0) {
+            String blacklistKey = BLACKLIST_PREFIX + accessToken;
+            redisUtil.set(blacklistKey, "logout", remainingTime, TimeUnit.MILLISECONDS);
+        }
+
+        log.info("로그아웃 성공: phoneNumber={}", phoneNumber);
     }
 }
