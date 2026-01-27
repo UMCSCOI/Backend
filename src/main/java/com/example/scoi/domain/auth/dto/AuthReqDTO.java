@@ -30,6 +30,9 @@ public class AuthReqDTO {
             @Pattern(regexp = "^01[0-9]{8,9}$", message = "올바른 휴대폰 번호 형식이 아닙니다.")
             String phoneNumber,
 
+            @NotBlank(message = "인증 토큰은 필수입니다.")
+            String verificationToken,
+
             @NotBlank(message = "영문 이름은 필수입니다.")
             @Pattern(regexp = "^[A-Z ]+$", message = "영문 대문자와 공백만 입력 가능합니다.")
             @Size(max = 50, message = "영문 이름은 50자 이내입니다.")
