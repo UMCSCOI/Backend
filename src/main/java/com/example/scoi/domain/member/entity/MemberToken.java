@@ -42,4 +42,10 @@ public class MemberToken {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
+
+    // 업데이트 메서드
+    public void updateToken(String refreshToken, LocalDateTime expirationDate) {
+        this.refreshToken = refreshToken;
+        this.expirationDate = expirationDate;
+    }
 }
