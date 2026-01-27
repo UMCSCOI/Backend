@@ -33,6 +33,9 @@ public enum AuthErrorCode implements BaseErrorCode {
     ACCOUNT_LOCKED(HttpStatus.FORBIDDEN,
             "AUTH403_1",
             "5회 이상 비밀번호 오류로 계정이 잠겼습니다."),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN,
+            "AUTH403_2",
+            "접근 권한이 없습니다."),
 
     // 토큰 관련
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED,
