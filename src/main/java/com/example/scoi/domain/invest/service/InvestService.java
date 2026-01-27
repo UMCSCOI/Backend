@@ -2,7 +2,6 @@ package com.example.scoi.domain.invest.service;
 
 import com.example.scoi.domain.invest.client.adapter.BithumbApiClient;
 import com.example.scoi.domain.invest.client.adapter.UpbitApiClient;
-import com.example.scoi.domain.invest.client.adapter.BinanceApiClient;
 import com.example.scoi.domain.invest.client.ExchangeApiClient;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
@@ -24,7 +23,6 @@ public class InvestService {
     private final MemberRepository memberRepository;
     private final BithumbApiClient bithumbApiClient;
     private final UpbitApiClient upbitApiClient;
-    private final BinanceApiClient binanceApiClient;
     
     public MaxOrderInfoDTO getMaxOrderInfo(Long memberId, ExchangeType exchangeType, String coinType) {
         // 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)
@@ -93,7 +91,6 @@ public class InvestService {
         return switch (exchangeType) {
             case BITHUMB -> bithumbApiClient;
             case UPBIT -> upbitApiClient;
-            case BINANCE -> binanceApiClient;
         };
     }
 }

@@ -2,8 +2,7 @@ package com.example.scoi.domain.member.enums;
 
 public enum ExchangeType {
     BITHUMB("Bithumb"),
-    UPBIT("Upbit"),
-    BINANCE("Binance");
+    UPBIT("Upbit");
     
     private final String displayName;
     
