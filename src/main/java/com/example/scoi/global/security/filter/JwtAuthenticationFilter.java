@@ -3,6 +3,7 @@ package com.example.scoi.global.security.filter;
 import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
 import com.example.scoi.global.redis.RedisUtil;
 import com.example.scoi.global.security.jwt.JwtUtil;
+import com.example.scoi.global.security.userdetails.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,13 +12,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
 @Slf4j
 @Component
@@ -26,6 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
+    private final CustomUserDetailsService userDetailsService;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
@@ -80,11 +82,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * 인증 정보를 SecurityContext에 저장
+     * DB에서 회원 정보를 조회하여 UserDetails로 래핑합니다.
      */
     private void authenticateUser(HttpServletRequest request, String token) {
         String phoneNumber = jwtUtil.getPhoneNumberFromToken(token);
+
+        // DB에서 회원 조회 후 UserDetails 생성
+        UserDetails userDetails = userDetailsService.loadUserByUsername(phoneNumber);
+
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(phoneNumber, null, Collections.emptyList());
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
