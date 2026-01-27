@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,10 +61,7 @@ public class InvestController {
     @SecurityRequirement(name = "JWT TOKEN")
     public ApiResponse<Void> checkOrderAvailability(
             @RequestBody InvestReqDTO.OrderDTO request,
-            /* 임시 파라미터: JWT 인증 필터/인터셉터 구현 전까지 사용
-                            이후 이 파라미터를 제거 JWT 토큰에서 memberId를 추출하여 사용
-             */
-            @RequestParam Long memberId
+            @AuthenticationPrincipal String phoneNumber
     ) {
         // exchangeType String을 ExchangeType enum으로 변환
         ExchangeType exchangeType;
@@ -75,7 +73,7 @@ public class InvestController {
         
         // 주문 가능 여부 확인
         investService.checkOrderAvailability(
-                memberId,
+                phoneNumber,
                 exchangeType,
                 request.getMarket(),
                 request.getSide(),

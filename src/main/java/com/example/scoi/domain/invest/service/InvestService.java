@@ -48,7 +48,7 @@ public class InvestService {
     // 주문 가능 여부 확인
      
     public void checkOrderAvailability(
-            Long memberId,
+            String phoneNumber,
             ExchangeType exchangeType,
             String market,
             String side,
@@ -56,14 +56,12 @@ public class InvestService {
             String price,
             String volume
     ) {
-        // 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)
-        Member member = memberRepository.findById(memberId)
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
-        
-        String phoneNumber = member.getPhoneNumber();
 
         // 시크릿 키 복호화하기
-        // 쿼리 파라미터에 따라 빗썸 or 업비트 or 바이낸스 API 조회하기
+        // 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기
         ExchangeApiClient apiClient = getApiClient(exchangeType);
         
         try {
