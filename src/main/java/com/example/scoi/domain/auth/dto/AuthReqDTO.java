@@ -1,6 +1,9 @@
 package com.example.scoi.domain.auth.dto;
 
+import com.example.scoi.domain.member.enums.MemberType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -49,7 +52,13 @@ public class AuthReqDTO {
 
             @NotBlank(message = "간편비밀번호는 필수입니다.")
             @Pattern(regexp = "^\\d{6}$", message = "간편비밀번호는 6자리 숫자입니다.")
-            String simplePassword
+            String simplePassword,
+
+            @Schema(description = "회원 타입 (INDIVIDUAL: 개인, CORPORATION: 법인)",
+                    example = "INDIVIDUAL",
+                    allowableValues = {"INDIVIDUAL", "CORPORATION"})
+            @NotNull(message = "회원 타입은 필수입니다.")
+            MemberType memberType
     ) {}
 
     // 로그인 요청
