@@ -1,6 +1,7 @@
 package com.example.scoi.domain.invest.controller;
 
 import com.example.scoi.domain.invest.dto.InvestReqDTO;
+import com.example.scoi.domain.invest.dto.InvestResDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
 import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
@@ -29,18 +30,13 @@ public class InvestController {
     private final InvestService investService;
 
     @GetMapping("/orders/info")
-    @Operation(summary = "최대 주문 개수 조회", description = "주문 생성 전, 가능한 금액과 정보를 조회합니다.")
+    @Operation(summary = "최대 주문 개수 조회 By 강서현", description = "주문 생성 전, 가능한 금액과 정보를 조회합니다.")
     @SecurityRequirement(name = "JWT TOKEN")
     public ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
             @RequestParam String exchangeType,
             @RequestParam String coinType,
-            /* 임시 파라미터: JWT 인증 필터/인터셉터 구현 전까지 사용
-                            이후 이 파라미터를 제거 JWT 토큰에서 memberId를 추출하여 사용
-              @RequestParam 대신 다른 어노테이션 사용
-             => Charge  Controller 와 동일!!
-             현재는 로컬 테스트를 위해 Query Parameter로 받고 있음
-             */
-            @RequestParam Long memberId
+            @RequestParam(required = false) String price,  // 가격 (선택적)
+            @AuthenticationPrincipal String phoneNumber
     ) {
         // exchangeType String을 ExchangeType enum으로 변환
         ExchangeType exchangeTypeEnum;
@@ -50,14 +46,14 @@ public class InvestController {
             throw new InvestException(InvestErrorCode.INVALID_EXCHANGE_TYPE);
         }
         
-        // 정상 버전: Member 조회 후 phoneNumber 사용
-        MaxOrderInfoDTO result = investService.getMaxOrderInfo(memberId, exchangeTypeEnum, coinType);
+        // JWT에서 추출한 phoneNumber로 조회
+        MaxOrderInfoDTO result = investService.getMaxOrderInfo(phoneNumber, exchangeTypeEnum, coinType, price);
         
         return ApiResponse.onSuccess(InvestSuccessCode.MAX_ORDER_INFO_SUCCESS, result);
     }
 
     @PostMapping("/orders/test")
-    @Operation(summary = "주문 가능 여부 확인", description = "주문 직전 해당 주문이 가능한지 여부를 확인합니다.")
+    @Operation(summary = "주문 가능 여부 확인 By 강서현", description = "주문 직전 해당 주문이 가능한지 여부를 확인합니다.")
     @SecurityRequirement(name = "JWT TOKEN")
     public ApiResponse<Void> checkOrderAvailability(
             @RequestBody InvestReqDTO.OrderDTO request,
@@ -82,6 +78,7 @@ public class InvestController {
                 request.getVolume()
         );
         
+        // 주문 가능한 경우 200 응답 반환 ( result는 null)
         return ApiResponse.onSuccess(InvestSuccessCode.ORDER_AVAILABLE);
     }
 
