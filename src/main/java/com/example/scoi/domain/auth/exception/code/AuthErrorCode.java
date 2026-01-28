@@ -19,6 +19,9 @@ public enum AuthErrorCode implements BaseErrorCode {
     VERIFICATION_CODE_EXPIRED(HttpStatus.BAD_REQUEST,
             "AUTH400_2",
             "인증번호가 만료되었습니다."),
+    VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST,
+            "AUTH400_3",
+            "SMS 인증 토큰이 만료되었거나 유효하지 않습니다."),
 
     // 회원가입/로그인 관련
     ALREADY_REGISTERED_PHONE(HttpStatus.CONFLICT,
