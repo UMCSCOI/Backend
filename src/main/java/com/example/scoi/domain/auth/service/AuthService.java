@@ -231,7 +231,11 @@ public class AuthService {
         memberTokenRepository.save(memberToken);
 
         log.info("로그인 성공: phoneNumber={}", request.phoneNumber());
-        return new AuthResDTO.LoginResponse(accessToken, refreshToken);
+        return new AuthResDTO.LoginResponse(
+                accessToken,
+                refreshToken,
+                jwtUtil.getAccessTokenExpirationInSeconds()
+        );
     }
 
     @Transactional
@@ -276,7 +280,11 @@ public class AuthService {
         member.updateLastLoginAt(now);
 
         log.info("토큰 재발급 성공: phoneNumber={}", phoneNumber);
-        return new AuthResDTO.ReissueResponse(newAccessToken, newRefreshToken);
+        return new AuthResDTO.ReissueResponse(
+                newAccessToken,
+                newRefreshToken,
+                jwtUtil.getAccessTokenExpirationInSeconds()
+        );
     }
 
     @Transactional

@@ -27,12 +27,14 @@ public class AuthResDTO {
     // 로그인 응답
     public record LoginResponse(
             String accessToken,
-            String refreshToken
+            String refreshToken,
+            Long accessTokenExpiresIn  // Access Token 만료 시간 (초 단위)
     ) {}
 
     // 토큰 재발급 응답
     public record ReissueResponse(
             String accessToken,
-            String refreshToken
+            String refreshToken,
+            Long accessTokenExpiresIn  // Access Token 만료 시간 (초 단위)
     ) {}
 }
