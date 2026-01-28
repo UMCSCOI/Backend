@@ -7,6 +7,7 @@ import com.example.scoi.domain.auth.service.AuthService;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -70,7 +71,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestHeader("Authorization") String authorization
+            @Parameter(hidden = true) @RequestHeader("Authorization") String authorization
     ) {
         String phoneNumber = userDetails.getUsername();
         String accessToken = authorization.replace("Bearer ", "");
