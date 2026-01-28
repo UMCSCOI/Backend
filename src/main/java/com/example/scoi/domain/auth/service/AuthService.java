@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -120,19 +121,36 @@ public class AuthService {
         return new AuthResDTO.SmsVerifyResponse(verificationToken);
     }
 
-    @Transactional
-    public AuthResDTO.SignupResponse signup(AuthReqDTO.SignupRequest request) {
-        // 1. Verification Token 검증
-        String tokenKey = VERIFICATION_PREFIX + request.verificationToken();
+    /**
+     * Verification Token 검증 (범용)
+     * SMS 인증 완료 후 발급된 토큰이 유효한지 검증합니다.
+     * 다른 도메인(회원가입, 비밀번호 찾기, 휴대폰 번호 변경 등)에서 재사용 가능합니다.
+     *
+     * @param verificationToken SMS 인증 완료 후 발급받은 토큰
+     * @param phoneNumber 검증할 휴대폰 번호
+     * @return 검증된 휴대폰 번호
+     * @throws AuthException 토큰이 만료되었거나 휴대폰 번호가 일치하지 않을 경우
+     */
+    public String validateVerificationToken(String verificationToken, String phoneNumber) {
+        String tokenKey = VERIFICATION_PREFIX + verificationToken;
         String verifiedPhoneNumber = redisUtil.get(tokenKey);
 
         if (verifiedPhoneNumber == null) {
-            throw new AuthException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
+            throw new AuthException(AuthErrorCode.VERIFICATION_TOKEN_EXPIRED);
         }
 
-        if (!verifiedPhoneNumber.equals(request.phoneNumber())) {
+        if (!verifiedPhoneNumber.equals(phoneNumber)) {
             throw new AuthException(AuthErrorCode.INVALID_TOKEN);
         }
+
+        log.debug("Verification Token 검증 성공: phoneNumber={}", phoneNumber);
+        return verifiedPhoneNumber;
+    }
+
+    @Transactional
+    public AuthResDTO.SignupResponse signup(AuthReqDTO.SignupRequest request) {
+        // 1. Verification Token 검증 (SMS 인증 완료 확인)
+        validateVerificationToken(request.verificationToken(), request.phoneNumber());
 
         // 2. 중복 체크
         if (memberRepository.existsByPhoneNumber(request.phoneNumber())) {
@@ -168,9 +186,6 @@ public class AuthService {
 
         memberRepository.save(member);
 
-        // 5. Verification Token 삭제 (일회용)
-        redisUtil.delete(tokenKey);
-
         log.info("회원가입 성공: memberId={}, phoneNumber={}", member.getId(), member.getPhoneNumber());
         return new AuthResDTO.SignupResponse(member.getId(), member.getKoreanName());
     }
@@ -193,20 +208,45 @@ public class AuthService {
         } catch (GeneralSecurityException e) {
             log.error("AES 복호화 실패: phoneNumber={}", request.phoneNumber(), e);
             member.increaseLoginFailCount();
-            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+            int failCount = member.getLoginFailCount();
+            int remainingAttempts = Math.max(5 - failCount, 0);
+            throw new AuthException(
+                AuthErrorCode.INVALID_PASSWORD,
+                Map.of(
+                    "loginFailCount", String.valueOf(failCount),
+                    "remainingAttempts", String.valueOf(remainingAttempts)
+                )
+            );
         }
 
         // 복호화된 평문이 6자리 숫자인지 검증
         if (!rawPassword.matches("^\\d{6}$")) {
             log.warn("간편비밀번호 형식 오류: phoneNumber={}", request.phoneNumber());
             member.increaseLoginFailCount();
-            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+            int failCount = member.getLoginFailCount();
+            int remainingAttempts = Math.max(5 - failCount, 0);
+            throw new AuthException(
+                AuthErrorCode.INVALID_PASSWORD,
+                Map.of(
+                    "loginFailCount", String.valueOf(failCount),
+                    "remainingAttempts", String.valueOf(remainingAttempts)
+                )
+            );
         }
 
         if (!passwordEncoder.matches(rawPassword, member.getSimplePassword())) {
             member.increaseLoginFailCount();
-            log.warn("로그인 실패: phoneNumber={}, failCount={}", request.phoneNumber(), member.getLoginFailCount());
-            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+            int failCount = member.getLoginFailCount();
+            int remainingAttempts = Math.max(5 - failCount, 0);
+            log.warn("로그인 실패: phoneNumber={}, failCount={}, remainingAttempts={}",
+                request.phoneNumber(), failCount, remainingAttempts);
+            throw new AuthException(
+                AuthErrorCode.INVALID_PASSWORD,
+                Map.of(
+                    "loginFailCount", String.valueOf(failCount),
+                    "remainingAttempts", String.valueOf(remainingAttempts)
+                )
+            );
         }
 
         // 4. 성공 처리 (JPA 더티 체킹으로 자동 저장)
