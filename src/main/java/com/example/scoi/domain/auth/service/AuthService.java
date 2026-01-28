@@ -4,10 +4,12 @@ import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.exception.AuthException;
 import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
+import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.entity.MemberToken;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.domain.member.repository.MemberTokenRepository;
+import com.example.scoi.domain.member.service.MemberService;
 import com.example.scoi.global.client.CoolSmsClient;
 import com.example.scoi.global.client.dto.CoolSmsDTO;
 import com.example.scoi.global.redis.RedisUtil;
@@ -22,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +37,7 @@ public class AuthService {
 
     private final MemberRepository memberRepository;
     private final MemberTokenRepository memberTokenRepository;
+    private final MemberService memberService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
@@ -182,9 +187,30 @@ public class AuthService {
             .residentNumber(request.residentNumber())
             .simplePassword(hashedPassword)
             .memberType(request.memberType())
+            .isBioRegistered(request.isBioRegistered() != null ? request.isBioRegistered() : false)
             .build();
 
         memberRepository.save(member);
+
+        // 5. API 키 등록 (있는 경우에만)
+        if (request.apiKeys() != null && !request.apiKeys().isEmpty()) {
+            List<MemberReqDTO.PostPatchApiKey> apiKeyRequests = new ArrayList<>();
+            for (AuthReqDTO.ApiKeyRequest apiKey : request.apiKeys()) {
+                apiKeyRequests.add(new MemberReqDTO.PostPatchApiKey(
+                        apiKey.exchangeType(),
+                        apiKey.publicKey(),
+                        apiKey.secretKey()
+                ));
+            }
+
+            try {
+                List<String> registeredExchanges = memberService.postPatchApiKey(request.phoneNumber(), apiKeyRequests);
+                log.info("회원가입 시 API 키 등록 성공: memberId={}, exchanges={}", member.getId(), registeredExchanges);
+            } catch (Exception e) {
+                log.warn("회원가입 시 API 키 등록 실패 (회원가입은 성공): memberId={}, error={}", member.getId(), e.getMessage());
+                // API 키 등록 실패해도 회원가입은 성공으로 처리
+            }
+        }
 
         log.info("회원가입 성공: memberId={}, phoneNumber={}", member.getId(), member.getPhoneNumber());
         return new AuthResDTO.SignupResponse(member.getId(), member.getKoreanName());
