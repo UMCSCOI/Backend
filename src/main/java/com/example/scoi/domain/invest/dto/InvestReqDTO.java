@@ -11,12 +11,11 @@ public class InvestReqDTO {
     @AllArgsConstructor
     public static class OrderDTO {
         private String exchangeType;  
-        private String market;        // 마켓 타입 
-        private String side;          // 주문 타입 
-        private String orderType;     // 주문 방식 (지정가, 시장가 매수, 시장가 매도)
+        private String market;        
+        private String side;          // bid: 매수, ask: 매도
+        private String orderType;     // limit: 지정가 매수/매도, price: 시장가 매수, market: 시장가 매도
         private String price;          
-        private String volume;        // 주문 수량 
-        private String password;      // 간편 비밀번호
+        private String volume;         
     }
 
 }

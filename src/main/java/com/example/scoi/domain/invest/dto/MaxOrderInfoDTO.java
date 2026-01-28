@@ -10,5 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MaxOrderInfoDTO {
-    private String balance;  // 최대 주문 가능 수량/금액
+    private String balance;      // 보유 자산 
+    private String maxQuantity; // 최대 주문 가능 수량
 }
