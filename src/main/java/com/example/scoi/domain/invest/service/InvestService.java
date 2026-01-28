@@ -3,6 +3,7 @@ package com.example.scoi.domain.invest.service;
 import com.example.scoi.domain.invest.client.adapter.BithumbApiClient;
 import com.example.scoi.domain.invest.client.adapter.UpbitApiClient;
 import com.example.scoi.domain.invest.client.ExchangeApiClient;
+import com.example.scoi.domain.invest.dto.InvestResDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
 import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
@@ -24,20 +25,20 @@ public class InvestService {
     private final BithumbApiClient bithumbApiClient;
     private final UpbitApiClient upbitApiClient;
     
-    public MaxOrderInfoDTO getMaxOrderInfo(Long memberId, ExchangeType exchangeType, String coinType) {
-        // 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)
-        Member member = memberRepository.findById(memberId)
+    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
-        
-        String phoneNumber = member.getPhoneNumber();
 
-        //  시크릿 키 복호화하기 (JwtApiUtil 내부에서 처리)
-        //  쿼리 파라미터에 따라 빗썸 or 업비트 or 바이낸스 API 조회하기
+        // 시크릿 키 복호화하기 (JwtApiUtil 내부)
+        // 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기
         ExchangeApiClient apiClient = getApiClient(exchangeType);
         
         try {
             // 거래소 서버 응답 정제해 보내기
-            return apiClient.getMaxOrderInfo(phoneNumber, exchangeType, coinType);
+            return apiClient.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
+        } catch (InvestException e) {
+            throw e;
         } catch (Exception e) {
             log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, coinType: {}, error: {}", 
                     exchangeType, phoneNumber, coinType, e.getMessage(), e);
@@ -45,8 +46,7 @@ public class InvestService {
         }
     }
 
-    // 주문 가능 여부 확인
-     
+    // 주문 가능 여부 확인 
     public void checkOrderAvailability(
             String phoneNumber,
             ExchangeType exchangeType,
@@ -65,7 +65,7 @@ public class InvestService {
         ExchangeApiClient apiClient = getApiClient(exchangeType);
         
         try {
-            // 거래소 API 호출하여 주문 가능 여부 확인
+            // 거래소 API 호출하여 주문 가능 여부 확인 
             apiClient.checkOrderAvailability(
                     phoneNumber,
                     exchangeType,
