@@ -4,11 +4,7 @@ public class CoolSmsDTO {
 
     public record SendRequest(
         Message message
-    ) {
-        public SendRequest(String to, String from, String text) {
-            this(new Message(to, from, text));
-        }
-    }
+    ) {}
 
     public record Message(
         String to,
