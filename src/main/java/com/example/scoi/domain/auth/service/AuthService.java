@@ -38,6 +38,12 @@ public class AuthService {
     @Value("${coolsms.from-number}")
     private String fromNumber;
 
+    @Value("${coolsms.enabled:true}")
+    private boolean smsEnabled;
+
+    @Value("${coolsms.expose-code:false}")
+    private boolean exposeCode;
+
     // Redis 키 접두사
     private static final String SMS_PREFIX = "sms:";
     private static final String VERIFICATION_PREFIX = "verification:";
@@ -45,8 +51,10 @@ public class AuthService {
 
     // 상수
     private static final int SMS_CODE_LENGTH = 6;
-    private static final long SMS_EXPIRATION_MINUTES = 3;
+    private static final long SMS_EXPIRATION_MINUTES = 5;
     private static final long VERIFICATION_EXPIRATION_MINUTES = 10;
+    private static final long REFRESH_TOKEN_SLIDING_DAYS = 14;  // 비활성 기준 만료
+    private static final long REFRESH_TOKEN_ABSOLUTE_DAYS = 30; // 최대 수명
 
     public AuthResDTO.SmsSendResponse sendSms(AuthReqDTO.SmsSendRequest request) {
         // 1. 인증번호 생성 (6자리)
@@ -57,22 +65,27 @@ public class AuthService {
         redisUtil.set(redisKey, verificationCode, SMS_EXPIRATION_MINUTES, TimeUnit.MINUTES);
 
         // 3. CoolSMS 발송
-        try {
-            CoolSmsDTO.SendRequest smsRequest = new CoolSmsDTO.SendRequest(
-                request.phoneNumber(),
-                fromNumber,
-                "[SCOI] 인증번호: " + verificationCode
-            );
-            coolSmsClient.sendMessage(smsRequest);
-            log.info("SMS 발송 성공: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
-        } catch (Exception e) {
-            log.error("SMS 발송 실패: {}", e.getMessage());
-            throw new AuthException(AuthErrorCode.SMS_SEND_FAILED);
+        if (smsEnabled) {
+            try {
+                CoolSmsDTO.SendRequest smsRequest = new CoolSmsDTO.SendRequest(
+                    request.phoneNumber(),
+                    fromNumber,
+                    "[SCOI] 인증번호: " + verificationCode
+                );
+                coolSmsClient.sendMessage(smsRequest);
+                log.info("SMS 발송 성공: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
+            } catch (Exception e) {
+                log.error("SMS 발송 실패: {}", e.getMessage());
+                throw new AuthException(AuthErrorCode.SMS_SEND_FAILED);
+            }
+        } else {
+            log.warn("[DEV/QA MODE] SMS 발송 건너뛰기: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
         }
 
         // 4. 응답
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(SMS_EXPIRATION_MINUTES);
-        return new AuthResDTO.SmsSendResponse(expiredAt);
+        String codeToExpose = exposeCode ? verificationCode : null;
+        return new AuthResDTO.SmsSendResponse(expiredAt, codeToExpose);
     }
 
     public AuthResDTO.SmsVerifyResponse verifySms(AuthReqDTO.SmsVerifyRequest request) {
@@ -132,6 +145,7 @@ public class AuthService {
             .koreanName(request.koreanName())
             .residentNumber(request.residentNumber())
             .simplePassword(hashedPassword)
+            .memberType(request.memberType())
             .build();
 
         memberRepository.save(member);
@@ -171,19 +185,16 @@ public class AuthService {
         String accessToken = jwtUtil.createAccessToken(request.phoneNumber());
         String refreshToken = jwtUtil.createRefreshToken(request.phoneNumber());
 
-        // 6. RT DB 저장 (기존 있으면 업데이트)
-        MemberToken memberToken = memberTokenRepository.findByMemberPhoneNumber(request.phoneNumber())
-            .orElse(null);
+        // 6. RT DB 저장 (기존 있으면 삭제 후 재생성)
+        memberTokenRepository.deleteByMemberPhoneNumber(request.phoneNumber());
 
-        if (memberToken != null) {
-            memberToken.updateToken(refreshToken, LocalDateTime.now().plusDays(14));
-        } else {
-            memberToken = MemberToken.builder()
+        LocalDateTime now = LocalDateTime.now();
+        MemberToken memberToken = MemberToken.builder()
                 .member(member)
                 .refreshToken(refreshToken)
-                .expirationDate(LocalDateTime.now().plusDays(14))
+                .issuedAt(now)  // 최초 발급 시간
+                .expirationDate(now.plusDays(REFRESH_TOKEN_SLIDING_DAYS))
                 .build();
-        }
 
         memberTokenRepository.save(memberToken);
 
@@ -205,24 +216,35 @@ public class AuthService {
         MemberToken memberToken = memberTokenRepository.findByRefreshToken(request.refreshToken())
             .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND));
 
-        // 4. 만료 확인
-        if (memberToken.getExpirationDate().isBefore(LocalDateTime.now())) {
+        // 4. 만료 확인 (Sliding Expiration)
+        LocalDateTime now = LocalDateTime.now();
+        if (memberToken.getExpirationDate().isBefore(now)) {
             memberTokenRepository.delete(memberToken);
             throw new AuthException(AuthErrorCode.EXPIRED_REFRESH_TOKEN);
         }
 
-        // 5. 새 토큰 생성
+        // 5. 최대 수명 확인 (Absolute Expiration)
+        LocalDateTime issuedAt = memberToken.getIssuedAt();
+        LocalDateTime absoluteExpiration = issuedAt.plusDays(REFRESH_TOKEN_ABSOLUTE_DAYS);
+        if (absoluteExpiration.isBefore(now)) {
+            memberTokenRepository.delete(memberToken);
+            log.warn("RT 최대 수명 만료: phoneNumber={}, issuedAt={}", phoneNumber, issuedAt);
+            throw new AuthException(AuthErrorCode.EXPIRED_REFRESH_TOKEN);
+        }
+
+        // 6. 새 토큰 생성
         String newAccessToken = jwtUtil.createAccessToken(phoneNumber);
         String newRefreshToken = jwtUtil.createRefreshToken(phoneNumber);
 
-        // 6. 기존 RT 삭제 (Rotation)
+        // 7. 기존 RT 삭제 (Rotation)
         memberTokenRepository.delete(memberToken);
 
-        // 7. 새 RT 저장
+        // 8. 새 RT 저장 (issuedAt은 기존 값 유지)
         MemberToken newMemberToken = MemberToken.builder()
             .member(memberToken.getMember())
             .refreshToken(newRefreshToken)
-            .expirationDate(LocalDateTime.now().plusDays(14))
+            .issuedAt(issuedAt)  // 최초 발급 시간 유지!
+            .expirationDate(now.plusDays(REFRESH_TOKEN_SLIDING_DAYS))
             .build();
 
         memberTokenRepository.save(newMemberToken);
