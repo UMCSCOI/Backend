@@ -22,4 +22,8 @@ public interface BithumbFeignClient {
             @RequestHeader("Authorization") String authorization,
             @RequestParam("market") String market
     );
+    
+    //마켓 코드 조회 (PUBLIC API - 인증 불필요)
+    @GetMapping("/v1/market/all")
+    String getMarketAll(@RequestParam(value = "isDetails", required = false) Boolean isDetails);
 }
