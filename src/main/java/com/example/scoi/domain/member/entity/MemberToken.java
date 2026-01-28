@@ -46,9 +46,16 @@ public class MemberToken {
     @JoinColumn(name = "member_id")
     private Member member;
 
-    // 업데이트 메서드
+    // 업데이트 메서드 (issuedAt 유지)
     public void updateToken(String refreshToken, LocalDateTime expirationDate) {
         this.refreshToken = refreshToken;
         this.expirationDate = expirationDate;
+    }
+
+    // 업데이트 메서드 (issuedAt 갱신)
+    public void updateTokenWithIssuedAt(String refreshToken, LocalDateTime expirationDate, LocalDateTime issuedAt) {
+        this.refreshToken = refreshToken;
+        this.expirationDate = expirationDate;
+        this.issuedAt = issuedAt;
     }
 }
