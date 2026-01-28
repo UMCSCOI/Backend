@@ -1,12 +1,16 @@
 package com.example.scoi.domain.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.time.LocalDateTime;
 
 public class AuthResDTO {
 
     // SMS 발송 응답
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record SmsSendResponse(
-            LocalDateTime expiredAt  // 인증번호 만료 시간 (발송 시간 + 3분)
+            LocalDateTime expiredAt,  // 인증번호 만료 시간 (발송 시간 + 3분)
+            String verificationCode   // 개발/QA 환경에서만 포함 (프로덕션에서는 null)
     ) {}
 
     // SMS 검증 응답
