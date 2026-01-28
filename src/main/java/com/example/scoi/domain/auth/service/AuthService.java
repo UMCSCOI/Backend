@@ -12,6 +12,7 @@ import com.example.scoi.global.client.CoolSmsClient;
 import com.example.scoi.global.client.dto.CoolSmsDTO;
 import com.example.scoi.global.redis.RedisUtil;
 import com.example.scoi.global.security.jwt.JwtUtil;
+import com.example.scoi.global.util.HashUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +36,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
     private final CoolSmsClient coolSmsClient;
+    private final HashUtil hashUtil;
 
     @Value("${coolsms.from-number}")
     private String fromNumber;
@@ -67,11 +70,12 @@ public class AuthService {
         // 3. CoolSMS 발송
         if (smsEnabled) {
             try {
-                CoolSmsDTO.SendRequest smsRequest = new CoolSmsDTO.SendRequest(
+                CoolSmsDTO.Message message = new CoolSmsDTO.Message(
                     request.phoneNumber(),
                     fromNumber,
                     "[SCOI] 인증번호: " + verificationCode
                 );
+                CoolSmsDTO.SendRequest smsRequest = new CoolSmsDTO.SendRequest(message);
                 coolSmsClient.sendMessage(smsRequest);
                 log.info("SMS 발송 성공: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
             } catch (Exception e) {
@@ -135,8 +139,22 @@ public class AuthService {
             throw new AuthException(AuthErrorCode.ALREADY_REGISTERED_PHONE);
         }
 
-        // 3. 간편비밀번호 BCrypt 해싱 (평문 → 해시)
-        String hashedPassword = passwordEncoder.encode(request.simplePassword());
+        // 3. 간편비밀번호 AES 복호화 후 검증 및 BCrypt 해싱 (AES 암호문 → 평문 → 검증 → BCrypt 해시)
+        String rawPassword;
+        try {
+            rawPassword = new String(hashUtil.decryptAES(request.simplePassword()));
+        } catch (GeneralSecurityException e) {
+            log.error("AES 복호화 실패: phoneNumber={}", request.phoneNumber(), e);
+            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        }
+
+        // 복호화된 평문이 6자리 숫자인지 검증
+        if (!rawPassword.matches("^\\d{6}$")) {
+            log.warn("간편비밀번호 형식 오류: phoneNumber={}", request.phoneNumber());
+            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        }
+
+        String hashedPassword = passwordEncoder.encode(rawPassword);
 
         // 4. Member 생성
         Member member = Member.builder()
@@ -168,18 +186,32 @@ public class AuthService {
             throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
         }
 
-        // 3. 비밀번호 검증 (평문 vs BCrypt 해시)
-        if (!passwordEncoder.matches(request.simplePassword(), member.getSimplePassword())) {
+        // 3. 비밀번호 AES 복호화 후 검증 (AES 암호문 → 평문 → 형식 검증 → BCrypt 해시와 비교)
+        String rawPassword;
+        try {
+            rawPassword = new String(hashUtil.decryptAES(request.simplePassword()));
+        } catch (GeneralSecurityException e) {
+            log.error("AES 복호화 실패: phoneNumber={}", request.phoneNumber(), e);
             member.increaseLoginFailCount();
-            memberRepository.save(member);
+            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        }
+
+        // 복호화된 평문이 6자리 숫자인지 검증
+        if (!rawPassword.matches("^\\d{6}$")) {
+            log.warn("간편비밀번호 형식 오류: phoneNumber={}", request.phoneNumber());
+            member.increaseLoginFailCount();
+            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        }
+
+        if (!passwordEncoder.matches(rawPassword, member.getSimplePassword())) {
+            member.increaseLoginFailCount();
             log.warn("로그인 실패: phoneNumber={}, failCount={}", request.phoneNumber(), member.getLoginFailCount());
             throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
         }
 
-        // 4. 성공 처리
+        // 4. 성공 처리 (JPA 더티 체킹으로 자동 저장)
         member.resetLoginFailCount();
         member.updateLastLoginAt(LocalDateTime.now());
-        memberRepository.save(member);
 
         // 5. 토큰 생성
         String accessToken = jwtUtil.createAccessToken(request.phoneNumber());
@@ -236,18 +268,12 @@ public class AuthService {
         String newAccessToken = jwtUtil.createAccessToken(phoneNumber);
         String newRefreshToken = jwtUtil.createRefreshToken(phoneNumber);
 
-        // 7. 기존 RT 삭제 (Rotation)
-        memberTokenRepository.delete(memberToken);
+        // 7. RT 업데이트 (Rotation, issuedAt 갱신하여 최대 수명도 연장)
+        memberToken.updateTokenWithIssuedAt(newRefreshToken, now.plusDays(REFRESH_TOKEN_SLIDING_DAYS), now);
 
-        // 8. 새 RT 저장 (issuedAt은 기존 값 유지)
-        MemberToken newMemberToken = MemberToken.builder()
-            .member(memberToken.getMember())
-            .refreshToken(newRefreshToken)
-            .issuedAt(issuedAt)  // 최초 발급 시간 유지!
-            .expirationDate(now.plusDays(REFRESH_TOKEN_SLIDING_DAYS))
-            .build();
-
-        memberTokenRepository.save(newMemberToken);
+        // 8. lastLoginAt 갱신 (사용자 활동 추적)
+        Member member = memberToken.getMember();
+        member.updateLastLoginAt(now);
 
         log.info("토큰 재발급 성공: phoneNumber={}", phoneNumber);
         return new AuthResDTO.ReissueResponse(newAccessToken, newRefreshToken);
