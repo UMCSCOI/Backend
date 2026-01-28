@@ -30,6 +30,9 @@ public class MemberToken {
     @Column(name = "expiration_date", nullable = false)
     private LocalDateTime expirationDate;
 
+    @Column(name = "issued_at", nullable = false)
+    private LocalDateTime issuedAt;  // RT 최초 발급 시간 (최대 수명 계산용)
+
     @Column(name = "created_at")
     @CreatedDate
     private LocalDateTime createdAt;
