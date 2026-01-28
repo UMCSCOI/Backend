@@ -34,11 +34,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String ERROR_CODE_ATTRIBUTE = "authErrorCode";
     private static final String BLACKLIST_PREFIX = "blacklist:";
 
+    // 인증 없이 접근 가능한 경로 (SecurityConfig와 동일하게 유지)
+    private static final String[] PUBLIC_ENDPOINTS = {
+            "/auth/sms/",
+            "/auth/signup",
+            "/auth/login",
+            "/auth/reissue",
+            "/swagger-ui/",
+            "/v3/api-docs/",
+            "/swagger-resources/",
+            "/error"
+    };
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String requestURI = request.getRequestURI();
+
+        // PUBLIC_ENDPOINTS는 토큰 검증 건너뛰기
+        if (isPublicEndpoint(request)) {
+            log.debug("PUBLIC_ENDPOINT 접근: {}", requestURI);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = resolveToken(request);
 
         // 토큰이 없으면 필터 통과 (인증 불필요 경로용)
@@ -67,6 +87,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         log.debug("JWT 인증 성공: {}", requestURI);
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * PUBLIC_ENDPOINTS 여부 확인
+     */
+    private boolean isPublicEndpoint(HttpServletRequest request) {
+        String requestURI = request.getRequestURI();
+        for (String endpoint : PUBLIC_ENDPOINTS) {
+            if (requestURI.equals(endpoint) || requestURI.startsWith(endpoint)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
