@@ -1,11 +1,14 @@
 package com.example.scoi.domain.auth.dto;
 
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.enums.MemberType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import java.util.List;
 
 public class AuthReqDTO {
 
@@ -43,7 +46,7 @@ public class AuthReqDTO {
 
             @NotBlank(message = "한글 이름은 필수입니다.")
             @Pattern(regexp = "^[가-힣]+$", message = "한글만 입력 가능합니다.")
-            @Size(max = 5, message = "한글 이름은 5자 이내입니다.")
+            @Size(min = 2, max = 5, message = "한글 이름은 2~5자입니다.")
             String koreanName,
 
             @NotBlank(message = "주민등록번호는 필수입니다.")
@@ -58,7 +61,28 @@ public class AuthReqDTO {
                     example = "INDIVIDUAL",
                     allowableValues = {"INDIVIDUAL", "CORPORATION"})
             @NotNull(message = "회원 타입은 필수입니다.")
-            MemberType memberType
+            MemberType memberType,
+
+            @Schema(description = "바이오 인증 등록 여부 (true: 등록, false: 나중에)", example = "false")
+            Boolean isBioRegistered,
+
+            @Schema(description = "거래소 API 키 목록 (선택사항)")
+            List<ApiKeyRequest> apiKeys
+    ) {}
+
+    // API 키 요청 (회원가입용)
+    public record ApiKeyRequest(
+            @NotNull(message = "거래소 타입은 필수입니다.")
+            @Schema(description = "거래소 타입", example = "UPBIT", allowableValues = {"BITHUMB", "UPBIT", "BINANCE"})
+            ExchangeType exchangeType,
+
+            @NotBlank(message = "퍼블릭 키는 필수입니다.")
+            @Schema(description = "거래소 API 퍼블릭 키", example = "your-public-key")
+            String publicKey,
+
+            @NotBlank(message = "시크릿 키는 필수입니다.")
+            @Schema(description = "거래소 API 시크릿 키 (AES 암호화된 Base64)", example = "asdadsasdasd...")
+            String secretKey
     ) {}
 
     // 로그인 요청
