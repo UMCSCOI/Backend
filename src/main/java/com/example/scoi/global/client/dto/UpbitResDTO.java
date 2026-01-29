@@ -1,6 +1,5 @@
 package com.example.scoi.global.client.dto;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class UpbitResDTO {
@@ -12,10 +11,10 @@ public class UpbitResDTO {
             String currency,
             String txid,
             String status,
-            LocalDateTime created_at,
-            LocalDateTime done_at,
-            Long amount,
-            Long fee,
+            String created_at,
+            String done_at,
+            String amount,
+            String fee,
             String transaction_type
     ){}
 
@@ -54,5 +53,20 @@ public class UpbitResDTO {
             String trend,
             String created_at,
             String side
+    ){}
+
+    // 개별 입금 조회
+    public record GetDeposit(
+            String type,
+            String uuid,
+            String currency,
+            String net_type,
+            String txid,
+            String state,
+            String created_at,
+            String done_at,
+            String amount,
+            String fee,
+            String transaction_type
     ){}
 }
