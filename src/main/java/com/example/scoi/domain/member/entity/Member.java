@@ -78,4 +78,8 @@ public class Member {
     }
 
     public void updateSimplePassword(String simplePassword){ this.simplePassword = simplePassword; }
+
+    public void updateLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
 }

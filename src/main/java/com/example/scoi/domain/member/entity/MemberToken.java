@@ -30,6 +30,9 @@ public class MemberToken {
     @Column(name = "expiration_date", nullable = false)
     private LocalDateTime expirationDate;
 
+    @Column(name = "issued_at", nullable = false)
+    private LocalDateTime issuedAt;  // RT 최초 발급 시간 (최대 수명 계산용)
+
     @Column(name = "created_at")
     @CreatedDate
     private LocalDateTime createdAt;
@@ -42,4 +45,17 @@ public class MemberToken {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
+
+    // 업데이트 메서드 (issuedAt 유지)
+    public void updateToken(String refreshToken, LocalDateTime expirationDate) {
+        this.refreshToken = refreshToken;
+        this.expirationDate = expirationDate;
+    }
+
+    // 업데이트 메서드 (issuedAt 갱신)
+    public void updateTokenWithIssuedAt(String refreshToken, LocalDateTime expirationDate, LocalDateTime issuedAt) {
+        this.refreshToken = refreshToken;
+        this.expirationDate = expirationDate;
+        this.issuedAt = issuedAt;
+    }
 }

@@ -124,4 +124,11 @@ public class JwtUtil {
     private Claims parseClaims(String token) {
         return jwtParser.parseSignedClaims(token).getPayload();
     }
+
+    /**
+     * Access Token 만료 시간을 초 단위로 반환
+     */
+    public long getAccessTokenExpirationInSeconds() {
+        return accessTokenExpiration / 1000;
+    }
 }
