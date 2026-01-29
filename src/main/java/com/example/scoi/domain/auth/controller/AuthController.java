@@ -4,6 +4,10 @@ import com.example.scoi.domain.auth.code.AuthSuccessCode;
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.service.AuthService;
+import com.example.scoi.domain.member.entity.Member;
+import com.example.scoi.domain.member.exception.MemberException;
+import com.example.scoi.domain.member.exception.code.MemberErrorCode;
+import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtUtil jwtUtil;
+    private final MemberRepository memberRepository;
 
     @Operation(summary = "SMS 발송 By 장명준", description = "휴대폰 번호로 인증번호를 발송합니다.")
     @PostMapping("/sms/send")

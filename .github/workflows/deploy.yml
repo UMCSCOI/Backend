@@ -1,0 +1,92 @@
+name: Deploy (dev/main, Java 21, firebase shared)
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # 공통 firebase 파일 생성
+      - name: Inject firebase json (shared)
+        shell: bash
+        run: |
+          mkdir -p src/main/resources
+          cat > src/main/resources/firebase-scoi.json <<'EOF'
+          ${{ secrets.FIREBASE_JSON }}
+          EOF
+
+      # main application.yml
+      - name: Inject application.yml (main)
+        if: github.ref_name == 'main'
+        shell: bash
+        run: |
+          mkdir -p src/main/resources
+          cat > src/main/resources/application.yml <<'EOF'
+          ${{ secrets.APP_YML_MAIN }}
+          EOF
+
+      # dev application.yml
+      - name: Inject application.yml (dev)
+        if: github.ref_name == 'develop'
+        shell: bash
+        run: |
+          mkdir -p src/main/resources
+          cat > src/main/resources/application.yml <<'EOF'
+          ${{ secrets.APP_YML_DEV }}
+          EOF
+
+      - name: Build bootJar
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean bootJar -x test
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload jar to EC2
+        shell: bash
+        run: |
+          # bootJar/ plain.jar 혼동 방지: plain 제외 우선 선택
+          JAR_PATH=$(ls build/libs/*.jar | grep -v plain | head -n 1)
+          test -n "$JAR_PATH"
+          scp "$JAR_PATH" ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/app.jar
+
+      - name: Deploy & restart (main)
+        if: github.ref_name == 'main'
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+            sudo mkdir -p /opt/myapp-main
+            sudo mv /home/ec2-user/app.jar /opt/myapp-main/app.jar
+            sudo chown -R ec2-user:ec2-user /opt/myapp-main
+            sudo systemctl restart myapp-main
+            sudo systemctl status myapp-main --no-pager
+          EOF
+
+      - name: Deploy & restart (dev)
+        if: github.ref_name == 'develop'
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+            sudo mkdir -p /opt/myapp-dev
+            sudo mv /home/ec2-user/app.jar /opt/myapp-dev/app.jar
+            sudo chown -R ec2-user:ec2-user /opt/myapp-dev
+            sudo systemctl restart myapp-dev
+            sudo systemctl status myapp-dev --no-pager
+          EOF
