@@ -2,15 +2,22 @@ package com.example.scoi.domain.charge.controller;
 
 import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.charge.exception.code.ChargeSuccessCode;
 import com.example.scoi.domain.charge.service.ChargeService;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
+
+import com.example.scoi.domain.charge.exception.ChargeException;
+import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
+import com.example.scoi.domain.member.enums.ExchangeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,5 +45,34 @@ public class ChargeController implements ChargeControllerDocs{
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
         return ApiResponse.onSuccess(code, chargeService.getOrders(phoneNumber, dto));
+    }
+
+    @GetMapping("/balances")
+    public ApiResponse<BalanceResDTO.BalanceDTO> getBalances(
+            @RequestParam(defaultValue = "Bithumb") String exchangeType,
+            // 현재는 정상 버전: memberId를 Query Parameter로 받아서 Member 조회
+            @RequestParam(required = false) Long memberId,
+            // 테스트용: phone 파라미터로 직접 조회
+            @RequestParam(required = false) String phone
+    ) {
+        // exchangeType String을 ExchangeType enum으로 변환
+        ExchangeType exchangeTypeEnum;
+        try {
+            exchangeTypeEnum = ExchangeType.fromString(exchangeType);
+        } catch (IllegalArgumentException e) {
+            throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
+        }
+
+        // phone 파라미터가 있으면 phone으로 조회, 없으면 memberId로 조회
+        BalanceResDTO.BalanceDTO result;
+        if (phone != null) {
+            result = chargeService.getBalancesByPhone(phone, exchangeTypeEnum);
+        } else if (memberId != null) {
+            result = chargeService.getBalances(memberId, exchangeTypeEnum);
+        } else {
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
+        }
+
+        return ApiResponse.onSuccess(ChargeSuccessCode.OK, result);
     }
 }

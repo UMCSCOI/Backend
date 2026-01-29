@@ -2,11 +2,14 @@ package com.example.scoi.domain.charge.controller;
 
 import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Tag(name = "충전 API")
 public interface ChargeControllerDocs {
@@ -22,4 +25,15 @@ public interface ChargeControllerDocs {
             description = "특정 주문을 UUID로 스냅샷 형태로 확인합니다. 주문 체결 알림은 웹소켓 이용해서 실시간 추적, 체결 되면 FCM 토큰으로 알림이 갑니다."
     )
     ApiResponse<String> getOrders(@AuthenticationPrincipal String phoneNumber, @RequestBody ChargeReqDTO.GetOrder dto);
+
+    @Operation(
+            summary = "보유 자산 조회 API By 강서현",
+            description = "현재 보유 자산을 조회합니다."
+    )
+    @SecurityRequirement(name = "JWT TOKEN")
+    ApiResponse<BalanceResDTO.BalanceDTO> getBalances(
+            @RequestParam(defaultValue = "Bithumb") String exchangeType,
+            @RequestParam(required = false) Long memberId,
+            @RequestParam(required = false) String phone
+    );
 }
