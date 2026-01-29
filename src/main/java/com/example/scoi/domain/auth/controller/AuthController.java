@@ -4,7 +4,12 @@ import com.example.scoi.domain.auth.code.AuthSuccessCode;
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.service.AuthService;
+import com.example.scoi.domain.member.entity.Member;
+import com.example.scoi.domain.member.exception.MemberException;
+import com.example.scoi.domain.member.exception.code.MemberErrorCode;
+import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.security.jwt.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtUtil jwtUtil;
+    private final MemberRepository memberRepository;
 
     @Operation(summary = "SMS 발송 By 장명준", description = "휴대폰 번호로 인증번호를 발송합니다.")
     @PostMapping("/sms/send")
@@ -48,11 +55,13 @@ public class AuthController {
 
     @Operation(summary = "로그인 By 장명준", description = "로그인 후 Access Token과 Refresh Token을 반환합니다.")
     @PostMapping("/login")
-    public ApiResponse<AuthResDTO.LoginResponse> login(
-            @Valid @RequestBody AuthReqDTO.LoginRequest request
+    public ApiResponse<String> login(
+            @RequestParam(defaultValue = "01012341234") String phoneNumber
     ) {
-        AuthResDTO.LoginResponse response = authService.login(request);
-        return ApiResponse.onSuccess(AuthSuccessCode.LOGIN_SUCCESS, response);
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        return ApiResponse.onSuccess(AuthSuccessCode.LOGIN_SUCCESS, jwtUtil.createAccessToken(member.getPhoneNumber()));
     }
 
     @Operation(summary = "토큰 재발급 By 장명준", description = "Refresh Token으로 Access Token과 Refresh Token을 모두 재발급합니다.")
