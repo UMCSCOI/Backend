@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface ChargeControllerDocs {
 
     @Operation(
-            summary = "원화 충전 요청하기 API By 김주헌 (인증서 구현 가능성 확인 중)",
+            summary = "원화 충전 요청하기 API By 김주헌",
             description = "코인을 구매하기 위한 원화 충전을 요청합니다. 반드시 인증서 발급을 한 뒤 호출해주세요."
     )
     ApiResponse<ChargeResDTO.ChargeKrw> chargeKrw(@AuthenticationPrincipal String phoneNumber, @RequestBody ChargeReqDTO.ChargeKrw dto);
