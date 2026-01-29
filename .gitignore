@@ -10,6 +10,7 @@
 *.pem
 *.env
 
+
 ### Firebase JSON 제거 ###
 firebase-scoi.json
 
