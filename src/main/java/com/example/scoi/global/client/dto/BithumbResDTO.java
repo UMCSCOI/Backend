@@ -50,4 +50,47 @@ public class BithumbResDTO {
             String side,
             String created_at
     ){}
+
+    // 출금(이체) 가능 정보
+    public record WithdrawsChance(
+            MemberLevel member_level,
+            Currency currency,
+            Account account,
+            WithdrawLimit withdraw_limit
+    ) {}
+    public record MemberLevel(
+            Integer security_level,          // 보안등급
+            Integer fee_level,               // 수수료등급
+            Boolean email_verified,          // 이메일 인증 여부
+            Boolean identity_auth_verified,  // 실명 인증 여부
+            Boolean bank_account_verified,   // 계좌 인증 여부
+            Boolean two_factor_auth_verified,// 2FA 인증 여부
+            Boolean locked,                  // 계정 보호 상태
+            Boolean wallet_locked            // 출금 보호 상태
+    ) {}
+    public record Currency(
+            String code,                     // 화폐 코드 (BTC, ETH 등)
+            String withdraw_fee,             // 출금 수수료
+            Boolean is_coin,                 // 코인 여부
+            String wallet_state,             // 지갑 상태 (working 등)
+            List<String> wallet_support      // 지원하는 입출금 정보 (deposit, withdraw 등)
+    ) {}
+    public record Account(
+            String currency,                 // 화폐 코드
+            String balance,                  // 주문 가능 금액/수량
+            String locked,                   // 주문 중 묶인 금액
+            String avg_buy_price,            // 평균 매수가
+            Boolean avg_buy_price_modified,  // 평균 매수가 수정 여부
+            String unit_currency             // 평단가 기준 화폐
+    ) {}
+    public record WithdrawLimit(
+            String currency,                 // 화폐 코드
+            String minimum,                  // 최소 출금 금액
+            String onetime,                  // 1회 한도
+            String daily,                    // 1일 한도
+            String remaining_daily,          // 1일 잔여 한도
+            String remaining_daily_krw,      // 통합 1일 잔여 한도 (KRW 환산)
+            Integer fixed,                   // 소수점 자리수
+            Boolean can_withdraw             // 출금 지원 여부
+    ) {}
 }

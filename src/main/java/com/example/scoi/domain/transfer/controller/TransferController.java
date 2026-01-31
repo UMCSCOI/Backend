@@ -63,4 +63,14 @@ public class TransferController implements TransferControllerDocs{
         return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_4,
                 transferService.changeToNotFavoriteRecipient(recipientId));
     }
+
+    @PostMapping("/recipients/validate")
+    public ApiResponse<TransferResDTO.CheckRecipientResDTO> checkRecipientInput(
+            @AuthenticationPrincipal String phoneNumber,
+            @RequestBody TransferReqDTO.RecipientInformation recipientInformation
+    ){
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_5,
+                transferService.checkRecipientInput(recipientInformation, phoneNumber));
+    }
+
 }

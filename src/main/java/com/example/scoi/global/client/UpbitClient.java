@@ -50,4 +50,13 @@ public interface UpbitClient {
             @RequestHeader("Authorization") String authorization,
             @RequestBody MemberReqDTO.Test dto
     );
+
+    // 출금(이체) 가능 금액 조회
+    // 쿼리파라미터 O
+    @GetMapping("/v1/withdraws/chance")
+    UpbitResDTO.WithdrawsChance getWithdrawsChance(
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
+    );
 }

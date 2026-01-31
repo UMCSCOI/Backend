@@ -55,4 +55,43 @@ public class UpbitResDTO {
             String created_at,
             String side
     ){}
+
+    // 출금(이체) 가능 정보
+    public record WithdrawsChance(
+            MemberLevel member_level,          // 사용자 보안 등급 정보
+            Currency currency,                  // 화폐 정보
+            Account account,                    // 계좌 잔액 정보
+            WithdrawLimit withdraw_limit        // 출금 제약 정보
+    ) {
+        public record MemberLevel(
+                String security_level,
+                String fee_level,
+                Boolean email_verified,
+                Boolean identity_auth_verified,
+                Boolean bank_account_verified,
+                Boolean two_factor_auth_verified,
+                Boolean locked,
+                Boolean wallet_locked
+        ) {}
+        public record Currency(
+                String code,
+                String withdraw_fee,            // 출금 수수료
+                Boolean is_coin,
+                String wallet_state             // 지갑 상태 (working, etc.)
+        ) {}
+        public record Account(
+                String currency,
+                String balance,                 // 주문 가능 금액
+                String locked,                  // 주문 중 묶인 금액
+                String avg_buy_price
+        ) {}
+        public record WithdrawLimit(
+                String currency,
+                String minimum,                 // 최소 출금 금액
+                String onetime,                // 1회 출금 한도
+                String daily,                  // 1일 출금 한도
+                String remaining_daily,        // 1일 잔여 출금 한도
+                Boolean can_withdraw           // 출금 지원 여부
+        ) {}
+    }
 }

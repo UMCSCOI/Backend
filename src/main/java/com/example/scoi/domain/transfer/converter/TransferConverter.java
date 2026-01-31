@@ -1,11 +1,15 @@
 package com.example.scoi.domain.transfer.converter;
 
 import com.example.scoi.domain.member.entity.Member;
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.entity.Recipient;
 import com.example.scoi.domain.transfer.entity.TradeHistory;
+import com.example.scoi.global.client.dto.BithumbResDTO;
+import com.example.scoi.global.client.dto.UpbitResDTO;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -75,4 +79,51 @@ public class TransferConverter {
                 .member(member)
                 .build();
     }
+
+    // 1. 업비트용 컨버터
+    public static TransferResDTO.CheckRecipientResDTO toCheckRecipientResDTO(
+            TransferReqDTO.RecipientInformation info,
+            UpbitResDTO.WithdrawsChance upbitResult // 매개변수 타입이 다름
+    ) {
+        return TransferResDTO.CheckRecipientResDTO.builder()
+                .recipient(toRecipientDetailDTO(info))
+                .balance(TransferResDTO.BalanceDTO.builder()
+                        .exchangeType(ExchangeType.UPBIT)
+                        .coinType(info.coinType())
+                        .network(info.netType())
+                        .networkFee(upbitResult.currency().withdraw_fee())
+                        .availableAmount(upbitResult.account().balance())
+                        .updatedAt(LocalDateTime.now().toString())
+                        .build())
+                .build();
+    }
+    // 2. 빗썸용 컨버터
+    public static TransferResDTO.CheckRecipientResDTO toCheckRecipientResDTO(
+            TransferReqDTO.RecipientInformation info,
+            BithumbResDTO.WithdrawsChance bithumbResult // 매개변수 타입이 다름
+    ) {
+        return TransferResDTO.CheckRecipientResDTO.builder()
+                .recipient(toRecipientDetailDTO(info))
+                .balance(TransferResDTO.BalanceDTO.builder()
+                        .exchangeType(ExchangeType.BITHUMB)
+                        .coinType(info.coinType())
+                        .network(info.netType())
+                        .networkFee(bithumbResult.currency().withdraw_fee())
+                        .availableAmount(bithumbResult.account().balance())
+                        .updatedAt(LocalDateTime.now().toString())
+                        .build())
+                .build();
+    }
+
+    // 공통 수취인 정보 변환 로직 (중복 제거)
+    private static TransferResDTO.RecipientDetailDTO toRecipientDetailDTO(TransferReqDTO.RecipientInformation info) {
+        return TransferResDTO.RecipientDetailDTO.builder()
+                .recipientType(info.memberType())
+                .recipientName(info.recipientName())
+                .corpKoreanName(info.corpKoreanName())
+                .corpEnglishName(info.corpEnglishName())
+                .walletAddress(info.walletAddress())
+                .build();
+    }
+
 }

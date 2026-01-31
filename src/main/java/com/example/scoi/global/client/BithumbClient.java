@@ -1,6 +1,7 @@
 package com.example.scoi.global.client;
 
 import com.example.scoi.domain.member.dto.MemberReqDTO;
+import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -45,5 +46,14 @@ public interface BithumbClient {
     String getDepositAddress(
             @RequestHeader("Authorization") String authorization,
             @RequestBody MemberReqDTO.Test dto
+    );
+
+    // 이체 출금 가능 정보
+    // 쿼리 파라미터 O
+    @GetMapping("/v1/withdraws/chance")
+    BithumbResDTO.WithdrawsChance getWithdrawsChance(
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
     );
 }

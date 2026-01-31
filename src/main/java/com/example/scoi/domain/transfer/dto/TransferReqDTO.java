@@ -2,6 +2,8 @@ package com.example.scoi.domain.transfer.dto;
 
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.enums.MemberType;
+import com.example.scoi.domain.transfer.enums.CoinType;
+import com.example.scoi.domain.transfer.enums.NetworkType;
 
 public class TransferReqDTO {
 
@@ -12,6 +14,10 @@ public class TransferReqDTO {
             String corpEnglishName,
             String walletAddress,
             ExchangeType exchangeType
+            ExchangeType exchangeType,
+            CoinType coinType,
+            String netType
+    ) { }
 
     ) { }
 }
