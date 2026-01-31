@@ -13,11 +13,19 @@ public class TransferReqDTO {
             String corpKoreanName,
             String corpEnglishName,
             String walletAddress,
-            ExchangeType exchangeType
             ExchangeType exchangeType,
             CoinType coinType,
             String netType
     ) { }
+
+    public record Quote(
+            String available,
+            String amount,
+            CoinType coinType,
+            NetworkType networkType,
+            String networkFee
+    ) {}
+
 
     ) { }
 }

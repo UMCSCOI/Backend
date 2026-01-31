@@ -126,4 +126,11 @@ public class TransferConverter {
                 .build();
     }
 
+    public static TransferResDTO.QuoteValidDTO toQuoteValidDTO(String amount, String networkFee, String totalAmount) {
+        return TransferResDTO.QuoteValidDTO.builder()
+                .amount(amount)
+                .networkFee(networkFee)
+                .totalAmount(totalAmount)
+                .build();
+    }
 }

@@ -55,4 +55,10 @@ public interface TransferControllerDocs {
             @RequestBody TransferReqDTO.RecipientInformation recipientInformation
     );
 
+    @Operation(
+            summary = "출금 견적을 검증합니다.",
+            description = "사용자가 입력한 출금 값 + 네트워크 수수료가 남은 잔고보다 많은지 검증하고 그 값들을 반환합니다.")
+    ApiResponse<TransferResDTO.QuoteValidDTO> checkQuotes(
+            @RequestBody TransferReqDTO.Quote quotes
+    );
 }

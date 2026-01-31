@@ -73,4 +73,12 @@ public class TransferController implements TransferControllerDocs{
                 transferService.checkRecipientInput(recipientInformation, phoneNumber));
     }
 
+    @PostMapping("/quotes")
+    public ApiResponse<TransferResDTO.QuoteValidDTO> checkQuotes(
+            @RequestBody TransferReqDTO.Quote quotes
+    ){
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_6,
+                transferService.checkQuotes(quotes));
+    }
+
 }

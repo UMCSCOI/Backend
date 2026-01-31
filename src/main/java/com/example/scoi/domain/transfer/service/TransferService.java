@@ -254,6 +254,29 @@ public class TransferService {
         }
     }
 
+    public TransferResDTO.QuoteValidDTO checkQuotes(TransferReqDTO.Quote quotes) {
+
+        // 1. 이체 금액 + 수수료 계산
+        BigDecimal amount = new BigDecimal(quotes.amount());
+        BigDecimal fee = new BigDecimal(quotes.networkFee());
+
+        BigDecimal total = amount.add(fee);
+
+        // 2. 잔고에 해당하는 금액이 존재하는지 확인
+        BigDecimal available = new BigDecimal(quotes.available());
+
+        if(available.compareTo(total) < 0){
+            throw new TransferException(TransferErrorCode.INSUFFICIENT_BALANCE);
+        }
+
+        // 3. 응답 변환 및 반환
+        return TransferConverter.toQuoteValidDTO(
+                amount.toPlainString(),
+                fee.toPlainString(),
+                total.toPlainString()
+        );
+    }
+
     // 수취인 입력값 검증 메서드
     private void validateRecipient(TransferReqDTO.RecipientInformation recipient) {
         // 1. 지갑 주소와 수취인 정보가 비어있는 경우

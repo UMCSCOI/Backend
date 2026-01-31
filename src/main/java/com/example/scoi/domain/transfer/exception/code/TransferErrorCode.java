@@ -17,6 +17,7 @@ public enum TransferErrorCode implements BaseErrorCode {
     INVALID_NETWORK_TYPE(HttpStatus.BAD_REQUEST, "TRANSFER400_5", "네트워크 타입이 잘못되었습니다."),
     EXCHANGE_BAD_REQUEST(HttpStatus.BAD_REQUEST, "TRANSFER400_6", "거래소에서 요청을 처리하지 못했습니다."),
     UNSUPPORTED_EXCHANGE(HttpStatus.BAD_REQUEST, "TRANSFER400_7", "지원하지 않는 거래소입니다."),
+    INSUFFICIENT_BALANCE(HttpStatus.BAD_REQUEST, "TRANSFER400_8", "잔액이 부족합니다."),
 
     // 403
     EXCHANGE_FORBIDDEN(HttpStatus.FORBIDDEN, "TRANSFER403_1", "거래소의 API 키 권한이 부족합니다."),

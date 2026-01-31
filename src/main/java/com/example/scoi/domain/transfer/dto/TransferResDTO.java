@@ -78,4 +78,15 @@ public class TransferResDTO {
         private String updatedAt;   // 날짜 형식 문자열
     }
 
+    // 출금 검증 반환
+    @Getter
+    @Builder
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    @AllArgsConstructor
+    public static class QuoteValidDTO {
+        private String amount;
+        private String networkFee;
+        private String totalAmount;
+    }
+
 }
