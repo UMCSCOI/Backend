@@ -29,11 +29,11 @@ public class BithumbConverter {
     // 빗썸 전체 계좌 조회 -> BalanceDTO
     public static BalanceResDTO.BalanceDTO toBalanceDTO(@NotNull BithumbResDTO.BalanceResponse[] responses) {
         for (BithumbResDTO.BalanceResponse response : responses) {
-            if ("KRW".equals(response.getCurrency())) {
+            if ("KRW".equals(response.currency())) {
                 return BalanceResDTO.BalanceDTO.builder()
-                        .currency(response.getCurrency())
-                        .balance(response.getBalance())
-                        .locked(response.getLocked())
+                        .currency(response.currency())
+                        .balance(response.balance())
+                        .locked(response.locked())
                         .build();
             }
         }

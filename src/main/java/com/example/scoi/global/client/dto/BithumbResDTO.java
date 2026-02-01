@@ -2,11 +2,6 @@ package com.example.scoi.global.client.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 /**
  * 빗썸 API 응답 DTO
@@ -83,25 +78,12 @@ public class BithumbResDTO {
      *   ...
      * ]
      */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BalanceResponse {
-
-        private String currency;
-
-        private String balance;
-
-        private String locked;
-
-        @JsonProperty("avg_buy_price")
-        private String avgBuyPrice;
-
-        @JsonProperty("avg_buy_price_modified")
-        private Boolean avgBuyPriceModified;
-
-        @JsonProperty("unit_currency")
-        private String unitCurrency;
-    }
+    public record BalanceResponse(
+            String currency,
+            String balance,
+            String locked,
+            String avg_buy_price,
+            Boolean avg_buy_price_modified,
+            String unit_currency
+    ) {}
 }
