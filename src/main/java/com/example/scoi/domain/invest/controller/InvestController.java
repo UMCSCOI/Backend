@@ -9,9 +9,6 @@ import com.example.scoi.domain.invest.exception.code.InvestSuccessCode;
 import com.example.scoi.domain.invest.service.InvestService;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,14 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-@Tag(name = "투자", description = "투자 관련 API")
-public class InvestController {
+public class InvestController implements InvestControllerDocs {
     
     private final InvestService investService;
 
     @GetMapping("/orders/info")
-    @Operation(summary = "최대 주문 개수 조회 By 강서현", description = "주문 생성 전, 가능한 금액과 정보를 조회합니다.")
-    @SecurityRequirement(name = "JWT TOKEN")
+    @Override
     public ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
             @RequestParam String exchangeType,
             @RequestParam String coinType,
@@ -53,8 +48,7 @@ public class InvestController {
     }
 
     @PostMapping("/orders/test")
-    @Operation(summary = "주문 가능 여부 확인 By 강서현", description = "주문 직전 해당 주문이 가능한지 여부를 확인합니다.")
-    @SecurityRequirement(name = "JWT TOKEN")
+    @Override
     public ApiResponse<Void> checkOrderAvailability(
             @RequestBody InvestReqDTO.OrderDTO request,
             @AuthenticationPrincipal String phoneNumber
