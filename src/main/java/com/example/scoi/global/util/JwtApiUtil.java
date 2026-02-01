@@ -27,6 +27,7 @@ public class JwtApiUtil {
 
     /**
      * 업비트 API 통신을 위한 JWT를 생성합니다.
+     * 반드시 로그인 된 상태 (JWT이 존재하는 상태) 여야합니다.
      * GET 요청은 파라미터를 (ex. key=abc&key2[]=abc&key2[]=abc)
      * 그 외 Request Body가 들어있는 요청은 body에 DTO(Record) 그대로 넣어주시면 됩니다.
      * @param phoneNumber 사용자의 휴대전화 번호
