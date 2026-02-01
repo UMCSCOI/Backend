@@ -37,6 +37,9 @@ public class ChargeService {
     private final JwtApiUtil jwtApiUtil;
     private final BithumbClient bithumbClient;
     private final UpbitClient upbitClient;
+    private final MemberRepository memberRepository;
+    private final BithumbAdapter bithumbAdapter;
+    private final UpbitAdapter upbitAdapter;
 
     // 원화 충전 요청하기
     public ChargeResDTO.ChargeKrw chargeKrw(
@@ -164,10 +167,6 @@ public class ChargeService {
 
         return result.toUpperCase();
     }
-
-    private final MemberRepository memberRepository;
-    private final BithumbAdapter bithumbAdapter;
-    private final UpbitAdapter upbitAdapter;
 
     /**
      * 보유 자산 조회
