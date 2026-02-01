@@ -9,7 +9,6 @@ import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import com.example.scoi.global.util.JwtApiUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,7 +24,6 @@ public class BithumbApiClient implements ExchangeApiClient {
     
     private final BithumbFeignClient bithumbFeignClient;
     private final JwtApiUtil jwtApiUtil;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Override
     public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
@@ -33,8 +31,13 @@ public class BithumbApiClient implements ExchangeApiClient {
             // coinType을 마켓 형식으로
             String market = convertCoinTypeToMarket(coinType);
             
+            log.info("빗썸 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), price: {}", 
+                    phoneNumber, coinType, market, price);
+            
             // 주문 가능 정보 조회 
             BithumbResDTO.OrderChance orderChance = getOrderChance(phoneNumber, market);
+            
+            log.info("빗썸 최대 주문 정보 조회 API 응답 수신 완료");
             
             // 응답 파싱 및 변환 (bid_account.balance 사용 - 매수 가능 잔고)
             return parseMaxOrderInfoFromOrderChance(orderChance, price);
@@ -53,11 +56,24 @@ public class BithumbApiClient implements ExchangeApiClient {
         try {
             String balance = "0";
             
+            // bid_account와 ask_account 정보 로깅
+            if (orderChance.bid_account() != null) {
+                BithumbResDTO.BidAccount bidAccount = orderChance.bid_account();
+                log.info("빗썸 bid_account 정보 - currency: {}, balance: {}, locked: {}, avg_buy_price: {}", 
+                        bidAccount.currency(), bidAccount.balance(), bidAccount.locked(), bidAccount.avg_buy_price());
+            }
+            if (orderChance.ask_account() != null) {
+                BithumbResDTO.AskAccount askAccount = orderChance.ask_account();
+                log.info("빗썸 ask_account 정보 - currency: {}, balance: {}, locked: {}, avg_buy_price: {}", 
+                        askAccount.currency(), askAccount.balance(), askAccount.locked(), askAccount.avg_buy_price());
+            }
+            
             // bid_account에서 balance 추출  
             if (orderChance.bid_account() != null) {
                 BithumbResDTO.BidAccount bidAccount = orderChance.bid_account();
                 if (bidAccount.balance() != null && !bidAccount.balance().isEmpty()) {
                     balance = bidAccount.balance();
+                    log.info("빗썸 bid_account balance 사용: {}", balance);
                 } else {
                     log.warn("빗썸 주문 가능 정보 응답에 bid_account.balance가 없습니다.");
                 }
@@ -183,20 +199,17 @@ public class BithumbApiClient implements ExchangeApiClient {
             String authorization = jwtApiUtil.createBithumbJwt(phoneNumber, query, null);
             
             // Feign Client를 통한 API 호출
+            // Feign Client가 DTO로 변환
             log.info("빗썸 API 호출 시작 - market: {}", convertedMarket);
-            String responseBody = bithumbFeignClient.getOrderChance(authorization, convertedMarket);
+            BithumbResDTO.OrderChance orderChance = bithumbFeignClient.getOrderChance(authorization, convertedMarket);
             
-            log.info("빗썸 API 응답 본문: {}", responseBody);
-            BithumbResDTO.OrderChance orderChance = objectMapper.readValue(
-                responseBody,
-                BithumbResDTO.OrderChance.class
-            );
+            log.info("빗썸 API 응답 수신 완료");
             
             if (orderChance.bid_account() != null || orderChance.ask_account() != null) {
                 return orderChance;
             }
             
-            log.error("빗썸 API 응답 형식이 예상과 다름. 응답 본문: {}", responseBody);
+            log.error("빗썸 API 응답 형식이 예상과 다름. 응답 본문: {}", orderChance);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
             
         } catch (GeneralSecurityException e) {

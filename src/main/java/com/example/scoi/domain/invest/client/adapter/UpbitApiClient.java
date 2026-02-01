@@ -9,8 +9,6 @@ import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.client.dto.UpbitResDTO;
 import com.example.scoi.global.util.JwtApiUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -26,8 +24,7 @@ import java.util.Map;
 public class UpbitApiClient implements ExchangeApiClient {
     
     private final UpbitFeignClient upbitFeignClient;
-    private final JwtApiUtil jwtApiUtil;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JwtApiUtil jwtApiUtil; 
     
     @Override
     public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
@@ -39,12 +36,17 @@ public class UpbitApiClient implements ExchangeApiClient {
             log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), price: {}", 
                     phoneNumber, coinType, normalizedCoinType, price);
             
-            String responseBody = upbitFeignClient.getAccounts(authorization);
+            // Feign Client가 자동으로 List<Account>로 변환해줌 (ObjectMapper 불필요!)
+            List<UpbitResDTO.Account> accounts = upbitFeignClient.getAccounts(authorization);
             
-            log.info("업비트 최대 주문 정보 조회 API 응답 수신");
-            log.debug("업비트 최대 주문 정보 조회 API 응답 본문: {}", responseBody);
+            log.info("업비트 최대 주문 정보 조회 API 응답 수신 - 계좌 개수: {}", accounts.size());
+            // 디버깅: 실제 응답 값 확인
+            for (UpbitResDTO.Account account : accounts) {
+                log.info("계좌 정보 - currency: {}, balance: {}, locked: {}, available: {}", 
+                        account.currency(), account.balance(), account.locked(), account.available());
+            }
             
-            return parseMaxOrderInfoResponse(responseBody, normalizedCoinType, price);
+            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, price);
             
         } catch (GeneralSecurityException e) {
             log.error("업비트 JWT 생성 실패", e);
@@ -55,13 +57,8 @@ public class UpbitApiClient implements ExchangeApiClient {
         }
     }
     
-    private MaxOrderInfoDTO parseMaxOrderInfoResponse(String responseBody, String coinType, String price) {
+    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String price) {
         try {
-            List<Map<String, Object>> accounts = objectMapper.readValue(
-                responseBody,
-                new TypeReference<List<Map<String, Object>>>() {}
-            );
-            
             // coinType이 KRW-BTC 형식이면, 매수 시 KRW 잔액을 조회해야 함
             String currency;
             if (coinType.contains("-")) {
@@ -75,14 +72,33 @@ public class UpbitApiClient implements ExchangeApiClient {
             String balance = "0";
             
             // 먼저 해당 currency로 계좌 찾기
-            for (Map<String, Object> account : accounts) {
-                String accountCurrency = String.valueOf(account.get("currency"));
-                if (currency.equals(accountCurrency)) {
+            for (UpbitResDTO.Account account : accounts) {
+                if (currency.equals(account.currency())) {
+                    log.info("해당 currency 계좌 발견 - currency: {}, balance: {}, locked: {}, available: {}", 
+                            account.currency(), account.balance(), account.locked(), account.available());
+                    
                     // available이 있으면 available 사용 (매수 가능 금액)
-                    if (account.containsKey("available") && account.get("available") != null) {
-                        balance = String.valueOf(account.get("available"));
-                    } else if (account.containsKey("balance") && account.get("balance") != null) {
-                        balance = String.valueOf(account.get("balance"));
+                    // 주의: 업비트 API /v1/accounts는 available 필드를 제공하지 않음 (공식 문서 확인)
+                    // 따라서 available이 null이면 balance - locked로 계산해야 함
+                    if (account.available() != null && !account.available().isEmpty()) {
+                        balance = account.available();
+                        log.info("available 사용: {}", balance);
+                    } else if (account.balance() != null && !account.balance().isEmpty()) {
+                        // available이 null이면 balance - locked로 계산
+                        try {
+                            BigDecimal balanceDecimal = new BigDecimal(account.balance());
+                            BigDecimal lockedDecimal = account.locked() != null && !account.locked().isEmpty() 
+                                    ? new BigDecimal(account.locked()) 
+                                    : BigDecimal.ZERO;
+                            BigDecimal availableDecimal = balanceDecimal.subtract(lockedDecimal);
+                            balance = availableDecimal.toPlainString();
+                            log.info("available 계산 사용 - balance: {}, locked: {}, available: {}", 
+                                    account.balance(), account.locked(), balance);
+                        } catch (NumberFormatException e) {
+                            // 계산 실패 시 balance 그대로 사용
+                            balance = account.balance();
+                            log.warn("available 계산 실패, balance 사용: {}", balance);
+                        }
                     }
                     break;
                 }
@@ -114,7 +130,7 @@ public class UpbitApiClient implements ExchangeApiClient {
                     .build();
                     
         } catch (Exception e) {
-            log.error("업비트 최대 주문 정보 조회 API 응답 파싱 실패: {}", responseBody, e);
+            log.error("업비트 최대 주문 정보 조회 API 응답 파싱 실패", e);
             throw new RuntimeException("응답 파싱 실패: " + e.getMessage(), e);
         }
     }
@@ -199,12 +215,8 @@ public class UpbitApiClient implements ExchangeApiClient {
             String query = "market=" + market;
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, query, null);
             
-            String responseBody = upbitFeignClient.getOrderChance(authorization, market);
-            
-            return objectMapper.readValue(
-                responseBody,
-                UpbitResDTO.OrderChance.class
-            );
+            // Feign Client가 DTO로 변환
+            return upbitFeignClient.getOrderChance(authorization, market);
             
         } catch (GeneralSecurityException e) {
             log.error("업비트 JWT 생성 실패", e);

@@ -124,4 +124,16 @@ public class UpbitResDTO {
             Boolean avg_buy_price_modified,
             String unit_currency
     ){}
+
+    // 전체 계좌 조회
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Account(
+            String currency,
+            String balance,
+            String locked,
+            String avg_buy_price,
+            Boolean avg_buy_price_modified,
+            String unit_currency,
+            String available  // 매수 가능 금액/수량
+    ){}
 }

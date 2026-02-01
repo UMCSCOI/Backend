@@ -1,5 +1,6 @@
 package com.example.scoi.domain.invest.client.feign;
 
+import com.example.scoi.global.client.dto.BithumbResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -18,7 +19,7 @@ public interface BithumbFeignClient {
 
     //주문 가능 정보 조회
     @GetMapping("/v1/orders/chance")
-    String getOrderChance(
+    BithumbResDTO.OrderChance getOrderChance(
             @RequestHeader("Authorization") String authorization,
             @RequestParam("market") String market
     );
