@@ -21,12 +21,14 @@ import com.example.scoi.global.util.JwtApiUtil;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.GeneralSecurityException;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemberService {
@@ -188,6 +190,7 @@ public class MemberService {
     }
 
     // API키 등록 & 수정
+    @Transactional
     public List<String> postPatchApiKey(
             String phoneNumber,
             List<MemberReqDTO.PostPatchApiKey> dto
@@ -204,6 +207,7 @@ public class MemberService {
         // API 리스트 for문
         for (MemberReqDTO.PostPatchApiKey i : dto){
 
+            log.info("[API키 등록]: 시크릿 키: {}", i.secretKey());
             // 실제 API키가 맞는지 검증: JWT 토큰 생성한 뒤 실제 요청을 보냈을때 200 오면 OK
             try {
                 String token = jwtApiUtil.createJwtWithApiKeys(i.publicKey(),i.secretKey(),i.exchangeType());
@@ -218,9 +222,12 @@ public class MemberService {
             // JWT 토큰 생성 실패시: dto 거래소 타입이 잘못됨, 잘못된 API 키
             // 요청을 보낼때 에러 (4XX) 발생시
             } catch (GeneralSecurityException | IllegalArgumentException | FeignException e) {
+                log.info("[API키 등록]: 검증 실패");
+                log.info(e.getMessage());
                 continue;
             }
 
+            log.info("[API키 등록]: 검증 성공");
             // 정상적인 요청
             boolean isExist = false;
             for (MemberApiKey apiKey : memberApiKeyList){
@@ -230,6 +237,7 @@ public class MemberService {
                     isExist = true;
                     apiKey.updateApiKey(i.publicKey(), i.secretKey());
                     result.add(apiKey.getExchangeType().name());
+                    log.info("[API키 등록]: API키 변경 완료");
                 }
             }
 
@@ -244,6 +252,7 @@ public class MemberService {
                 );
                 memberApiKeyRepository.save(apiKey);
                 result.add(i.exchangeType().name());
+                log.info("[API키 등록]: API키 엔티티 생성 완료");
             }
         }
         return result;
