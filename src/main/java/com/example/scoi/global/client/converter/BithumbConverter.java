@@ -4,6 +4,7 @@ import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 빗썸 API 응답을 BalanceResDTO로 변환하는 Converter
@@ -26,25 +27,22 @@ public class BithumbConverter {
     }
 
     // 빗썸 전체 계좌 조회 -> BalanceDTO
-    public static BalanceResDTO.BalanceDTO toBalanceDTO(BithumbResDTO.BalanceResponse[] responses) {
-
-        if (responses != null) {
-            for (BithumbResDTO.BalanceResponse response : responses) {
-                if ("KRW".equals(response.getCurrency())) {
-                    return new BalanceResDTO.BalanceDTO(
-                            response.getCurrency(),
-                            response.getBalance(),
-                            response.getLocked()
-                    );
-                }
+    public static BalanceResDTO.BalanceDTO toBalanceDTO(@NotNull BithumbResDTO.BalanceResponse[] responses) {
+        for (BithumbResDTO.BalanceResponse response : responses) {
+            if ("KRW".equals(response.getCurrency())) {
+                return BalanceResDTO.BalanceDTO.builder()
+                        .currency(response.getCurrency())
+                        .balance(response.getBalance())
+                        .locked(response.getLocked())
+                        .build();
             }
         }
 
         // KRW가 없으면 빈 값 반환
-        return new BalanceResDTO.BalanceDTO(
-                "KRW",
-                "0",
-                "0"
-        );
+        return BalanceResDTO.BalanceDTO.builder()
+                .currency("KRW")
+                .balance("0")
+                .locked("0")
+                .build();
     }
 }

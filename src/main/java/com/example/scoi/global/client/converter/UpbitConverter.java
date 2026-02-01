@@ -4,6 +4,7 @@ import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.global.client.dto.UpbitReqDTO;
 import com.example.scoi.global.client.dto.UpbitResDTO;
+import jakarta.validation.constraints.NotNull;
 
 // 업비트 API 응답 -> BalanceResDTO
 
@@ -20,25 +21,23 @@ public class UpbitConverter {
     }
 
     // 업비트 계정 잔고 조회 응답 -> BalanceDTO로 변환
-    public static BalanceResDTO.BalanceDTO toBalanceDTO(UpbitResDTO.BalanceResponse[] responses) {
+    public static BalanceResDTO.BalanceDTO toBalanceDTO(@NotNull UpbitResDTO.BalanceResponse[] responses) {
         // 필요 시 BTC, USDT 등 다른 화폐도 추가 가능
-        if (responses != null) {
-            for (UpbitResDTO.BalanceResponse response : responses) {
-                if ("KRW".equals(response.getCurrency())) {
-                    return new BalanceResDTO.BalanceDTO(
-                            response.getCurrency(),
-                            response.getBalance(),
-                            response.getLocked()
-                    );
-                }
+        for (UpbitResDTO.BalanceResponse response : responses) {
+            if ("KRW".equals(response.getCurrency())) {
+                return BalanceResDTO.BalanceDTO.builder()
+                        .currency(response.getCurrency())
+                        .balance(response.getBalance())
+                        .locked(response.getLocked())
+                        .build();
             }
         }
 
         // KRW가 없으면 빈 값 반환
-        return new BalanceResDTO.BalanceDTO(
-                "KRW",
-                "0",
-                "0"
-        );
+        return BalanceResDTO.BalanceDTO.builder()
+                .currency("KRW")
+                .balance("0")
+                .locked("0")
+                .build();
     }
 }
