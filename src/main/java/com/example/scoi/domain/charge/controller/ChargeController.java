@@ -47,13 +47,11 @@ public class ChargeController implements ChargeControllerDocs{
         return ApiResponse.onSuccess(code, chargeService.getOrders(phoneNumber, dto));
     }
 
+    //보유자산 조회하기
     @GetMapping("/balances")
     public ApiResponse<BalanceResDTO.BalanceDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,
-            // 현재는 정상 버전: memberId를 Query Parameter로 받아서 Member 조회
-            @RequestParam(required = false) Long memberId,
-            // 테스트용: phone 파라미터로 직접 조회
-            @RequestParam(required = false) String phone
+            @AuthenticationPrincipal String phoneNumber
     ) {
         // exchangeType String을 ExchangeType enum으로 변환
         ExchangeType exchangeTypeEnum;
@@ -63,15 +61,8 @@ public class ChargeController implements ChargeControllerDocs{
             throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
         }
 
-        // phone 파라미터가 있으면 phone으로 조회, 없으면 memberId로 조회
-        BalanceResDTO.BalanceDTO result;
-        if (phone != null) {
-            result = chargeService.getBalancesByPhone(phone, exchangeTypeEnum);
-        } else if (memberId != null) {
-            result = chargeService.getBalances(memberId, exchangeTypeEnum);
-        } else {
-            throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
-        }
+        // JWT에서 가져온 phoneNumber로 조회
+        BalanceResDTO.BalanceDTO result = chargeService.getBalancesByPhone(phoneNumber, exchangeTypeEnum);
 
         return ApiResponse.onSuccess(ChargeSuccessCode.OK, result);
     }

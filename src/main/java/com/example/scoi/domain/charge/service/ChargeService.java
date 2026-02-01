@@ -7,7 +7,6 @@ import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
-import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.client.BithumbClient;
@@ -170,43 +169,40 @@ public class ChargeService {
 
     /**
      * 보유 자산 조회
-     * 지금 버전: Member 조회 후 phoneNumber 사용
-     * dev로 최신화 후 병합하면 AuthUser 구현 후 파라미터를 AuthUser로 변경 예정
-     */
-    public BalanceResDTO.BalanceDTO getBalances(Long memberId, ExchangeType exchangeType) {
-        // 사용자의 API 키를 DB에서 가져오기 (Member 조회하여 phoneNumber 가져오기)
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND));
-
-        String phoneNumber = member.getPhoneNumber();
-
-        // 시크릿 키 복호화하기 -JwtApiUtil
-        //쿼리 파라미터에 따라 빗썸 /업비트 API 조회하기
-        ExchangeApiClient apiClient = getApiClient(exchangeType);
-
-        try {//응답
-            return apiClient.getBalance(phoneNumber, exchangeType);
-        } catch (Exception e) {
-            log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, error: {}",
-                    exchangeType, phoneNumber, e.getMessage(), e);
-            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-        }
-    }
-
-    /**
-     * 보유 자산 조회 (phone 파라미터로 직접 조회)
-     * 테스트용
+     * JWT에서 추출한 phoneNumber로 조회
      */
     public BalanceResDTO.BalanceDTO getBalancesByPhone(String phoneNumber, ExchangeType exchangeType) {
         // 시크릿 키 복호화하기 -JwtApiUtil
         //쿼리 파라미터에 따라 빗썸 /업비트 API 조회하기
         ExchangeApiClient apiClient = getApiClient(exchangeType);
 
-        try {//응답
+        try {
             return apiClient.getBalance(phoneNumber, exchangeType);
-        } catch (Exception e) {
-            log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, error: {}",
-                    exchangeType, phoneNumber, e.getMessage(), e);
+        // 토큰 못 만들었을 경우
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        } catch (FeignException.BadRequest | FeignException.NotFound e) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+
+            // API 키를 찾을 수 없는 경우
+            if (e instanceof FeignException.NotFound) {
+                throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
+            }
+
+            // 나머지 400 에러
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+        } catch (FeignException.Unauthorized e) {
+            // Error 변환
+            ObjectMapper objectMapper = new ObjectMapper();
+            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+
+            // 권한 부족
+            if (error.error().name().equals("out_of_scope")) {
+                throw new ChargeException(ChargeErrorCode.EXCHANGE_FORBIDDEN);
+            }
+
+            // 그 이외에는 JWT 관련 오류
             throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
         }
     }

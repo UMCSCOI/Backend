@@ -5,7 +5,6 @@ import com.example.scoi.domain.charge.dto.ChargeResDTO;
 import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,10 +29,8 @@ public interface ChargeControllerDocs {
             summary = "보유 자산 조회 API By 강서현",
             description = "현재 보유 자산을 조회합니다."
     )
-    @SecurityRequirement(name = "JWT TOKEN")
     ApiResponse<BalanceResDTO.BalanceDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,
-            @RequestParam(required = false) Long memberId,
-            @RequestParam(required = false) String phone
+            @AuthenticationPrincipal String phoneNumber
     );
 }
