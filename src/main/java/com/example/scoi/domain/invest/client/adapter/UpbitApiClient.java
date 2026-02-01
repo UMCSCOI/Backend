@@ -222,11 +222,7 @@ public class UpbitApiClient implements ExchangeApiClient {
             log.error("업비트 JWT 생성 실패", e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (feign.FeignException.Unauthorized e) {
-            // 401 
-            log.error("업비트 API 키 권한 부족", e);
-            throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
-        } catch (feign.FeignException.Forbidden e) {
-            // 403 
+            // 401 Unauthorized: API 키 권한 부족
             log.error("업비트 API 키 권한 부족", e);
             throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
         } catch (Exception e) {

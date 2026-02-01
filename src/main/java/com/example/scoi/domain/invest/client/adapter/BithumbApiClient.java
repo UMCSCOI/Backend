@@ -219,10 +219,6 @@ public class BithumbApiClient implements ExchangeApiClient {
             // 401 Unauthorized: API 키 권한 부족
             log.error("빗썸 API 키 권한 부족", e);
             throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
-        } catch (feign.FeignException.Forbidden e) {
-            // 403 Forbidden: API 키 권한 부족
-            log.error("빗썸 API 키 권한 부족", e);
-            throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
         } catch (Exception e) {
             log.error("빗썸 주문 가능 정보 조회 실패", e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);

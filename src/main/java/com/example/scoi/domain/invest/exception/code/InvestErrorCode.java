@@ -27,9 +27,9 @@ public enum InvestErrorCode implements BaseErrorCode {
             "INVEST400_4",
             "보유 수량을 초과할 수 없습니다."),
     
-    // 403 에러
-    INSUFFICIENT_API_PERMISSION(HttpStatus.FORBIDDEN,
-            "INVEST403_1",
+    // 401 에러
+    INSUFFICIENT_API_PERMISSION(HttpStatus.UNAUTHORIZED,
+            "INVEST401_1",
             "거래소의 API키의 권한이 부족합니다."),
     
     // 404 에러
