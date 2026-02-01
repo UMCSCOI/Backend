@@ -3,8 +3,6 @@ package com.example.scoi.domain.invest.controller;
 import com.example.scoi.domain.invest.dto.InvestReqDTO;
 import com.example.scoi.domain.invest.dto.InvestResDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
-import com.example.scoi.domain.invest.exception.InvestException;
-import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.invest.exception.code.InvestSuccessCode;
 import com.example.scoi.domain.invest.service.InvestService;
 import com.example.scoi.domain.member.enums.ExchangeType;
@@ -28,21 +26,13 @@ public class InvestController implements InvestControllerDocs {
     @GetMapping("/orders/info")
     @Override
     public ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
-            @RequestParam String exchangeType,
+            @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String price,  // 가격 (선택적)
             @AuthenticationPrincipal String phoneNumber
     ) {
-        // exchangeType String을 ExchangeType enum으로 변환
-        ExchangeType exchangeTypeEnum;
-        try {
-            exchangeTypeEnum = ExchangeType.fromString(exchangeType);
-        } catch (IllegalArgumentException e) {
-            throw new InvestException(InvestErrorCode.INVALID_EXCHANGE_TYPE);
-        }
-        
         // JWT에서 추출한 phoneNumber로 조회
-        MaxOrderInfoDTO result = investService.getMaxOrderInfo(phoneNumber, exchangeTypeEnum, coinType, price);
+        MaxOrderInfoDTO result = investService.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
         
         return ApiResponse.onSuccess(InvestSuccessCode.MAX_ORDER_INFO_SUCCESS, result);
     }
@@ -53,18 +43,10 @@ public class InvestController implements InvestControllerDocs {
             @RequestBody InvestReqDTO.OrderDTO request,
             @AuthenticationPrincipal String phoneNumber
     ) {
-        // exchangeType String을 ExchangeType enum으로 변환
-        ExchangeType exchangeType;
-        try {
-            exchangeType = ExchangeType.fromString(request.getExchangeType());
-        } catch (IllegalArgumentException e) {
-            throw new InvestException(InvestErrorCode.INVALID_EXCHANGE_TYPE);
-        }
-        
         // 주문 가능 여부 확인
         investService.checkOrderAvailability(
                 phoneNumber,
-                exchangeType,
+                request.getExchangeType(),
                 request.getMarket(),
                 request.getSide(),
                 request.getOrderType(),

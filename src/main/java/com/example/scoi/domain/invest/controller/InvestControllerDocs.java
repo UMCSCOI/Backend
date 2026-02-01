@@ -2,6 +2,7 @@ package com.example.scoi.domain.invest.controller;
 
 import com.example.scoi.domain.invest.dto.InvestReqDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +18,7 @@ public interface InvestControllerDocs {
             description = "주문 생성 전, 가능한 금액과 정보를 조회합니다."
     )
     ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
-            @RequestParam String exchangeType,
+            @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String price,
             @AuthenticationPrincipal String phoneNumber

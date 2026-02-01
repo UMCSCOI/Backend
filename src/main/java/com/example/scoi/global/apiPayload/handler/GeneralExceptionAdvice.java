@@ -102,6 +102,33 @@ public class GeneralExceptionAdvice {
         return ResponseEntity.status(constraintErrorCode.getStatus()).body(errorResponse);
     }
 
+    // IllegalArgumentException 핸들러 (enum 변환 실패 등)
+    @ExceptionHandler(IllegalArgumentException.class)
+    protected ResponseEntity<ApiResponse<String>> handleIllegalArgumentException(
+            IllegalArgumentException ex
+    ) {
+        log.warn("[ IllegalArgumentException ]: {}", ex.getMessage());
+        
+        // ExchangeType 변환 실패인 경우 InvestErrorCode 사용
+        if (ex.getMessage() != null && ex.getMessage().contains("Invalid exchange type")) {
+            com.example.scoi.domain.invest.exception.code.InvestErrorCode investErrorCode = 
+                    com.example.scoi.domain.invest.exception.code.InvestErrorCode.INVALID_EXCHANGE_TYPE;
+            ApiResponse<String> errorResponse = ApiResponse.onFailure(
+                    investErrorCode,
+                    null
+            );
+            return ResponseEntity.status(investErrorCode.getStatus()).body(errorResponse);
+        }
+        
+        // 그 외의 경우 일반 검증 실패로 처리
+        BaseErrorCode validationErrorCode = GeneralErrorCode.VALIDATION_FAILED;
+        ApiResponse<String> errorResponse = ApiResponse.onFailure(
+                validationErrorCode,
+                ex.getMessage()
+        );
+        return ResponseEntity.status(validationErrorCode.getStatus()).body(errorResponse);
+    }
+
     // 애플리케이션에서 발생하는 커스텀 예외를 처리
     @ExceptionHandler(ScoiException.class)
     public ResponseEntity<ApiResponse<?>> handleCustomException(
