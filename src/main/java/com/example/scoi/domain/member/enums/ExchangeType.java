@@ -7,20 +7,20 @@ public enum ExchangeType {
     BITHUMB("Bithumb"),
     UPBIT("Upbit"),
     BINANCE("Binance");
-    
+
     private final String displayName;
-    
+
     ExchangeType(String displayName) {
         this.displayName = displayName;
     }
-    
+
     public String getDisplayName() {
         return displayName;
     }
-    
-    
+
+
     //문자열을 ExchangeType enum으로 변환
-     
+
     public static ExchangeType fromString(String value) {
         for (ExchangeType type : values()) {
             if (type.displayName.equalsIgnoreCase(value)) {

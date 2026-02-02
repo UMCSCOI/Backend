@@ -11,9 +11,12 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.security.*;
+import lombok.Getter;
+import lombok.AllArgsConstructor;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
