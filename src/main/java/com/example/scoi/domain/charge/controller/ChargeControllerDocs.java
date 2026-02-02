@@ -27,9 +27,9 @@ public interface ChargeControllerDocs {
 
     @Operation(
             summary = "보유 자산 조회 API By 강서현",
-            description = "현재 보유 자산을 조회합니다."
+            description = "현재 보유 자산을 조회합니다. 모든 보유 자산(KRW, BTC, ETH 등)을 배열로 반환합니다."
     )
-    ApiResponse<BalanceResDTO.BalanceDTO> getBalances(
+    ApiResponse<BalanceResDTO.BalanceListDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,
             @AuthenticationPrincipal String phoneNumber
     );

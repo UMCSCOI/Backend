@@ -1,5 +1,8 @@
 package com.example.scoi.domain.member.enums;
 
+import com.example.scoi.domain.charge.exception.ChargeException;
+import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
+
 public enum ExchangeType {
     BITHUMB("Bithumb"),
     UPBIT("Upbit"),
@@ -15,16 +18,16 @@ public enum ExchangeType {
         return displayName;
     }
     
-    /**
-     * 문자열을 ExchangeType enum으로 변환
-     * 대소문자 구분 없이 변환 가능
-     */
+    
+    //문자열을 ExchangeType enum으로 변환
+     
     public static ExchangeType fromString(String value) {
         for (ExchangeType type : values()) {
             if (type.displayName.equalsIgnoreCase(value)) {
                 return type;
             }
         }
-        throw new IllegalArgumentException("Invalid exchange type: " + value);
+        // IllegalArgumentException 대신 ChargeException
+        throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
     }
 }

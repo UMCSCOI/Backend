@@ -49,20 +49,15 @@ public class ChargeController implements ChargeControllerDocs{
 
     //보유자산 조회하기
     @GetMapping("/balances")
-    public ApiResponse<BalanceResDTO.BalanceDTO> getBalances(
+    public ApiResponse<BalanceResDTO.BalanceListDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,
             @AuthenticationPrincipal String phoneNumber
     ) {
-        // exchangeType String을 ExchangeType enum으로 변환
-        ExchangeType exchangeTypeEnum;
-        try {
-            exchangeTypeEnum = ExchangeType.fromString(exchangeType);
-        } catch (IllegalArgumentException e) {
-            throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
-        }
+        // try-catch 제거 - ExceptionAdvice에서 자동 처리
+        ExchangeType exchangeTypeEnum = ExchangeType.fromString(exchangeType);
 
         // JWT에서 가져온 phoneNumber로 조회
-        BalanceResDTO.BalanceDTO result = chargeService.getBalancesByPhone(phoneNumber, exchangeTypeEnum);
+        BalanceResDTO.BalanceListDTO result = chargeService.getBalancesByPhone(phoneNumber, exchangeTypeEnum);
 
         return ApiResponse.onSuccess(ChargeSuccessCode.OK, result);
     }
