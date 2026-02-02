@@ -3,6 +3,7 @@ package com.example.scoi.global.security.filter;
 import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
 import com.example.scoi.global.redis.RedisUtil;
 import com.example.scoi.global.security.jwt.JwtUtil;
+import com.example.scoi.global.security.userdetails.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,13 +12,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
 @Slf4j
 @Component
@@ -26,17 +27,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
+    private final CustomUserDetailsService userDetailsService;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String ERROR_CODE_ATTRIBUTE = "authErrorCode";
     private static final String BLACKLIST_PREFIX = "blacklist:";
 
+    // 인증 없이 접근 가능한 경로 (SecurityConfig와 동일하게 유지)
+    private static final String[] PUBLIC_ENDPOINTS = {
+            "/auth/sms/",
+            "/auth/signup",
+            "/auth/login",
+            "/auth/reissue",
+            "/swagger-ui/",
+            "/v3/api-docs/",
+            "/swagger-resources/",
+            "/error"
+    };
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String requestURI = request.getRequestURI();
+
+        // PUBLIC_ENDPOINTS는 토큰 검증 건너뛰기
+        if (isPublicEndpoint(request)) {
+            log.debug("PUBLIC_ENDPOINT 접근: {}", requestURI);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = resolveToken(request);
 
         // 토큰이 없으면 필터 통과 (인증 불필요 경로용)
@@ -68,6 +90,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
+     * PUBLIC_ENDPOINTS 여부 확인
+     */
+    private boolean isPublicEndpoint(HttpServletRequest request) {
+        String requestURI = request.getRequestURI();
+        for (String endpoint : PUBLIC_ENDPOINTS) {
+            if (requestURI.equals(endpoint) || requestURI.startsWith(endpoint)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Authorization 헤더에서 토큰 추출
      */
     private String resolveToken(HttpServletRequest request) {
@@ -80,11 +115,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * 인증 정보를 SecurityContext에 저장
+     * DB에서 회원 정보를 조회하여 UserDetails로 래핑합니다.
      */
     private void authenticateUser(HttpServletRequest request, String token) {
         String phoneNumber = jwtUtil.getPhoneNumberFromToken(token);
+
+        // DB에서 회원 조회 후 UserDetails 생성
+        UserDetails userDetails = userDetailsService.loadUserByUsername(phoneNumber);
+
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(phoneNumber, null, Collections.emptyList());
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
