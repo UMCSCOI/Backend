@@ -11,9 +11,6 @@ import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.client.BithumbClient;
 import com.example.scoi.global.client.UpbitClient;
-import com.example.scoi.global.client.adapter.BithumbAdapter;
-import com.example.scoi.global.client.adapter.UpbitAdapter;
-import com.example.scoi.global.client.adapter.ExchangeApiClient;
 import com.example.scoi.global.client.converter.BithumbConverter;
 import com.example.scoi.global.client.converter.UpbitConverter;
 import com.example.scoi.global.client.dto.*;
@@ -26,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 import java.security.GeneralSecurityException;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -37,8 +35,6 @@ public class ChargeService {
     private final BithumbClient bithumbClient;
     private final UpbitClient upbitClient;
     private final MemberRepository memberRepository;
-    private final BithumbAdapter bithumbAdapter;
-    private final UpbitAdapter upbitAdapter;
 
     // 원화 충전 요청하기
     public ChargeResDTO.ChargeKrw chargeKrw(
@@ -167,18 +163,30 @@ public class ChargeService {
         return result.toUpperCase();
     }
 
-    /**
-     * 보유 자산 조회
-     * JWT에서 추출한 phoneNumber로 조회
-     */
-    public BalanceResDTO.BalanceDTO getBalancesByPhone(String phoneNumber, ExchangeType exchangeType) {
-        // 시크릿 키 복호화하기 -JwtApiUtil
-        //쿼리 파라미터에 따라 빗썸 /업비트 API 조회하기
-        ExchangeApiClient apiClient = getApiClient(exchangeType);
-
+    //보유 자산 조회
+     
+    public BalanceResDTO.BalanceListDTO getBalancesByPhone(String phoneNumber, ExchangeType exchangeType) {
         try {
-            return apiClient.getBalance(phoneNumber, exchangeType);
-        // 토큰 못 만들었을 경우
+            List<BalanceResDTO.BalanceDTO> balances;
+            
+            switch (exchangeType) {
+                case UPBIT:
+                    String jwt = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
+                    UpbitResDTO.BalanceResponse[] upbitResponses = upbitClient.getAccount(jwt);
+                    balances = UpbitConverter.toBalanceDTOList(upbitResponses);
+                    break;
+                case BITHUMB:
+                    jwt = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);
+                    BithumbResDTO.BalanceResponse[] bithumbResponses = bithumbClient.getAccount(jwt);
+                    balances = BithumbConverter.toBalanceDTOList(bithumbResponses);
+                    break;
+                default:
+                    throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
+            }
+            
+            return BalanceResDTO.BalanceListDTO.builder()
+                    .balances(balances)
+                    .build();
         } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
         } catch (FeignException.BadRequest | FeignException.NotFound e) {
@@ -205,13 +213,5 @@ public class ChargeService {
             // 그 이외에는 JWT 관련 오류
             throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
         }
-    }
-
-    private ExchangeApiClient getApiClient(ExchangeType exchangeType) {
-        return switch (exchangeType) {
-            case BITHUMB -> bithumbAdapter;
-            case UPBIT -> upbitAdapter;
-            case BINANCE -> throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE); // 바이낸스는 후순위
-        };
     }
 }
