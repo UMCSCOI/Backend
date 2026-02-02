@@ -6,14 +6,11 @@ import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import jakarta.validation.constraints.NotNull;
 
-/**
- * 빗썸 API 응답을 BalanceResDTO로 변환하는 Converter
- *
- * 역할:
- * - 빗썸 API의 원본 응답 형식을 표준화된 BalanceResDTO.BalanceDTO로 변환
- * - 거래소별 응답 형식 차이를 여기서 흡수
- * - Adapter에서 호출하여 사용
- */
+import java.util.ArrayList;
+import java.util.List;
+
+
+//빗썸 API 응답을 BalanceResDTO로 변환
 public class BithumbConverter {
 
     // 원화 입금
@@ -26,23 +23,29 @@ public class BithumbConverter {
                 .build();
     }
 
-    // 빗썸 전체 계좌 조회 -> BalanceDTO
-    public static BalanceResDTO.BalanceDTO toBalanceDTO(@NotNull BithumbResDTO.BalanceResponse[] responses) {
+    // 빗썸 전체 계좌 조회 -> BalanceDTO 리스트
+    public static List<BalanceResDTO.BalanceDTO> toBalanceDTOList(@NotNull BithumbResDTO.BalanceResponse[] responses) {
+        List<BalanceResDTO.BalanceDTO> result = new ArrayList<>();
+        
         for (BithumbResDTO.BalanceResponse response : responses) {
-            if ("KRW".equals(response.currency())) {
-                return BalanceResDTO.BalanceDTO.builder()
-                        .currency(response.currency())
-                        .balance(response.balance())
-                        .locked(response.locked())
-                        .build();
+            try {
+                // 잔고가 0보다 큰 자산만 추가
+                double balance = Double.parseDouble(response.balance());
+                double locked = Double.parseDouble(response.locked());
+                
+                if (balance > 0 || locked > 0) {
+                    result.add(BalanceResDTO.BalanceDTO.builder()
+                            .currency(response.currency())
+                            .balance(response.balance())
+                            .locked(response.locked())
+                            .build());
+                }
+            } catch (NumberFormatException e) {
+                // 파싱 실패 시 해당 자산은 제외
+                continue;
             }
         }
-
-        // KRW가 없으면 빈 값 반환
-        return BalanceResDTO.BalanceDTO.builder()
-                .currency("KRW")
-                .balance("0")
-                .locked("0")
-                .build();
+        
+        return result;
     }
 }
