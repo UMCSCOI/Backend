@@ -3,10 +3,12 @@ package com.example.scoi.domain.charge.service;
 import com.example.scoi.domain.charge.converter.ChargeConverter;
 import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
+import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.client.BithumbClient;
 import com.example.scoi.global.client.UpbitClient;
 import com.example.scoi.global.client.converter.BithumbConverter;
@@ -15,18 +17,24 @@ import com.example.scoi.global.client.dto.*;
 import com.example.scoi.global.util.JwtApiUtil;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 import java.security.GeneralSecurityException;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
+@Slf4j
 public class ChargeService {
 
     private final JwtApiUtil jwtApiUtil;
     private final BithumbClient bithumbClient;
     private final UpbitClient upbitClient;
+    private final MemberRepository memberRepository;
 
     // 원화 충전 요청하기
     public ChargeResDTO.ChargeKrw chargeKrw(
@@ -79,10 +87,10 @@ public class ChargeService {
                 case "deposit_amount_too_small":
                     throw new ChargeException(ChargeErrorCode.MINIMUM_DEPOSIT_BAD_REQUEST);
             }
-            
+
             // 나머지 400 에러
             throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-            
+
         } catch (FeignException.Unauthorized e) {
 
             // Error 변환
@@ -97,7 +105,7 @@ public class ChargeService {
             // 그 이외에는 JWT 관련 오류
             throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
         }
-        
+
         // 정상 처리되었을때
         return ChargeConverter.toChargeKrw(uuid,txid);
     }
@@ -153,5 +161,57 @@ public class ChargeService {
         }
 
         return result.toUpperCase();
+    }
+
+    //보유 자산 조회
+     
+    public BalanceResDTO.BalanceListDTO getBalancesByPhone(String phoneNumber, ExchangeType exchangeType) {
+        try {
+            List<BalanceResDTO.BalanceDTO> balances;
+            
+            switch (exchangeType) {
+                case UPBIT:
+                    String jwt = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
+                    UpbitResDTO.BalanceResponse[] upbitResponses = upbitClient.getAccount(jwt);
+                    balances = UpbitConverter.toBalanceDTOList(upbitResponses);
+                    break;
+                case BITHUMB:
+                    jwt = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);
+                    BithumbResDTO.BalanceResponse[] bithumbResponses = bithumbClient.getAccount(jwt);
+                    balances = BithumbConverter.toBalanceDTOList(bithumbResponses);
+                    break;
+                default:
+                    throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
+            }
+            
+            return BalanceResDTO.BalanceListDTO.builder()
+                    .balances(balances)
+                    .build();
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        } catch (FeignException.BadRequest | FeignException.NotFound e) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+
+            // API 키를 찾을 수 없는 경우
+            if (e instanceof FeignException.NotFound) {
+                throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
+            }
+
+            // 나머지 400 에러
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+        } catch (FeignException.Unauthorized e) {
+            // Error 변환
+            ObjectMapper objectMapper = new ObjectMapper();
+            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+
+            // 권한 부족
+            if (error.error().name().equals("out_of_scope")) {
+                throw new ChargeException(ChargeErrorCode.EXCHANGE_FORBIDDEN);
+            }
+
+            // 그 이외에는 JWT 관련 오류
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+        }
     }
 }
