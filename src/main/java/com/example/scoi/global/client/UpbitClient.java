@@ -32,8 +32,16 @@ public interface UpbitClient {
 
     // 전체 계좌 조회
     // 쿼리파라미터 X & Request Body X
+    // @GetMapping("/v1/accounts")
+    // String getAccount(@RequestHeader("Authorization") String authorization);
+    
+    // 전체 계좌 조회 (DTO 반환)
     @GetMapping("/v1/accounts")
-    String getAccount(@RequestHeader("Authorization") String authorization);
+    UpbitResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String authorization);
+
+    //보유자산 조회
+    // @GetMapping("/v1/accounts")
+    // UpbitResDTO.BalanceResponse[] getBalance(@RequestHeader("Authorization") String authorization);
 
     // 페어별 주문 가능 정보 조회
     // 쿼리파라미터 O
