@@ -19,7 +19,11 @@ public enum InvestSuccessCode implements BaseSuccessCode {
 
     ORDER_UNAVAILABLE(HttpStatus.OK,
             "INVEST200_3",
-            "주문이 불가능합니다. 잔고 또는 수량이 부족합니다.");
+            "주문이 불가능합니다. 잔고 또는 수량이 부족합니다."),
+
+    ORDER_SUCCESS(HttpStatus.OK,
+            "INVEST200_4",
+            "주문이 성공적으로 생성되었습니다.");
 
     private final HttpStatus status;
     private final String code;
