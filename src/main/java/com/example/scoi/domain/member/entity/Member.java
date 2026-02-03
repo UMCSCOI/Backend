@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
@@ -16,6 +18,7 @@ import java.time.LocalDateTime;
 @Table(name = "member")
 @SQLDelete(sql = "UPDATE member SET deleted_at = now() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
+@EntityListeners(AuditingEntityListener.class)
 public class Member {
 
     @Id
@@ -48,6 +51,10 @@ public class Member {
     @Builder.Default
     private Boolean isBioRegistered = false;
 
+    @Column(name = "created_at")
+    @CreatedDate
+    private LocalDateTime createdAt;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -60,4 +67,19 @@ public class Member {
 
     @Column(name = "profile_image_url")
     private String profileImageUrl;
+
+    // 업데이트
+    public void increaseLoginFailCount(){
+        this.loginFailCount++;
+    }
+
+    public void resetLoginFailCount(){
+        this.loginFailCount = 0;
+    }
+
+    public void updateSimplePassword(String simplePassword){ this.simplePassword = simplePassword; }
+
+    public void updateLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
 }

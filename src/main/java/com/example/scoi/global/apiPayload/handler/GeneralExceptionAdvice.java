@@ -102,14 +102,50 @@ public class GeneralExceptionAdvice {
         return ResponseEntity.status(constraintErrorCode.getStatus()).body(errorResponse);
     }
 
+    // IllegalArgumentException 핸들러 (enum 변환 실패 등)
+    @ExceptionHandler(IllegalArgumentException.class)
+    protected ResponseEntity<ApiResponse<String>> handleIllegalArgumentException(
+            IllegalArgumentException ex
+    ) {
+        log.warn("[ IllegalArgumentException ]: {}", ex.getMessage());
+        
+        // ExchangeType 변환 실패인 경우 InvestErrorCode 사용
+        if (ex.getMessage() != null && ex.getMessage().contains("Invalid exchange type")) {
+            com.example.scoi.domain.invest.exception.code.InvestErrorCode investErrorCode = 
+                    com.example.scoi.domain.invest.exception.code.InvestErrorCode.INVALID_EXCHANGE_TYPE;
+            ApiResponse<String> errorResponse = ApiResponse.onFailure(
+                    investErrorCode,
+                    null
+            );
+            return ResponseEntity.status(investErrorCode.getStatus()).body(errorResponse);
+        }
+        
+        // 그 외의 경우 일반 검증 실패로 처리
+        BaseErrorCode validationErrorCode = GeneralErrorCode.VALIDATION_FAILED;
+        ApiResponse<String> errorResponse = ApiResponse.onFailure(
+                validationErrorCode,
+                ex.getMessage()
+        );
+        return ResponseEntity.status(validationErrorCode.getStatus()).body(errorResponse);
+    }
+
     // 애플리케이션에서 발생하는 커스텀 예외를 처리
     @ExceptionHandler(ScoiException.class)
-    public ResponseEntity<ApiResponse<Void>> handleCustomException(
+    public ResponseEntity<ApiResponse<?>> handleCustomException(
             ScoiException ex
     ) {
-        //예외가 발생하면 로그 기록
+        // 예외가 발생하면 로그 기록
         log.warn("[ ScoiException ]: {}", ex.getCode().getMessage());
-        //커스텀 예외에 정의된 에러 코드와 메시지를 포함한 응답 제공
+
+        // 바인딩이 존재하는 경우
+        if (ex.getBind() != null) {
+            return ResponseEntity.status(ex.getCode().getStatus())
+                    .body(ApiResponse.onFailure(
+                            ex.getCode(),
+                            ex.getBind()
+                    ));
+        }
+        // 커스텀 예외에 정의된 에러 코드와 메시지를 포함한 응답 제공
         return ResponseEntity.status(ex.getCode().getStatus())
                 .body(ApiResponse.onFailure(
                                 ex.getCode(),

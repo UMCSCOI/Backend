@@ -1,7 +1,8 @@
 ### .yml ###
 *.yml
 *.properties
-
+# GitHub Actions workflow는 예외로 추적
+!.github/workflows/deploy.yml
 ### workflow.yml 제외 ###
 !workflow.yml
 
@@ -9,6 +10,10 @@
 *.pem
 *.env
 data.sql
+
+
+### Firebase JSON 제거 ###
+firebase-scoi.json
 
 HELP.md
 .gradle
