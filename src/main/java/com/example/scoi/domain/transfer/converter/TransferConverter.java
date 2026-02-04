@@ -163,4 +163,37 @@ public class TransferConverter {
                 .receiverCorpEnName(dto.receiverCorpEnName())
                 .build();
     }
+
+    // 1. 업비트용 컨버터 (외부 호출용)
+    public static TransferResDTO.WithdrawResult toWithdrawResult(UpbitResDTO.WithdrawResDTO upbitRes) {
+        return buildWithdrawResult(
+                upbitRes.amount(),
+                upbitRes.currency(),
+                upbitRes.uuid(),
+                upbitRes.txid(),
+                upbitRes.state()
+        );
+    }
+    // 2. 빗썸용 컨버터 (외부 호출용)
+    public static TransferResDTO.WithdrawResult toWithdrawResult(BithumbResDTO.WithdrawResDTO bithumbRes) {
+        return buildWithdrawResult(
+                bithumbRes.amount(),
+                bithumbRes.currency(),
+                bithumbRes.uuid(),
+                bithumbRes.txid(),
+                bithumbRes.state()
+        );
+    }
+    // 3. 빌더 로직 통합 (내부 공통 메서드)
+    private static TransferResDTO.WithdrawResult buildWithdrawResult(
+            String amount, String currency, String uuid, String txid, String state
+    ) {
+        return TransferResDTO.WithdrawResult.builder()
+                .amount(amount)
+                .currency(currency)
+                .uuid(uuid)
+                .txid(txid)
+                .state(state)
+                .build();
+    }
 }

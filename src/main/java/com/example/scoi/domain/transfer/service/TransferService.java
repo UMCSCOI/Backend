@@ -307,17 +307,19 @@ public class TransferService {
                     TransferReqDTO.UpbitWithdrawRequest upbitDTO = TransferConverter.toUpbitWithdrawRequest(request);
                     token = jwtApiUtil.createUpBitJwt(phoneNumber, null, upbitDTO);
 
-                    UpbitResDTO.WithdrawResDTO upbitResult = upbitClient.withdrawCoin(token, upbitDTO);
+                    UpbitResDTO.WithdrawResDTO upbitRes = upbitClient.withdrawCoin(token, upbitDTO);
+                    TransferResDTO.WithdrawResult upbitResult = TransferConverter.toWithdrawResult(upbitRes);
 
-                    return null;
+                    return upbitResult;
 
                 case BITHUMB:
                     TransferReqDTO.BithumbWithdrawRequest bithumbDTO = TransferConverter.toBithumbWithdrawRequest(request);
                     token = jwtApiUtil.createBithumbJwt(phoneNumber, null, bithumbDTO);
 
-                    BithumbResDTO.WithdrawResDTO bithumResult = bithumbClient.withdrawCoin(token, bithumbDTO);
+                    BithumbResDTO.WithdrawResDTO bithumRes = bithumbClient.withdrawCoin(token, bithumbDTO);
+                    TransferResDTO.WithdrawResult bithumbResult = TransferConverter.toWithdrawResult(bithumRes);
 
-                    return null;
+                    return bithumbResult;
 
                 default:
                     throw new TransferException(TransferErrorCode.UNSUPPORTED_EXCHANGE);
