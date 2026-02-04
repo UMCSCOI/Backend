@@ -36,8 +36,16 @@ public interface BithumbClient {
 
     // 전체 계좌 조회
     // 쿼리파라미터 & Request Body X
+    // @GetMapping("/v1/accounts")
+    // String getAccount(@RequestHeader("Authorization") String authorization);
+    
+    // 전체 계좌 조회 (DTO 반환)
     @GetMapping("/v1/accounts")
-    String getAccount(@RequestHeader("Authorization") String authorization);
+    BithumbResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String authorization);
+
+    //보유자산 조회
+    // @GetMapping("/v1/accounts")
+    // BithumbResDTO.BalanceResponse[] getBalance(@RequestHeader("Authorization") String authorization);
 
     // 주문 가능 정보
     // 쿼리파라미터 O
