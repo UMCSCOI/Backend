@@ -3,6 +3,7 @@ package com.example.scoi.domain.charge.service;
 import com.example.scoi.domain.charge.converter.ChargeConverter;
 import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
+import com.example.scoi.domain.charge.enums.DepositType;
 import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.charge.exception.ChargeException;
@@ -119,19 +120,43 @@ public class ChargeService {
         String token;
         String result;
         try {
-            switch (dto.exchangeType()){
-                case UPBIT:
-                    token = jwtApiUtil.createUpBitJwt(phoneNumber, "uuid="+dto.uuid(), null);
-                    UpbitResDTO.GetOrder upbitResult = upbitClient.getOrder(token, dto.uuid());
-                    result = upbitResult.state();
-                    break;
-                case BITHUMB:
-                    token = jwtApiUtil.createBithumbJwt(phoneNumber, "uuid="+dto.uuid(), null);
-                    BithumbResDTO.GetOrder bithumbResult = bithumbClient.getOrder(token, dto.uuid());
-                    result = bithumbResult.state();
-                    break;
-                default:
-                    throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
+            if (dto.depositType().equals(DepositType.ORDER)){
+                switch (dto.exchangeType()){
+                    case UPBIT:
+                        token = jwtApiUtil.createUpBitJwt(phoneNumber, "uuid="+dto.uuid(), null);
+                        UpbitResDTO.GetOrder upbitResult = upbitClient.getOrder(token, dto.uuid());
+                        result = upbitResult.state();
+                        break;
+                    case BITHUMB:
+                        token = jwtApiUtil.createBithumbJwt(phoneNumber, "uuid="+dto.uuid(), null);
+                        BithumbResDTO.GetOrder bithumbResult = bithumbClient.getOrder(token, dto.uuid());
+                        result = bithumbResult.state();
+                        break;
+                    default:
+                        throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
+                }
+            } else if (dto.depositType().equals(DepositType.DEPOSIT)) {
+                switch (dto.exchangeType()) {
+                    case UPBIT:
+                        token = jwtApiUtil.createUpBitJwt(phoneNumber, "uuid="+dto.uuid()+"&currency=KRW", null);
+                        UpbitResDTO.GetDeposit upbitResult = upbitClient.getDeposit(token, dto.uuid(), "KRW");
+                        result = upbitResult.state();
+                        break;
+                    case BITHUMB:
+                        token = jwtApiUtil.createBithumbJwt(phoneNumber, "uuid="+dto.uuid()+"&currency=KRW", null);
+                        BithumbResDTO.GetDeposit bithumbResult = bithumbClient.getDeposit(token, dto.uuid(), "KRW");
+                        // PROCESSING, REJECTED, ACCEPTED
+                        if (bithumbResult.state().equals("REJECTED")){
+                            result = "CANCELLED";
+                        } else {
+                            result = bithumbResult.state();
+                        }
+                        break;
+                    default:
+                        throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
+                }
+            } else {
+                throw new ChargeException(ChargeErrorCode.WRONG_DEPOSIT_TYPE);
             }
         // 토큰 못 만들었을 경우
         } catch (GeneralSecurityException e) {

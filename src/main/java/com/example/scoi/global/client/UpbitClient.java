@@ -30,6 +30,14 @@ public interface UpbitClient {
             @RequestParam("uuid") String uuid
     );
 
+    // 개별 입금 조회
+    @GetMapping("/v1/deposit")
+    UpbitResDTO.GetDeposit getDeposit(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("uuid") String uuid,
+            @RequestParam("currency") String currency
+    );
+
     // 전체 계좌 조회
     // 쿼리파라미터 X & Request Body X
     // @GetMapping("/v1/accounts")
@@ -47,7 +55,7 @@ public interface UpbitClient {
     // 쿼리파라미터 O
     @GetMapping("/v1/orders/chance")
     String getOrderChance(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader("Authorization") String token,
             @RequestParam("market") String market
     );
 
@@ -55,7 +63,7 @@ public interface UpbitClient {
     // Request Body O
     @PostMapping("/v1/deposits/generate_coin_address")
     String getDepositAddress(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader("Authorization") String token,
             @RequestBody MemberReqDTO.Test dto
     );
 }

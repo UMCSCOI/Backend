@@ -22,10 +22,10 @@ public class BithumbResDTO {
             String currency,
             String txid,
             String status,
-            LocalDateTime created_at,
-            LocalDateTime done_at,
-            Long amount,
-            Long fee,
+            String created_at,
+            String done_at,
+            String amount,
+            String fee,
             String transaction_type
     ){}
 

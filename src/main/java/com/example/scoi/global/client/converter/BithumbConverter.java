@@ -19,7 +19,7 @@ public class BithumbConverter {
     ){
         return BithumbReqDTO.ChargeKrw.builder()
                 .amount(dto.amount().toString())
-                .two_factor_type(dto.MFA().name())
+                .two_factor_type(dto.MFA().name().toLowerCase())
                 .build();
     }
 

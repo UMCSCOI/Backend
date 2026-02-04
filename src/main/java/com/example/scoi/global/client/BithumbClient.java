@@ -26,6 +26,14 @@ public interface BithumbClient {
             @RequestParam("uuid") String uuid
     );
 
+    // 개별 입금 조회
+    @GetMapping("/v1/deposit")
+    BithumbResDTO.GetDeposit getDeposit(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("uuid") String uuid,
+            @RequestParam("currency") String currency
+    );
+
     // 전체 계좌 조회
     // 쿼리파라미터 & Request Body X
     // @GetMapping("/v1/accounts")

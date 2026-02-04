@@ -27,7 +27,7 @@ public class ChargeController implements ChargeControllerDocs{
 
     private final ChargeService chargeService;
 
-    // 원화 충전하기 (2차 인증서를 개발 단계에선 못함)
+    // 원화 충전하기
     @PostMapping("/deposits/krw")
     public ApiResponse<ChargeResDTO.ChargeKrw> chargeKrw(
             @AuthenticationPrincipal String phoneNumber,
