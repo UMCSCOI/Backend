@@ -94,4 +94,20 @@ public class UpbitResDTO {
                 Boolean can_withdraw           // 출금 지원 여부
         ) {}
     }
+
+    //이체 결과
+    public record WithdrawResDTO(
+            String type,                // 입출금 종류 (기본값: withdraw)
+            String uuid,                // 출금의 유일 식별자
+            String currency,            // 통화 코드 (예: BTC)
+            String netType,             // 출금 네트워크 유형
+            String txid,                // 트랜잭션 ID (실패/대기 시 null 가능)
+            String state,               // 출금 상태 (WAITING, DONE 등)
+            String createdAt,           // 출금 생성 시간
+            String doneAt,              // 출금 완료 시간 (미완료 시 null)
+            String amount,              // 출금 수량
+            String fee,                 // 출금 수수료
+            String transactionType,     // 출금 유형 (default: 일반, internal: 바로출금)
+            Boolean isCancelable        // 출금 취소 가능 여부
+    ) {}
 }

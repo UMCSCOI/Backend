@@ -126,11 +126,41 @@ public class TransferConverter {
                 .build();
     }
 
+    // dto로 변환
     public static TransferResDTO.QuoteValidDTO toQuoteValidDTO(String amount, String networkFee, String totalAmount) {
         return TransferResDTO.QuoteValidDTO.builder()
                 .amount(amount)
                 .networkFee(networkFee)
                 .totalAmount(totalAmount)
+                .build();
+    }
+
+    // 업비트 요청으로 변환
+    public static TransferReqDTO.UpbitWithdrawRequest toUpbitWithdrawRequest(TransferReqDTO.WithdrawRequest dto){
+        return new TransferReqDTO.UpbitWithdrawRequest(
+                dto.currency(),
+                dto.netType(),
+                dto.amount(),
+                dto.address()
+        );
+    }
+
+    // 빗썸 요청으로 변환
+    public static TransferReqDTO.BithumbWithdrawRequest toBithumbWithdrawRequest(TransferReqDTO.WithdrawRequest dto) {
+        // MemberType(Enum)을 빗썸 규격 문자열로 매핑
+        String mappedReceiverType = dto.receiverType().equals("INDIVIDUAL") ? "personal" : "corporation";
+
+        return TransferReqDTO.BithumbWithdrawRequest.builder()
+                .currency(dto.currency())
+                .netType(dto.netType())
+                .amount(Double.valueOf(dto.amount()))
+                .address(dto.address())
+                .exchangeName(String.valueOf(dto.exchangeName()))
+                .receiverType(mappedReceiverType)
+                .receiverKoName(dto.receiverKoName())
+                .receiverEnName(dto.receiverEnName())
+                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
+                .receiverCorpEnName(dto.receiverCorpEnName())
                 .build();
     }
 }

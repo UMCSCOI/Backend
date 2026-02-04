@@ -16,6 +16,7 @@ public enum TransferSuccessCode implements BaseSuccessCode {
     TRANSFER200_4(HttpStatus.OK, "TRANSFER200_4", "즐겨찾기 수취인에서 해제했습니다."),
     TRANSFER200_5(HttpStatus.OK, "TRANSFER200_5", "수취인 입력값 검증에 성공했습니다."),
     TRANSFER200_6(HttpStatus.OK, "TRANSFER200_6", "출금 견접 검증에 성공했습니다."),
+    TRANSFER200_7(HttpStatus.OK, "TRANSFER200_7", "출금 요청에 성공했습니다."),
 
     TRANSFER201_1(HttpStatus.CREATED, "TRANSFER201_1", "즐겨찾기 수취인 등록에 성공했습니다.")
     ;

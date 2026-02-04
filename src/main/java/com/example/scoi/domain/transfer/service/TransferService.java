@@ -4,6 +4,8 @@ import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.enums.MemberType;
 import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
+import com.example.scoi.domain.auth.exception.AuthException;
+import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.domain.transfer.converter.TransferConverter;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
@@ -30,6 +32,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
@@ -45,6 +48,7 @@ public class TransferService {
     private final TradeHistoryRepository tradeHistoryRepository;
     private final MemberRepository memberRepository;
     private final RecipientRepository recipientRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private final JwtApiUtil jwtApiUtil;
     private final BithumbClient bithumbClient;
@@ -53,7 +57,7 @@ public class TransferService {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // 최근 수취인 조회 메서드
-    public TransferResDTO.RecipientListDTO findRecentRecipients(String phoneNumber, String cursor, int limit){
+    public TransferResDTO.RecipientListDTO findRecentRecipients(String phoneNumber, String cursor, int limit) {
 
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
@@ -115,7 +119,6 @@ public class TransferService {
         // DTO로 변환 및 반환
         return TransferConverter.toFavoriteRecipientListDTO(content, nextCursor, hasNext);
     }
-
 
     // 즐겨찾기 등록 메서드
     @Transactional
@@ -275,6 +278,106 @@ public class TransferService {
                 fee.toPlainString(),
                 total.toPlainString()
         );
+    }
+
+    // 이체
+    public TransferResDTO.WithdrawResult executeWithdraw(String phoneNumber, TransferReqDTO.WithdrawRequest request) {
+
+        // 1. 간편 비밀번호 검증
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        if (member.getLoginFailCount() >= 5) {
+            throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
+        }
+
+        if (!passwordEncoder.matches(request.simplePassword(), member.getSimplePassword())) {
+            member.increaseLoginFailCount();
+            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        }
+        // 비밀번호 일치 시 실패 횟수 초기화
+        member.resetLoginFailCount();
+
+        // 2. 이체하기
+        String token;
+
+        try {
+            switch (request.exchangeType()) {
+                case UPBIT:
+                    TransferReqDTO.UpbitWithdrawRequest upbitDTO = TransferConverter.toUpbitWithdrawRequest(request);
+                    token = jwtApiUtil.createUpBitJwt(phoneNumber, null, upbitDTO);
+
+                    UpbitResDTO.WithdrawResDTO upbitResult = upbitClient.withdrawCoin(token, upbitDTO);
+
+                    return null;
+
+                case BITHUMB:
+                    TransferReqDTO.BithumbWithdrawRequest bithumbDTO = TransferConverter.toBithumbWithdrawRequest(request);
+                    token = jwtApiUtil.createBithumbJwt(phoneNumber, null, bithumbDTO);
+
+                    BithumbResDTO.WithdrawResDTO bithumResult = bithumbClient.withdrawCoin(token, bithumbDTO);
+
+                    return null;
+
+                default:
+                    throw new TransferException(TransferErrorCode.UNSUPPORTED_EXCHANGE);
+            }
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
+        catch (FeignException.BadRequest | FeignException.NotFound e) {
+            String rawBody = e.contentUTF8(); // 원본 응답 저장
+            log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
+
+            ClientErrorDTO.Errors error = null;
+            error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
+
+            // 파라미터가 잘못된 경우
+            if (error.error().name().equals("validation_error")) {
+                throw new TransferException(TransferErrorCode.INVALID_INPUT);
+            }
+
+            // 네트워크가 잘못된 경우
+            if (error.error().name().equals("invalid_network_type")) {
+                throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
+            }
+
+            // 지갑 주소가 올바르지 않은 경우
+            if (error.error().name().equals("invalid_withdraw_address")) {
+                throw new TransferException(TransferErrorCode.INVALID_WALLET_ADDRESS);
+            }
+
+            // 거래소에서 요청을 처리하지 못한 경우
+            if(error.error().name().equals("request_fail")) {
+                throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+            }
+
+            // 등록된 출금 주소가 아닌 경우
+            if(error.error().name().equals("withdraw_address_not_registered")) {
+                throw new TransferException(TransferErrorCode.UNREGISTERED_WALLET_ADDRESS);
+            }
+
+            // 출금 시스템 점검 중인 경우
+            if(error.error().name().equals("withdraw_maintain")) {
+                throw new TransferException(TransferErrorCode.TRANSFER_CHECK);
+            }
+
+            // 나머지 400 에러
+            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+
+            // 권한이 부족한 경우
+        } catch (FeignException.Unauthorized e) {
+            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+
+            // 권한이 부족한 경우
+            if (error.error().name().equals("out_of_scope")) {
+                throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+            }
+
+            // 나머지 JWT 관련 오류
+            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+        }
     }
 
     // 수취인 입력값 검증 메서드

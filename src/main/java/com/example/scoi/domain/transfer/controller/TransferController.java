@@ -81,4 +81,12 @@ public class TransferController implements TransferControllerDocs{
                 transferService.checkQuotes(quotes));
     }
 
+    @PostMapping("/execute")
+    public ApiResponse<TransferResDTO.WithdrawResult> executeWithdraw(
+        @AuthenticationPrincipal String phoneNumber,
+        @RequestBody TransferReqDTO.WithdrawRequest request
+        ) {
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_7,
+                transferService.executeWithdraw(phoneNumber, request));
+    }
 }

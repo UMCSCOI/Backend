@@ -56,4 +56,12 @@ public interface BithumbClient {
             @RequestParam("currency") String currency,
             @RequestParam("net_type") String netType
     );
+
+    // 이체
+    // Request Body O
+    @PostMapping("/v1/withdraws/coin")
+    BithumbResDTO.WithdrawResDTO withdrawCoin(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody TransferReqDTO.BithumbWithdrawRequest dto
+    );
 }

@@ -2,6 +2,7 @@ package com.example.scoi.domain.transfer.controller;
 
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
+import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -60,5 +61,13 @@ public interface TransferControllerDocs {
             description = "사용자가 입력한 출금 값 + 네트워크 수수료가 남은 잔고보다 많은지 검증하고 그 값들을 반환합니다.")
     ApiResponse<TransferResDTO.QuoteValidDTO> checkQuotes(
             @RequestBody TransferReqDTO.Quote quotes
+    );
+
+    @Operation(
+            summary = "출금을 실행합니다.",
+            description = "사용자의 간편 비밀번호를 확인한 후, 지정된 거래소로 코인을 이체합니다.")
+    ApiResponse<TransferResDTO.WithdrawResult> executeWithdraw(
+            @AuthenticationPrincipal String phoneNumber,
+            @RequestBody TransferReqDTO.WithdrawRequest request
     );
 }

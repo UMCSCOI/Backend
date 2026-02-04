@@ -93,4 +93,20 @@ public class BithumbResDTO {
             Integer fixed,                   // 소수점 자리수
             Boolean can_withdraw             // 출금 지원 여부
     ) {}
+
+    // 이체 결과
+    public record WithdrawResDTO(
+            String type,                // 입출금 종류
+            String uuid,                // 출금의 고유 아이디
+            String currency,            // 화폐 영문 대문자 코드
+            String netType,             // 출금 네트워크
+            String txid,                // 출금의 트랜잭션 아이디
+            String state,               // 출금 상태
+            String createdAt,           // 출금 생성 시간 (DateString)
+            String done_at,             // 출금 완료 시간 (DateString)
+            String amount,              // 출금 금액/수량 (NumberString)
+            String fee,                 // 출금 수수료 (NumberString)
+            String krwAmount,           // 원화 환산 가격 (NumberString)
+            String transactionType      // 출금 유형 (default 등)
+    ) {}
 }
