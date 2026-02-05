@@ -36,7 +36,7 @@ public class Recipient {
     @Column(name = "recipient_corp_ko_name", length = 50, nullable = true)
     private String recipientCorpKoName;
 
-    @Column(name = "is_favorite", nullable = false)
+    @Column(name = "is_favorite")
     @Builder.Default
     private Boolean isFavorite = false;
 

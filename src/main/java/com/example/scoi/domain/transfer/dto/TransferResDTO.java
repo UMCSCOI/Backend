@@ -98,7 +98,7 @@ public class TransferResDTO {
         private String amount;          // 3,200 (공통: 출금 수량)
         private String currency;        // USDT (공통: 화폐 코드)
         private String uuid;
-        private String txid;            // TXYZop... (공통: 트랜잭션 아이디/주소)
+        private String createdAt;
         private String state;           // 출금 신청 완료 (공통: 출금 상태)
     }
 }

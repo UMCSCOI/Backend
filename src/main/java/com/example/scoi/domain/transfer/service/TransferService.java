@@ -30,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,6 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -55,6 +57,7 @@ public class TransferService {
     private final UpbitClient upbitClient;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final RedisTemplate<String, String> redisTemplate;
 
     // 최근 수취인 조회 메서드
     public TransferResDTO.RecipientListDTO findRecentRecipients(String phoneNumber, String cursor, int limit) {
@@ -283,6 +286,23 @@ public class TransferService {
     // 이체
     public TransferResDTO.WithdrawResult executeWithdraw(String phoneNumber, TransferReqDTO.WithdrawRequest request) {
 
+        // 0. 멱등성 키 추출 및 Redis 락 획득
+        String idempotentKey = request.idempotentKey();
+        String redisKey = "transfer:lock:" + idempotentKey;
+
+        // 10분동안 유효한 락 설정
+        Boolean isFirstReq = redisTemplate.opsForValue()
+                .setIfAbsent(redisKey, "PROCESSING", Duration.ofMinutes(10));
+
+        // 이미 해당 키로 진행 중이거나 완료된 요청임
+        if (Boolean.FALSE.equals(isFirstReq)) {
+            //throw new TransferException(TransferErrorCode.DUPLICATE_REQUEST);
+            TradeHistory tradeHistory = tradeHistoryRepository.findTradeHistoryByIdempotentKey(idempotentKey)
+                    .orElseThrow(() -> new TransferException(TransferErrorCode.DUPLICATE_REQUEST));
+            return TransferConverter.toWithdrawResult(tradeHistory);
+        }
+        boolean isSuccess = false;
+
         // 1. 간편 비밀번호 검증
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
@@ -300,6 +320,7 @@ public class TransferService {
 
         // 2. 이체하기
         String token;
+        TransferResDTO.WithdrawResult result;
 
         try {
             switch (request.exchangeType()) {
@@ -308,22 +329,36 @@ public class TransferService {
                     token = jwtApiUtil.createUpBitJwt(phoneNumber, null, upbitDTO);
 
                     UpbitResDTO.WithdrawResDTO upbitRes = upbitClient.withdrawCoin(token, upbitDTO);
-                    TransferResDTO.WithdrawResult upbitResult = TransferConverter.toWithdrawResult(upbitRes);
-
-                    return upbitResult;
+                    result = TransferConverter.toWithdrawResult(upbitRes);
+                    log.info("UP DTO: {}", upbitRes);
+                    break;
 
                 case BITHUMB:
                     TransferReqDTO.BithumbWithdrawRequest bithumbDTO = TransferConverter.toBithumbWithdrawRequest(request);
                     token = jwtApiUtil.createBithumbJwt(phoneNumber, null, bithumbDTO);
 
                     BithumbResDTO.WithdrawResDTO bithumRes = bithumbClient.withdrawCoin(token, bithumbDTO);
-                    TransferResDTO.WithdrawResult bithumbResult = TransferConverter.toWithdrawResult(bithumRes);
-
-                    return bithumbResult;
+                    result = TransferConverter.toWithdrawResult(bithumRes);
+                    log.info("BIT DTO: {}", bithumRes);
+                    break;
 
                 default:
                     throw new TransferException(TransferErrorCode.UNSUPPORTED_EXCHANGE);
             }
+            // 성공한 경우
+            isSuccess = true;
+
+            // 수취인 저장
+            Recipient recipient = TransferConverter.toRecipient(request, member);
+            recipientRepository.save(recipient);
+
+            // 이체내역 저장
+            TradeHistory tradeHistory = TransferConverter.toTradeHistory(request, result, recipient, member);
+            tradeHistoryRepository.save(tradeHistory);
+
+            // 결과 반환
+            return result;
+
         } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
@@ -379,6 +414,12 @@ public class TransferService {
 
             // 나머지 JWT 관련 오류
             throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+        }
+        finally {
+            // 성공하지 못했다면(예외 발생 시) Redis 키를 삭제하여 재시도 허용
+            if (!isSuccess) {
+                redisTemplate.delete(redisKey);
+            }
         }
     }
 

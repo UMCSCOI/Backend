@@ -27,6 +27,9 @@ public enum TransferErrorCode implements BaseErrorCode {
 
     // 404
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "TRANSFER404_1", "memberId에 해당하는 사용자를 찾을 수 없습니다."),
+
+    //423
+    DUPLICATE_REQUEST(HttpStatus.LOCKED, "TRANSFER423_1", "이미 요청된 출금입니다."),
     ;
 
     private final HttpStatus status;
