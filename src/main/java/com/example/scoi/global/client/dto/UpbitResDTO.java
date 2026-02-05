@@ -1,7 +1,6 @@
 package com.example.scoi.global.client.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +11,6 @@ import java.util.List;
 
 /**
  * 업비트 API 응답 DTO
- *
  * 역할:
  * - 업비트 API의 원본 응답 형식을 그대로 받아오는 DTO
  * - 공식 문서의 모든 필드를 포함
@@ -167,10 +165,8 @@ public class UpbitResDTO {
     ){}
     /**
      * 업비트 계정 잔고 조회 응답 (배열)
-     *
      * 공식 문서: https://docs.upbit.com/kr/reference/get-balance
      * 엔드포인트: GET /v1/accounts
-     *
      * 공식 문서의 모든 필드를 포함:
      * - currency: 화폐를 의미하는 영문 대문자 코드
      * - balance: 주문가능 금액/수량

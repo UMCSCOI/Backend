@@ -1,12 +1,11 @@
 package com.example.scoi.global.client.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.time.LocalDateTime;
+
 import java.util.List;
 
 /**
  * 빗썸 API 응답 DTO
- *
  * 역할:
  * - 빗썸 API의 원본 응답 형식을 그대로 받아오는 DTO
  * - 공식 문서의 모든 필드를 포함
@@ -141,12 +140,11 @@ public class BithumbResDTO {
             Boolean avg_buy_price_modified,
             String unit_currency
     ){}
+
     /**
      * 빗썸 전체 계좌 조회 응답 (배열)
-     *
      * 공식 문서: https://apidocs.bithumb.com/reference/전체-계좌-조회
      * 엔드포인트: GET /v1/accounts
-     *
      * 공식 문서 응답 형식 (Response 200):
      * array of objects
      * [
