@@ -4,16 +4,16 @@ import com.example.scoi.domain.auth.code.AuthSuccessCode;
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.service.AuthService;
-import com.example.scoi.domain.member.entity.Member;
-import com.example.scoi.domain.member.exception.MemberException;
-import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.jwt.JwtUtil;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "인증 API", description = "SMS, 회원가입, 로그인, 토큰 관리")
@@ -55,13 +55,11 @@ public class AuthController {
 
     @Operation(summary = "로그인 By 장명준", description = "로그인 후 Access Token과 Refresh Token을 반환합니다.")
     @PostMapping("/login")
-    public ApiResponse<String> login(
-            @RequestParam(defaultValue = "01012341234") String phoneNumber
+    public ApiResponse<AuthResDTO.LoginResponse> login(
+            @Valid @RequestBody AuthReqDTO.LoginRequest request
     ) {
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        return ApiResponse.onSuccess(AuthSuccessCode.LOGIN_SUCCESS, jwtUtil.createAccessToken(member.getPhoneNumber()));
+        AuthResDTO.LoginResponse response = authService.login(request);
+        return ApiResponse.onSuccess(AuthSuccessCode.LOGIN_SUCCESS, response);
     }
 
     @Operation(summary = "토큰 재발급 By 장명준", description = "Refresh Token으로 Access Token과 Refresh Token을 모두 재발급합니다.")
@@ -76,10 +74,10 @@ public class AuthController {
     @Operation(summary = "로그아웃 By 장명준", description = "로그아웃 처리 (Refresh Token 삭제, Access Token 블랙리스트 등록)")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
-            @RequestHeader("Authorization") String authorization
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Parameter(hidden = true) @RequestHeader("Authorization") String authorization
     ) {
-        // TODO: 다음 PR에서 JWT 구현 후 phoneNumber 추출
-        String phoneNumber = "01012345678"; // 임시
+        String phoneNumber = userDetails.getUsername();
         String accessToken = authorization.replace("Bearer ", "");
 
         authService.logout(phoneNumber, accessToken);

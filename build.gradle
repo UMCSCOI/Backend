@@ -42,6 +42,7 @@ dependencies {
     // MySQL
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -64,12 +65,15 @@ dependencies {
 
     // Firebase
     implementation 'com.google.firebase:firebase-admin:9.7.0'
-    
+
     // Spring Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Dotenv (환경변수)
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 }
 
 tasks.named('test') {
