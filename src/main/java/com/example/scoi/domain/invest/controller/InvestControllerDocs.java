@@ -4,9 +4,11 @@ import com.example.scoi.domain.invest.dto.InvestReqDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -21,7 +23,7 @@ public interface InvestControllerDocs {
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String price,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     );
 
     @Operation(
@@ -30,6 +32,6 @@ public interface InvestControllerDocs {
     )
     ApiResponse<Void> checkOrderAvailability(
             @RequestBody InvestReqDTO.OrderDTO request,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     );
 }

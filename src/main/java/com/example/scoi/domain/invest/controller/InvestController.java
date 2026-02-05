@@ -7,8 +7,10 @@ import com.example.scoi.domain.invest.exception.code.InvestSuccessCode;
 import com.example.scoi.domain.invest.service.InvestService;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,28 +26,26 @@ public class InvestController implements InvestControllerDocs {
     private final InvestService investService;
 
     @GetMapping("/orders/info")
-    @Override
     public ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String price,  // 가격 (선택적)
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
         // JWT에서 추출한 phoneNumber로 조회
-        MaxOrderInfoDTO result = investService.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
+        MaxOrderInfoDTO result = investService.getMaxOrderInfo(user.getUsername(), exchangeType, coinType, price);
         
         return ApiResponse.onSuccess(InvestSuccessCode.MAX_ORDER_INFO_SUCCESS, result);
     }
 
     @PostMapping("/orders/test")
-    @Override
     public ApiResponse<Void> checkOrderAvailability(
             @RequestBody InvestReqDTO.OrderDTO request,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
         // 주문 가능 여부 확인
         investService.checkOrderAvailability(
-                phoneNumber,
+                user.getUsername(),
                 request.getExchangeType(),
                 request.getMarket(),
                 request.getSide(),

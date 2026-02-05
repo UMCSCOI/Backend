@@ -11,8 +11,10 @@ import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
 import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,34 +32,34 @@ public class ChargeController implements ChargeControllerDocs{
     // 원화 충전하기
     @PostMapping("/deposits/krw")
     public ApiResponse<ChargeResDTO.ChargeKrw> chargeKrw(
-            @AuthenticationPrincipal String phoneNumber,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody ChargeReqDTO.ChargeKrw dto
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
-        return ApiResponse.onSuccess(code, chargeService.chargeKrw(phoneNumber,dto));
+        return ApiResponse.onSuccess(code, chargeService.chargeKrw(user.getUsername(),dto));
     }
 
     // 특정 주문 확인하기
     @PostMapping("/deposits")
     public ApiResponse<String> getOrders(
-            @AuthenticationPrincipal String phoneNumber,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody ChargeReqDTO.GetOrder dto
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
-        return ApiResponse.onSuccess(code, chargeService.getOrders(phoneNumber, dto));
+        return ApiResponse.onSuccess(code, chargeService.getOrders(user.getUsername(), dto));
     }
 
     //보유자산 조회하기
     @GetMapping("/balances")
     public ApiResponse<BalanceResDTO.BalanceListDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
         // try-catch 제거 - ExceptionAdvice에서 자동 처리
         ExchangeType exchangeTypeEnum = ExchangeType.fromString(exchangeType);
 
         // JWT에서 가져온 phoneNumber로 조회
-        BalanceResDTO.BalanceListDTO result = chargeService.getBalancesByPhone(phoneNumber, exchangeTypeEnum);
+        BalanceResDTO.BalanceListDTO result = chargeService.getBalancesByPhone(user.getUsername(), exchangeTypeEnum);
 
         return ApiResponse.onSuccess(ChargeSuccessCode.OK, result);
     }
