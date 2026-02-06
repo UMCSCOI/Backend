@@ -163,6 +163,26 @@ public class UpbitResDTO {
             String unit_currency,
             String available  // 매수 가능 금액/수량
     ){}
+
+    // 개별 입금 주소 조회
+    public record GetDepositAddress(
+            String currency,
+            String net_type,
+            String deposit_address,
+            String secondary_address
+    ){}
+
+    // 입금 주소 생성 요청
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CreateDepositAddress(
+            String success, // 201 생성 요청 직후
+            String message, // 201 생성 요청 직후
+            String currency, // 200 생성 이후
+            String net_type, // 200 생성 이후
+            String deposit_address, // 200 생성 이후
+            String secondary_address // 200 생성 이후
+    ){}
+
     /**
      * 업비트 계정 잔고 조회 응답 (배열)
      * 공식 문서: https://docs.upbit.com/kr/reference/get-balance

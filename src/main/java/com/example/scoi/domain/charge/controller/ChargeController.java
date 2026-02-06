@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -53,5 +55,32 @@ public class ChargeController implements ChargeControllerDocs{
         BalanceResDTO.BalanceListDTO result = chargeService.getBalancesByPhone(user.getUsername(), exchangeTypeEnum);
 
         return ApiResponse.onSuccess(ChargeSuccessCode.OK, result);
+    }
+
+    // 입금 주소 확인하기
+    @GetMapping("/deposits/address")
+    public ApiResponse<List<ChargeResDTO.GetDepositAddress>> getDepositAddress(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam ExchangeType exchangeType,
+            @RequestParam(defaultValue = "") List<String> coinType,
+            @RequestParam(defaultValue = "") List<String> netType
+    ){
+        BaseSuccessCode code = ChargeSuccessCode.OK;
+        return ApiResponse.onSuccess(code, chargeService.getDepositAddress(
+                user.getUsername(),
+                exchangeType,
+                coinType.stream().map(String::toUpperCase).toList(),
+                netType.stream().map(String::toUpperCase).toList()
+        ));
+    }
+
+    // 입금 주소 생성하기
+    @PostMapping("/deposits/address")
+    public ApiResponse<List<String>> createDepositAddress(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestBody ChargeReqDTO.CreateDepositAddress dto
+    ){
+        BaseSuccessCode code = ChargeSuccessCode.OK;
+        return ApiResponse.onSuccess(code, chargeService.createDepositAddress(user.getUsername(), dto));
     }
 }
