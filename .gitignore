@@ -1,13 +1,15 @@
 ### .yml ###
 *.yml
 *.properties
-
+# GitHub Actions workflow는 예외로 추적
+!.github/workflows/deploy.yml
 ### workflow.yml 제외 ###
 !workflow.yml
 
 ### 민감한 개인 정보 제거 ###
 *.pem
 *.env
+
 
 ### Firebase JSON 제거 ###
 firebase-scoi.json

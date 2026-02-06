@@ -4,11 +4,16 @@ import com.example.scoi.domain.auth.code.AuthSuccessCode;
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.service.AuthService;
+import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.security.jwt.JwtUtil;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "인증 API", description = "SMS, 회원가입, 로그인, 토큰 관리")
@@ -18,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtUtil jwtUtil;
+    private final MemberRepository memberRepository;
 
     @Operation(summary = "SMS 발송 By 장명준", description = "휴대폰 번호로 인증번호를 발송합니다.")
     @PostMapping("/sms/send")
@@ -67,10 +74,10 @@ public class AuthController {
     @Operation(summary = "로그아웃 By 장명준", description = "로그아웃 처리 (Refresh Token 삭제, Access Token 블랙리스트 등록)")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
-            @RequestHeader("Authorization") String authorization
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Parameter(hidden = true) @RequestHeader("Authorization") String authorization
     ) {
-        // TODO: 다음 PR에서 JWT 구현 후 phoneNumber 추출
-        String phoneNumber = "01012345678"; // 임시
+        String phoneNumber = userDetails.getUsername();
         String accessToken = authorization.replace("Bearer ", "");
 
         authService.logout(phoneNumber, accessToken);

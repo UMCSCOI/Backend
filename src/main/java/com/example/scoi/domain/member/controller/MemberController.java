@@ -8,14 +8,12 @@ import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseErrorCode;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
-import com.example.scoi.global.apiPayload.code.GeneralSuccessCode;
-import com.example.scoi.global.security.jwt.JwtUtil;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,19 +28,19 @@ public class MemberController implements MemberControllerDocs{
     // 내 정보 조회
     @GetMapping("/members/me")
     public ApiResponse<MemberResDTO.MemberInfo> getMemberInfo(
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ){
         BaseSuccessCode code = MemberSuccessCode.OK;
-        return ApiResponse.onSuccess(code, memberService.getMemberInfo(phoneNumber));
+        return ApiResponse.onSuccess(code, memberService.getMemberInfo(user.getUsername()));
     }
 
     // 간편 비밀번호 변경
     @PatchMapping("/members/me/password")
     public ApiResponse<Map<String, String>> changePassword(
             @RequestBody MemberReqDTO.ChangePassword dto,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ){
-        Optional<Map<String, String>> result = memberService.changePassword(dto, phoneNumber);
+        Optional<Map<String, String>> result = memberService.changePassword(dto, user.getUsername());
         if (result.isPresent()){
             BaseErrorCode code = GeneralErrorCode.VALIDATION_FAILED;
             return ApiResponse.onFailure(code, result.get());
@@ -56,28 +54,28 @@ public class MemberController implements MemberControllerDocs{
     @PostMapping("/members/me/password/reset")
     public ApiResponse<Void> resetPassword(
             @Validated @RequestBody MemberReqDTO.ResetPassword dto,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ){
         BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;
-        return ApiResponse.onSuccess(code, memberService.resetPassword(dto, phoneNumber));
+        return ApiResponse.onSuccess(code, memberService.resetPassword(dto, user.getUsername()));
     }
 
     // 거래소 목록 조회
     @GetMapping("/exchanges")
     public ApiResponse<List<MemberResDTO.ExchangeList>> getExchangeList(
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ){
         BaseSuccessCode code = MemberSuccessCode.EXCHANGE_LIST;
-        return ApiResponse.onSuccess(code, memberService.getExchangeList(phoneNumber));
+        return ApiResponse.onSuccess(code, memberService.getExchangeList(user.getUsername()));
     }
 
     // API키 목록 조회
     @GetMapping("/members/me/api-keys")
     public ApiResponse<List<MemberResDTO.ApiKeyList>> getApiKeyList(
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ){
         BaseSuccessCode code = MemberSuccessCode.GET_API_KEY_LIST;
-        List<MemberResDTO.ApiKeyList> result = memberService.getApiKeyList(phoneNumber);
+        List<MemberResDTO.ApiKeyList> result = memberService.getApiKeyList(user.getUsername());
         if (result.isEmpty()){
             result = null;
         }
@@ -87,11 +85,11 @@ public class MemberController implements MemberControllerDocs{
     // API키 등록 및 수정
     @PostMapping("/members/me/api-keys")
     public ApiResponse<List<String>> postPatchApiKey(
-            @AuthenticationPrincipal String phoneNumber,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody List<MemberReqDTO.PostPatchApiKey> dto
     ){
         BaseSuccessCode code = MemberSuccessCode.POST_PATCH_API_KEY;
-        List<String> result = memberService.postPatchApiKey(phoneNumber, dto);
+        List<String> result = memberService.postPatchApiKey(user.getUsername(), dto);
         if (result.isEmpty()){
             result = null;
         }
@@ -101,20 +99,20 @@ public class MemberController implements MemberControllerDocs{
     // API키 삭제
     @DeleteMapping("/members/me/api-keys")
     public ApiResponse<Void> deleteApiKey(
-            @AuthenticationPrincipal String phoneNumber,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody MemberReqDTO.DeleteApiKey dto
     ){
         BaseSuccessCode code = MemberSuccessCode.DELETE_API_KEY;
-        return ApiResponse.onSuccess(code, memberService.deleteApiKey(phoneNumber, dto));
+        return ApiResponse.onSuccess(code, memberService.deleteApiKey(user.getUsername(), dto));
     }
 
     // FCM 토큰 등록
     @PostMapping("/members/me/fcm")
     public ApiResponse<Void> postFcmToken(
-            @AuthenticationPrincipal String phoneNumber,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody MemberReqDTO.PostFcmToken dto
     ){
         BaseSuccessCode code = MemberSuccessCode.POST_PATCH_FCM_TOKEN;
-        return ApiResponse.onSuccess(code, memberService.postFcmToken(phoneNumber, dto));
+        return ApiResponse.onSuccess(code, memberService.postFcmToken(user.getUsername(), dto));
     }
 }
