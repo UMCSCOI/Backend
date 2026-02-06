@@ -243,6 +243,11 @@ public class TransferService {
                 throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
             }
 
+            // 파라미터(네트워크 타입)가 잘못된 경우
+            if (error.error().name().equals("invalid_network_type")) {
+                throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
+            }
+
             // 나머지 400 에러
             throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
 

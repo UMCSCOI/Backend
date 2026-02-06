@@ -172,22 +172,22 @@ public class TransferConverter {
     public static TransferResDTO.WithdrawResult toWithdrawResult(UpbitResDTO.WithdrawResDTO upbitRes) {
         return buildWithdrawResult(
                 upbitRes.amount(),
-                upbitRes.fee(),
                 upbitRes.currency(),
                 upbitRes.uuid(),
                 upbitRes.createdAt(),
-                upbitRes.state()
+                upbitRes.state(),
+                upbitRes.fee()
         );
     }
     // 2. 빗썸용 컨버터 (외부 호출용)
     public static TransferResDTO.WithdrawResult toWithdrawResult(BithumbResDTO.WithdrawResDTO bithumbRes) {
         return buildWithdrawResult(
                 bithumbRes.amount(),
-                bithumbRes.fee(),
                 bithumbRes.currency(),
                 bithumbRes.uuid(),
                 bithumbRes.createdAt(),
-                bithumbRes.state()
+                bithumbRes.state(),
+                bithumbRes.fee()
         );
     }
     // 3. 빌더 로직 통합 (내부 공통 메서드)
