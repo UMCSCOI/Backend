@@ -23,7 +23,11 @@ public enum InvestSuccessCode implements BaseSuccessCode {
 
     ORDER_SUCCESS(HttpStatus.OK,
             "INVEST200_4",
-            "주문이 성공적으로 생성되었습니다.");
+            "주문이 성공적으로 생성되었습니다."),//확인 필요요
+
+    ORDER_CANCEL_SUCCESS(HttpStatus.OK,
+            "INVEST200_5",
+            "성공적으로 주문을 취소했습니다.");
 
     private final HttpStatus status;
     private final String code;

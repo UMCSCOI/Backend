@@ -154,4 +154,44 @@ public class BithumbResDTO {
             Boolean avg_buy_price_modified,
             String unit_currency
     ) {}
+
+    // 주문 생성 응답
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CreateOrder(
+            String uuid,
+            String side,
+            String ord_type,
+            String price,
+            String state,
+            String market,
+            String created_at,
+            String volume,
+            String remaining_volume,
+            String reserved_fee,
+            String remaining_fee,
+            String paid_fee,
+            String locked,
+            String executed_volume,
+            String trades_count
+    ){}
+
+    // 주문 취소 응답
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CancelOrder(
+            String uuid,
+            String side,
+            String ord_type,
+            String price,
+            String state,
+            String market,
+            String created_at,
+            String volume,
+            String remaining_volume,
+            String reserved_fee,
+            String remaining_fee,
+            String paid_fee,
+            String locked,
+            String executed_volume,
+            String trades_count
+    ){}
 }

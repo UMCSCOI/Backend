@@ -30,14 +30,14 @@ public class UpbitConverter {
         for (UpbitResDTO.BalanceResponse response : responses) {
             try {
                 // 잔고가 0보다 큰 자산만 추가
-                double balance = Double.parseDouble(response.getBalance());
-                double locked = Double.parseDouble(response.getLocked());
+                double balance = Double.parseDouble(response.balance());
+                double locked = Double.parseDouble(response.locked());
                 
                 if (balance > 0 || locked > 0) {
                     result.add(BalanceResDTO.BalanceDTO.builder()
-                            .currency(response.getCurrency())
-                            .balance(response.getBalance())
-                            .locked(response.getLocked())
+                            .currency(response.currency())
+                            .balance(response.balance())
+                            .locked(response.locked())
                             .build());
                 }
             } catch (NumberFormatException e) {

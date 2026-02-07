@@ -85,10 +85,118 @@ public class InvestService {
     }
 
 
+    // 주문 생성 테스트
+    public InvestResDTO.OrderDTO testCreateOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume
+    ) {
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
+
+        // 거래소별 분기
+        ExchangeApiClient apiClient = getApiClient(exchangeType);
+
+        try {
+            // 주문 생성 테스트
+            return apiClient.testCreateOrder(
+                    phoneNumber,
+                    exchangeType,
+                    market,
+                    side,
+                    orderType,
+                    price,
+                    volume
+            );
+        } catch (InvestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("거래소 주문 생성 테스트 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
+                    exchangeType, phoneNumber, market, side, e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
+
+    // 주문 생성
+    @Transactional
+    public InvestResDTO.OrderDTO createOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume,
+            String password
+    ) {
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
+
+        // 간편 비밀번호 검증 (password는 암호화된 상태로 전달됨)
+        // TODO: 비밀번호 검증 로직 추가 필요
+
+        // 거래소별 분기
+        ExchangeApiClient apiClient = getApiClient(exchangeType);
+
+        try {
+            // 주문 생성
+            return apiClient.createOrder(
+                    phoneNumber,
+                    exchangeType,
+                    market,
+                    side,
+                    orderType,
+                    price,
+                    volume,
+                    password
+            );
+        } catch (InvestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("거래소 주문 생성 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
+                    exchangeType, phoneNumber, market, side, e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
+
+    // 주문 취소
+    @Transactional
+    public InvestResDTO.CancelOrderDTO cancelOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String uuid,
+            String txid
+    ) {
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
+        
+        // 거래소별 분기
+        ExchangeApiClient apiClient = getApiClient(exchangeType);
+        
+        try {
+            // 주문 취소
+            return apiClient.cancelOrder(phoneNumber, exchangeType, uuid, txid);
+        } catch (InvestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("거래소 주문 취소 실패 - exchangeType: {}, phoneNumber: {}, uuid: {}, error: {}",
+                    exchangeType, phoneNumber, uuid, e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
+
     private ExchangeApiClient getApiClient(ExchangeType exchangeType) {
         return switch (exchangeType) {
             case BITHUMB -> bithumbApiClient;
             case UPBIT -> upbitApiClient;
+            case BINANCE -> throw new InvestException(InvestErrorCode.INVALID_EXCHANGE_TYPE);
         };
     }
 }

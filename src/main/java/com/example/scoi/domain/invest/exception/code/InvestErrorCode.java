@@ -27,6 +27,10 @@ public enum InvestErrorCode implements BaseErrorCode {
             "INVEST400_4",
             "보유 수량을 초과할 수 없습니다."),
 
+    MINIMUM_ORDER_AMOUNT(HttpStatus.BAD_REQUEST,
+            "INVEST400_5",
+            "주문 금액이 최소 주문 금액보다 낮습니다."),
+
     // 401 에러
     INSUFFICIENT_API_PERMISSION(HttpStatus.UNAUTHORIZED,
             "INVEST401_1",

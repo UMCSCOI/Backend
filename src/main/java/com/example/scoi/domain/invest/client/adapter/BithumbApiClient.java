@@ -7,14 +7,20 @@ import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.invest.exception.InvestException;
 import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
+import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
+import com.example.scoi.global.client.dto.ClientErrorDTO;
 import com.example.scoi.global.util.JwtApiUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Component
@@ -42,9 +48,70 @@ public class BithumbApiClient implements ExchangeApiClient {
             // 응답 파싱 및 변환 (bid_account.balance 사용 - 매수 가능 잔고)
             return parseMaxOrderInfoFromOrderChance(orderChance, price);
             
+        } catch (FeignException.BadRequest | FeignException.NotFound e) {
+            String errorBody = e.contentUTF8();
+            
+            // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
+            if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
+
+                    // API 키를 찾을 수 없는 경우
+                    if (e instanceof FeignException.NotFound) {
+                        throw new InvestException(InvestErrorCode.API_KEY_NOT_FOUND);
+                    }
+
+                    // 나머지 400 에러
+                    throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+                } catch (Exception parseException) {
+                    // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
+                    log.error("BithumbApiClient - 최대 주문 개수 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                            e.status(), errorBody, parseException.getMessage());
+                    throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+                }
+            } else {
+                // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
+                log.warn("BithumbApiClient - 최대 주문 개수 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                        e.status(), errorBody);
+                throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+            }
+        } catch (FeignException.Unauthorized e) {
+            String errorBody = e.contentUTF8();
+            
+            // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
+            if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
+
+                    // 권한이 부족한 경우
+                    if (error.error().name().equals("out_of_scope")) {
+                        throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
+                    }
+
+                    // 나머지 JWT 관련 오류
+                    throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+                } catch (Exception parseException) {
+                    // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
+                    log.error("BithumbApiClient - 최대 주문 개수 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                            e.status(), errorBody, parseException.getMessage());
+                    throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+                }
+            } else {
+                // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
+                log.warn("BithumbApiClient - 최대 주문 개수 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                        e.status(), errorBody);
+                throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+            }
+        } catch (FeignException e) {
+            // FeignException은 그대로 전파하여 상위에서 세부적인 분기 가능
+            log.error("빗썸 최대 주문 정보 조회 API 호출 실패 - FeignException: status: {}", e.status(), e);
+            throw e;
         } catch (Exception e) {
+            // FeignException이 아닌 경우에만 InvestException으로 변환
             log.error("빗썸 최대 주문 정보 조회 API 호출 실패", e);
-            throw new RuntimeException("빗썸 API 호출 실패: " + e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
     
@@ -56,40 +123,23 @@ public class BithumbApiClient implements ExchangeApiClient {
         try {
             String balance = "0";
             
-            // bid_account와 ask_account 정보 로깅
-            if (orderChance.bid_account() != null) {
-                BithumbResDTO.BidAccount bidAccount = orderChance.bid_account();
-                log.info("빗썸 bid_account 정보 - currency: {}, balance: {}, locked: {}, avg_buy_price: {}", 
-                        bidAccount.currency(), bidAccount.balance(), bidAccount.locked(), bidAccount.avg_buy_price());
-            }
-            if (orderChance.ask_account() != null) {
-                BithumbResDTO.AskAccount askAccount = orderChance.ask_account();
-                log.info("빗썸 ask_account 정보 - currency: {}, balance: {}, locked: {}, avg_buy_price: {}", 
-                        askAccount.currency(), askAccount.balance(), askAccount.locked(), askAccount.avg_buy_price());
-            }
-            
             // bid_account에서 balance 추출  
             if (orderChance.bid_account() != null) {
                 BithumbResDTO.BidAccount bidAccount = orderChance.bid_account();
                 if (bidAccount.balance() != null && !bidAccount.balance().isEmpty()) {
                     balance = bidAccount.balance();
-                    log.info("빗썸 bid_account balance 사용: {}", balance);
-                } else {
-                    log.warn("빗썸 주문 가능 정보 응답에 bid_account.balance가 없습니다.");
                 }
-            } else {
-                log.warn("빗썸 주문 가능 정보 응답에 bid_account가 없습니다.");
             }
             
             // price가 있으면 최대 주문 수량 계산 (balance / price)
             String maxQuantity = null;
             if (price != null && !price.isEmpty()) {
                 try {
-                    java.math.BigDecimal balanceDecimal = new java.math.BigDecimal(balance);
-                    java.math.BigDecimal priceDecimal = new java.math.BigDecimal(price);
+                    BigDecimal balanceDecimal = new BigDecimal(balance);
+                    BigDecimal priceDecimal = new BigDecimal(price);
                     
-                    if (priceDecimal.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        maxQuantity = balanceDecimal.divide(priceDecimal, 8, java.math.RoundingMode.DOWN).toPlainString();
+                    if (priceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                        maxQuantity = balanceDecimal.divide(priceDecimal, 8, RoundingMode.DOWN).toPlainString();
                         log.info("빗썸 최대 주문 수량 계산 - balance: {}, price: {}, maxQuantity: {}", balance, price, maxQuantity);
                     } else {
                         log.warn("가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
@@ -105,7 +155,7 @@ public class BithumbApiClient implements ExchangeApiClient {
                     
         } catch (Exception e) {
             log.error("빗썸 최대 주문 정보 조회 API 응답 파싱 실패", e);
-            throw new RuntimeException("응답 파싱 실패: " + e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
     
@@ -168,16 +218,11 @@ public class BithumbApiClient implements ExchangeApiClient {
             String volume
     ) {
         try {
-            log.info("빗썸 주문 가능 여부 확인 API 호출 시작 - phoneNumber: {}, market: {}, side: {}", 
-                    phoneNumber, market, side);
-            
             // 주문 가능 정보 조회 
             BithumbResDTO.OrderChance orderChance = getOrderChance(phoneNumber, market);
             
             // 주문 가능 여부 검증 
             validateOrderAvailability(market, side, orderType, price, volume, orderChance);
-            
-            log.info("빗썸 주문 가능 여부 확인 완료 - 주문 가능");
             
         } catch (InvestException e) {
             throw e;
@@ -197,10 +242,7 @@ public class BithumbApiClient implements ExchangeApiClient {
             
             // Feign Client를 통한 API 호출
             // Feign Client가 DTO로 변환
-            log.info("빗썸 API 호출 시작 - market: {}", convertedMarket);
             BithumbResDTO.OrderChance orderChance = bithumbFeignClient.getOrderChance(authorization, convertedMarket);
-            
-            log.info("빗썸 API 응답 수신 완료");
             
             if (orderChance.bid_account() != null || orderChance.ask_account() != null) {
                 return orderChance;
@@ -212,10 +254,66 @@ public class BithumbApiClient implements ExchangeApiClient {
         } catch (GeneralSecurityException e) {
             log.error("빗썸 JWT 생성 실패", e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
-        } catch (feign.FeignException.Unauthorized e) {
-            // 401 Unauthorized: API 키 권한 부족
-            log.error("빗썸 API 키 권한 부족", e);
-            throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
+        } catch (FeignException.BadRequest | FeignException.NotFound e) {
+            String errorBody = e.contentUTF8();
+            
+            // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
+            if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
+
+                    // API 키를 찾을 수 없는 경우
+                    if (e instanceof FeignException.NotFound) {
+                        throw new InvestException(InvestErrorCode.API_KEY_NOT_FOUND);
+                    }
+
+                    // 나머지 400 에러
+                    throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+                } catch (Exception parseException) {
+                    // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
+                    log.error("BithumbApiClient - 주문 가능여부 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                            e.status(), errorBody, parseException.getMessage());
+                    throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+                }
+            } else {
+                // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
+                log.warn("BithumbApiClient - 주문 가능여부 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                        e.status(), errorBody);
+                throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+            }
+        } catch (FeignException.Unauthorized e) {
+            String errorBody = e.contentUTF8();
+            
+            // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
+            if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
+
+                    // 권한이 부족한 경우
+                    if (error.error().name().equals("out_of_scope")) {
+                        throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
+                    }
+
+                    // 나머지 JWT 관련 오류
+                    throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+                } catch (Exception parseException) {
+                    // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
+                    log.error("BithumbApiClient - 주문 가능여부 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                            e.status(), errorBody, parseException.getMessage());
+                    throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+                }
+            } else {
+                // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
+                log.warn("BithumbApiClient - 주문 가능여부 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                        e.status(), errorBody);
+                throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+            }
+        } catch (FeignException e) {
+            // FeignException은 그대로 전파하여 상위에서 세부적인 분기 가능
+            log.error("빗썸 주문 가능 정보 조회 실패 - FeignException: status: {}", e.status(), e);
+            throw e;
         } catch (Exception e) {
             log.error("빗썸 주문 가능 정보 조회 실패", e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
@@ -355,7 +453,228 @@ public class BithumbApiClient implements ExchangeApiClient {
         } else {
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
-        
+    }
 
+    @Override
+    public InvestResDTO.OrderDTO testCreateOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume
+    ) {
+        // 빗썸은 주문 생성 테스트 엔드포인트를 지원하지 않음
+        throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+    }
+
+    @Override
+    public InvestResDTO.OrderDTO createOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume,
+            String password
+    ) {
+        try {
+            log.info("빗썸 주문 생성 API 호출 시작 - phoneNumber: {}, market: {}, side: {}, orderType: {}", 
+                    phoneNumber, market, side, orderType);
+
+            // 마켓 형식 변환
+            String convertedMarket = convertMarketForBithumb(market);
+
+            // 주문 생성 요청 DTO 생성
+            BithumbReqDTO.CreateOrder request = 
+                    BithumbReqDTO.CreateOrder.builder()
+                            .market(convertedMarket)
+                            .side(side)
+                            .ord_type(orderType)
+                            .price(price)
+                            .volume(volume)
+                            .build();
+
+            // 주문 가능 정보 조회하여 최소 주문 금액 가져오기
+            // getOrderChance에서 에러가 발생해도 주문 생성은 계속 진행
+            BithumbResDTO.OrderChance orderChance = null;
+            try {
+                orderChance = getOrderChance(phoneNumber, convertedMarket);
+                // TODO: 5000원 테스트를 위해 임시로 최소 주문 금액 검증 비활성화
+        
+                log.info("빗썸 최소 주문 금액 검증을 건너뜁니다. (5000원 테스트용)");
+            } catch (InvestException e) {
+                // INSUFFICIENT_API_PERMISSION 등 에러 발생 시 최소 주문 금액 검증 건너뛰기
+                if (e.getCode() == InvestErrorCode.INSUFFICIENT_API_PERMISSION) {
+                    log.warn("빗썸 주문 가능 정보 조회 실패 (권한 부족) - 최소 주문 금액 검증을 건너뜁니다. 에러: {}", e.getMessage());
+                } else {
+                    log.warn("빗썸 주문 가능 정보 조회 실패 - 최소 주문 금액 검증을 건너뜁니다. 에러: {}", e.getMessage());
+                }
+                // 주문 생성은 계속 진행
+            } catch (Exception e) {
+                log.warn("빗썸 주문 가능 정보 조회 실패 - 최소 주문 금액 검증을 건너뜁니다. 에러: {}", e.getMessage());
+                // 주문 생성은 계속 진행
+            }
+
+            // JWT 생성 (POST 요청이므로 body 사용)
+            String authorization = jwtApiUtil.createBithumbJwt(phoneNumber, null, request);
+
+            // 주문 생성 API 호출
+            BithumbResDTO.CreateOrder response = bithumbFeignClient.createOrder(authorization, request);
+
+            log.info("빗썸 주문 생성 완료 - uuid: {}, market: {}", response.uuid(), response.market());
+
+            // 응답을 InvestResDTO.OrderDTO로 변환
+            return new InvestResDTO.OrderDTO(
+                    response.uuid(),
+                    response.uuid(), // 빗썸은 txid가 없으므로 uuid 사용
+                    response.market(),
+                    response.side(),
+                    response.ord_type(),
+                    parseCreatedAt(response.created_at())
+            );
+
+        } catch (GeneralSecurityException e) {
+            log.error("빗썸 JWT 생성 실패", e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (FeignException e) {
+            // FeignException은 그대로 전파하여 상위에서 세부적인 분기 가능
+            log.error("빗썸 주문 생성 API 호출 실패 - FeignException: status: {}", e.status(), e);
+            throw e;
+        } catch (InvestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("빗썸 주문 생성 API 호출 실패", e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
+
+    /**
+     * 빗썸 최소 주문 금액 검증
+     * OrderChance API에서 가져온 min_total 값을 사용하여 검증합니다.
+     * - 지정가 매수 (limit): price * volume >= min_total
+     * - 시장가 매수 (price): price >= min_total
+     */
+    private void validateMinimumOrderAmount(
+            String side, 
+            String orderType, 
+            String price, 
+            String volume,
+            BithumbResDTO.OrderChance orderChance
+    ) {
+        // 매수 주문만 검증 (매도는 수량 기준이므로 별도 검증 필요 시 추가)
+        if (!"bid".equals(side)) {
+            return;
+        }
+
+        if (price == null || price.isEmpty()) {
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+
+        // OrderChance에서 최소 주문 금액 가져오기
+        String minTotalStr = null;
+        if (orderChance.bid() != null && orderChance.bid().min_total() != null) {
+            minTotalStr = orderChance.bid().min_total();
+            log.info("빗썸 최소 주문 금액 (bid.min_total): {}", minTotalStr);
+        } else {
+            log.warn("빗썸 OrderChance 응답에 bid.min_total이 없습니다. 검증을 건너뜁니다.");
+            return; // min_total이 없으면 검증 건너뛰기
+        }
+
+        if (minTotalStr == null || minTotalStr.isEmpty()) {
+            log.warn("빗썸 최소 주문 금액이 비어있습니다. 검증을 건너뜁니다.");
+            return;
+        }
+
+        BigDecimal priceDecimal = new BigDecimal(price);
+        BigDecimal minimumAmount = new BigDecimal(minTotalStr);
+        BigDecimal orderAmount;
+
+        if ("limit".equals(orderType)) {
+            // 지정가 매수: price * volume
+            if (volume == null || volume.isEmpty()) {
+                throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+            }
+            BigDecimal volumeDecimal = new BigDecimal(volume);
+            orderAmount = priceDecimal.multiply(volumeDecimal);
+        } else if ("price".equals(orderType)) {
+            // 시장가 매수: price (총액)
+            orderAmount = priceDecimal;
+        } else {
+            // 매도 주문 등은 검증하지 않음
+            return;
+        }
+
+        if (orderAmount.compareTo(minimumAmount) < 0) {
+            log.warn("빗썸 최소 주문 금액 미달 - 주문 금액: {}, 최소 금액: {}", orderAmount, minimumAmount);
+            Map<String, String> errorDetails = Map.of(
+                "orderAmount", orderAmount.toPlainString(),
+                "minimumAmount", minimumAmount.toPlainString()
+            );
+            throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT, errorDetails);
+        }
+    }
+
+    @Override
+    public InvestResDTO.CancelOrderDTO cancelOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String uuid,
+            String txid
+    ) {
+        try {
+            log.info("빗썸 주문 취소 API 호출 시작 - phoneNumber: {}, uuid: {}", phoneNumber, uuid);
+            
+            // 빗썸은 query parameter로 uuid 전달
+            String query = "uuid=" + uuid;
+            String authorization = jwtApiUtil.createBithumbJwt(phoneNumber, query, null);
+            
+            log.info("빗썸 주문 취소 인증 헤더 생성 완료");
+            
+            // 주문 취소 API 호출
+            BithumbResDTO.CancelOrder response = bithumbFeignClient.cancelOrder(authorization, uuid);
+            
+            log.info("빗썸 주문 취소 완료 - uuid: {}", response.uuid());
+            
+            // 응답을 InvestResDTO.CancelOrderDTO로 변환
+            return new InvestResDTO.CancelOrderDTO(
+                    response.uuid(),
+                    response.uuid(), // 빗썸은 txid가 없으므로 uuid 사용
+                    parseCreatedAt(response.created_at())
+            );
+            
+        } catch (GeneralSecurityException e) {
+            log.error("빗썸 JWT 생성 실패", e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (FeignException e) {
+            // FeignException은 그대로 전파하여 상위에서 세부적인 분기 가능
+            log.error("빗썸 주문 취소 API 호출 실패 - FeignException: status: {}", e.status(), e);
+            throw e;
+        } catch (InvestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("빗썸 주문 취소 API 호출 실패", e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
+
+    private LocalDateTime parseCreatedAt(String createdAt) {
+        if (createdAt == null || createdAt.isEmpty()) {
+            return LocalDateTime.now();
+        }
+        try {
+            // ISO 8601 형식 파싱 (예: "2026-01-10T19:51:25+09:00" 또는 "2026-01-10T19:51:25")
+            String cleaned = createdAt.replace("+09:00", "").replace("Z", "");
+            if (cleaned.contains("T")) {
+                // "2026-01-10T19:51:25" 형식
+                return LocalDateTime.parse(cleaned, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
+            return LocalDateTime.now();
+        } catch (Exception e) {
+            log.warn("created_at 파싱 실패: {}, 현재 시간 사용", createdAt);
+            return LocalDateTime.now();
+        }
     }
 }

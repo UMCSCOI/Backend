@@ -3,17 +3,15 @@ package com.example.scoi.domain.invest.controller;
 import com.example.scoi.domain.invest.dto.InvestReqDTO;
 import com.example.scoi.domain.invest.dto.InvestResDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
-import com.example.scoi.domain.invest.exception.InvestException;
-import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.invest.exception.code.InvestSuccessCode;
 import com.example.scoi.domain.invest.service.InvestService;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
-import io.swagger.v3.oas.annotations.Operation;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-@Tag(name = "투자", description = "주문 관련 API")
 public class InvestController implements InvestControllerDocs {
 
     private final InvestService investService;
@@ -35,8 +32,9 @@ public class InvestController implements InvestControllerDocs {
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String price,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
+        String phoneNumber = user.getUsername();
         // JWT에서 추출한 phoneNumber로 조회
         MaxOrderInfoDTO result = investService.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
 
@@ -47,8 +45,9 @@ public class InvestController implements InvestControllerDocs {
     @Override
     public ApiResponse<Void> checkOrderAvailability(
             @RequestBody InvestReqDTO.OrderDTO request,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
+        String phoneNumber = user.getUsername();
         // 주문 가능 여부 확인
         investService.checkOrderAvailability(
                 phoneNumber,
@@ -64,16 +63,41 @@ public class InvestController implements InvestControllerDocs {
         return ApiResponse.onSuccess(InvestSuccessCode.ORDER_AVAILABLE);
     }
 
+    @PostMapping("/orders/test-create")
+    @Override
+    @SecurityRequirement(name = "JWT TOKEN")
+    public ApiResponse<InvestResDTO.OrderDTO> testCreateOrder(
+            @RequestBody InvestReqDTO.TestOrderDTO request,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        String phoneNumber = user.getUsername();
+        
+        // 주문 생성 테스트 (password 불필요)
+        InvestResDTO.OrderDTO result = investService.testCreateOrder(
+                phoneNumber,
+                request.exchangeType(),
+                request.market(),
+                request.side(),
+                request.orderType(),
+                request.price(),
+                request.volume()
+        );
+
+        return ApiResponse.onSuccess(InvestSuccessCode.ORDER_SUCCESS, result);
+    }
+
     @PostMapping("/orders")
-    @Operation(summary = "코인 주문하기", description = "코인 주문을 생성합니다.")
+    @Override
     @SecurityRequirement(name = "JWT TOKEN")
     public ApiResponse<InvestResDTO.OrderDTO> createOrder(
             @RequestBody InvestReqDTO.OrderDTO request,
-            @RequestParam Long memberId
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
+        String phoneNumber = user.getUsername();
+        
         // 주문 생성
         InvestResDTO.OrderDTO result = investService.createOrder(
-                memberId,
+                phoneNumber,
                 request.exchangeType(),
                 request.market(),
                 request.side(),
@@ -84,5 +108,24 @@ public class InvestController implements InvestControllerDocs {
         );
 
         return ApiResponse.onSuccess(InvestSuccessCode.ORDER_SUCCESS, result);
+    }
+
+    @DeleteMapping("/orders")
+    @Override
+    @SecurityRequirement(name = "JWT TOKEN")
+    public ApiResponse<InvestResDTO.CancelOrderDTO> cancelOrder(
+            @RequestBody InvestReqDTO.CancelOrderDTO request,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        String phoneNumber = user.getUsername();
+        
+        InvestResDTO.CancelOrderDTO result = investService.cancelOrder(
+                phoneNumber,
+                request.exchangeType(),
+                request.uuid(),
+                request.txid()
+        );
+        
+        return ApiResponse.onSuccess(InvestSuccessCode.ORDER_CANCEL_SUCCESS, result);
     }
 }

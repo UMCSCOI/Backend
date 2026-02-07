@@ -1,9 +1,11 @@
 package com.example.scoi.domain.invest.controller;
 
 import com.example.scoi.domain.invest.dto.InvestReqDTO;
+import com.example.scoi.domain.invest.dto.InvestResDTO;
 import com.example.scoi.domain.invest.dto.MaxOrderInfoDTO;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,7 +23,7 @@ public interface InvestControllerDocs {
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String price,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     );
 
     @Operation(
@@ -30,6 +32,35 @@ public interface InvestControllerDocs {
     )
     ApiResponse<Void> checkOrderAvailability(
             @RequestBody InvestReqDTO.OrderDTO request,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
+    );
+
+    @Operation(
+            summary = "주문 생성 테스트 By 강서현",
+            description = "실제 주문을 생성하지 않고 주문 요청 형식과 주문 가능 여부를 검증합니다. " +
+                         "업비트 API의 주문 생성 테스트 엔드포인트(/v1/orders/test)를 사용하여 거래 수수료 없이 검증할 수 있습니다. " +
+                         "password는 필요하지 않습니다."
+    )
+    ApiResponse<InvestResDTO.OrderDTO> testCreateOrder(
+            @RequestBody InvestReqDTO.TestOrderDTO request,
+            @AuthenticationPrincipal CustomUserDetails user
+    );
+
+    @Operation(
+            summary = "코인 주문하기  By 강서현",
+            description = "코인 주문을 생성합니다."
+    )
+    ApiResponse<InvestResDTO.OrderDTO> createOrder(
+            @RequestBody InvestReqDTO.OrderDTO request,
+            @AuthenticationPrincipal CustomUserDetails user
+    );
+
+    @Operation(
+            summary = "주문 취소  By 강서현",
+            description = "생성한 주문을 취소합니다."
+    )
+    ApiResponse<InvestResDTO.CancelOrderDTO> cancelOrder(
+            @RequestBody InvestReqDTO.CancelOrderDTO request,
+            @AuthenticationPrincipal CustomUserDetails user
     );
 }

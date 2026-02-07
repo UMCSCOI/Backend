@@ -21,4 +21,11 @@ public class InvestResDTO {
             String orderType,       // 주문 방식 (limit/price/market)
             LocalDateTime createdAt // 주문 생성 시간
     ) {}
+
+    // 주문 취소 응답
+    public record CancelOrderDTO(
+            String uuid,                // 취소된 주문 UUID
+            String txid,                // 취소된 주문 TXID
+            LocalDateTime createdAt     // 취소 시간
+    ) {}
 }
