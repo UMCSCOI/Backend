@@ -2,7 +2,7 @@ package com.example.scoi.domain.transfer.dto;
 
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.enums.MemberType;
-import com.example.scoi.domain.transfer.enums.TradeType;
+import com.example.scoi.domain.transfer.enums.CoinType;
 import lombok.*;
 
 import java.util.List;
@@ -39,5 +39,66 @@ public class TransferResDTO {
         private String walletAddress;
 
         private Boolean isFavorite;
+    }
+
+    // 수취인 정보 + 출금 가능 잔액
+    @Getter
+    @Builder
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    @AllArgsConstructor
+    public static class CheckRecipientResDTO {
+        private RecipientDetailDTO recipient;
+        private BalanceDTO balance;
+    }
+
+    // 상세 수취인 정보 (응답 구조에 맞춤)
+    @Getter
+    @Builder
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    @AllArgsConstructor
+    public static class RecipientDetailDTO {
+        private MemberType recipientType;
+        private String recipientName;
+        private String corpKoreanName; // 법인일 경우 필수
+        private String corpEnglishName; // 법인일 경우 필수
+        private String walletAddress;
+    }
+
+    // 출금 가능 잔액 정보
+    @Getter
+    @Builder
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    @AllArgsConstructor
+    public static class BalanceDTO {
+        private ExchangeType exchangeType;
+        private CoinType coinType; // 예: "USDT"
+        private String network;     // 예: "TRON"
+        private String networkFee; // 네트워크 수수료
+        private String availableAmount; // 출금 가능 금액
+        private String updatedAt;   // 날짜 형식 문자열
+    }
+
+    // 출금 검증 반환
+    @Getter
+    @Builder
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    @AllArgsConstructor
+    public static class QuoteValidDTO {
+        private String amount;
+        private String networkFee;
+        private String totalAmount;
+    }
+
+    // 출금 실행 응답
+    @Getter
+    @Builder
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    @AllArgsConstructor
+    public static class WithdrawResult {
+        private String amount;          // 3,200 (공통: 출금 수량)
+        private String currency;        // USDT (공통: 화폐 코드)
+        private String uuid;
+        private String createdAt;
+        private String state;           // 출금 신청 완료 (공통: 출금 상태)
     }
 }
