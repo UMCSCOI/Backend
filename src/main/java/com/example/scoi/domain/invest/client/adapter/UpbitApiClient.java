@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import feign.FeignException;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
@@ -51,10 +53,13 @@ public class UpbitApiClient implements ExchangeApiClient {
             
         } catch (GeneralSecurityException e) {
             log.error("업비트 JWT 생성 실패", e);
-            throw new RuntimeException("JWT 생성 실패", e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (FeignException e) {
+            log.error("업비트 최대 주문 정보 조회 API 호출 실패 (FeignException)", e);
+            throw e;
         } catch (Exception e) {
             log.error("업비트 최대 주문 정보 조회 API 호출 실패", e);
-            throw new RuntimeException("업비트 API 호출 실패: " + e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
     
@@ -180,8 +185,9 @@ public class UpbitApiClient implements ExchangeApiClient {
             return "KRW-BTC";
         }
         
-        // 변환 불가능한 경우 그대로 반환
-        return coinType;
+        // 코인 타입만 있는 경우 (예: USDC, BTC) -> KRW-XXX 형식으로 변환
+        // 업비트 API는 KRW-USDC 형식을 사용
+        return "KRW-" + coinType;
     }
     
     @Override
@@ -195,11 +201,14 @@ public class UpbitApiClient implements ExchangeApiClient {
             String volume
     ) {
         try {
-            log.info("업비트 주문 가능 여부 확인 API 호출 시작 - phoneNumber: {}, market: {}, side: {}", 
-                    phoneNumber, market, side);
+            // market을 업비트 형식으로 정규화 (KRW-BTC 형식으로 통일)
+            String normalizedMarket = normalizeCoinType(market);
             
-            UpbitResDTO.OrderChance orderChance = getOrderChance(phoneNumber, market);
-            validateOrderAvailability(market, side, orderType, price, volume, orderChance);
+            log.info("업비트 주문 가능 여부 확인 API 호출 시작 - phoneNumber: {}, market: {} (정규화: {}), side: {}", 
+                    phoneNumber, market, normalizedMarket, side);
+            
+            UpbitResDTO.OrderChance orderChance = getOrderChance(phoneNumber, normalizedMarket);
+            validateOrderAvailability(normalizedMarket, side, orderType, price, volume, orderChance);
             
             log.info("업비트 주문 가능 여부 확인 완료 - 주문 가능");
             
