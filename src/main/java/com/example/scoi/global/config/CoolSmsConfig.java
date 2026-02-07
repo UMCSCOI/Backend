@@ -23,17 +23,24 @@ public class CoolSmsConfig {
     @Value("${coolsms.api-secret}")
     private String apiSecret;
 
-    @Bean
+    /**
+     * CoolSMS 전용 RequestInterceptor
+     * ⚠️ @Bean을 제거하여 전역 Bean이 되지 않도록 함
+     * Feign Client의 configuration 속성으로만 사용됨
+     */
     public RequestInterceptor coolSmsRequestInterceptor() {
         return template -> {
-            String date = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-            String salt = UUID.randomUUID().toString().replace("-", "");
-            String signature = generateSignature(date, salt);
+            // CoolSMS API URL로 시작하는 요청에만 적용
+            if (template.url() != null && template.url().contains("coolsms")) {
+                String date = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                String salt = UUID.randomUUID().toString().replace("-", "");
+                String signature = generateSignature(date, salt);
 
-            template.header("Authorization",
-                String.format("HMAC-SHA256 apiKey=%s, date=%s, salt=%s, signature=%s",
-                    apiKey, date, salt, signature));
-            template.header("Content-Type", "application/json");
+                template.header("Authorization",
+                    String.format("HMAC-SHA256 apiKey=%s, date=%s, salt=%s, signature=%s",
+                        apiKey, date, salt, signature));
+                template.header("Content-Type", "application/json");
+            }
         };
     }
 
