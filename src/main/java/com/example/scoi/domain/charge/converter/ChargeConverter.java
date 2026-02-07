@@ -15,4 +15,15 @@ public class ChargeConverter {
                 .txid(txid)
                 .build();
     }
+
+    // 입금 주소 조회하기
+    public static ChargeResDTO.GetDepositAddress toGetDepositAddress(
+            String coinType,
+            String address
+    ){
+        return ChargeResDTO.GetDepositAddress.builder()
+                .address(address)
+                .coinType(coinType)
+                .build();
+    }
 }

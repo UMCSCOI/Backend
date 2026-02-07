@@ -200,6 +200,22 @@ public class BithumbResDTO {
             String unit_currency
     ){}
 
+    // 개별 입금 주소 조회
+    public record GetDepositAddress(
+            String currency,
+            String net_type,
+            String deposit_address,
+            String secondary_address
+    ){}
+
+    // 입금 주소 생성 요청
+    public record CreateDepositAddress(
+            String currency,
+            String net_type,
+            String deposit_address,
+            String secondary_address
+    ){}
+
     /**
      * 빗썸 전체 계좌 조회 응답 (배열)
      * 공식 문서: https://apidocs.bithumb.com/reference/전체-계좌-조회

@@ -64,9 +64,17 @@ public interface UpbitClient {
     // 입금 주소 생성 요청
     // Request Body O
     @PostMapping("/v1/deposits/generate_coin_address")
-    String getDepositAddress(
+    UpbitResDTO.CreateDepositAddress createDepositAddress(
             @RequestHeader("Authorization") String token,
-            @RequestBody MemberReqDTO.Test dto
+            @RequestBody UpbitReqDTO.CreateDepositAddress dto
+    );
+
+    // 개별 입금 주소 조회
+    @GetMapping("/v1/deposits/coin_address")
+    UpbitResDTO.GetDepositAddress getDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
     );
 
     // 출금(이체) 가능 금액 조회
