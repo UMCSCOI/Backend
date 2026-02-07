@@ -4,8 +4,11 @@ import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
+import com.example.scoi.global.client.dto.UpbitResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @FeignClient(
         name = "bithumbClient",
@@ -79,5 +82,11 @@ public interface BithumbClient {
     BithumbResDTO.WithdrawResDTO withdrawCoin(
             @RequestHeader("Authorization") String authorization,
             @RequestBody TransferReqDTO.BithumbWithdrawRequest dto
+    );
+
+    // 출금 허용 주소 목록 조회 (수취인 조회)
+    @GetMapping("/v1/withdraws/coin_addresses")
+    List<BithumbResDTO.WithdrawalAddressResponse> getRecipients(
+            @RequestHeader("Authorization") String authorization
     );
 }
