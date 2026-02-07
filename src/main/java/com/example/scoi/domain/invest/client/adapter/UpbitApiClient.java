@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
@@ -105,15 +106,18 @@ public class UpbitApiClient implements ExchangeApiClient {
             }
             
             // price가 있으면 최대 주문 수량 계산 (balance / price)
+            // 소수점 절사하여 정수로 반환 (0.8개 → 0개, 1.2개 → 1개)
             String maxQuantity = null;
             if (price != null && !price.isEmpty()) {
                 try {
-                    java.math.BigDecimal balanceDecimal = new java.math.BigDecimal(balance);
-                    java.math.BigDecimal priceDecimal = new java.math.BigDecimal(price);
+                    BigDecimal balanceDecimal = new BigDecimal(balance);
+                    BigDecimal priceDecimal = new BigDecimal(price);
                     
-                    if (priceDecimal.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        maxQuantity = balanceDecimal.divide(priceDecimal, 8, java.math.RoundingMode.DOWN).toPlainString();
-                        log.info("업비트 최대 주문 수량 계산 - balance: {}, price: {}, maxQuantity: {}", balance, price, maxQuantity);
+                    if (priceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal quantity = balanceDecimal.divide(priceDecimal, 8, RoundingMode.DOWN);
+                        // 소수점 절사하여 정수로 변환
+                        maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
+                        log.info("업비트 최대 주문 수량 계산 - balance: {}, price: {}, maxQuantity: {} (정수)", balance, price, maxQuantity);
                     } else {
                         log.warn("가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
                     }
