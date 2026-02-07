@@ -124,10 +124,7 @@ public class UpbitApiClient implements ExchangeApiClient {
             
             log.info("업비트 최대 주문 정보 조회 완료 - coinType: {}, balance: {}, maxQuantity: {}", coinType, balance, maxQuantity);
             
-            return MaxOrderInfoDTO.builder()
-                    .balance(balance)
-                    .maxQuantity(maxQuantity)
-                    .build();
+            return new MaxOrderInfoDTO(balance, maxQuantity);
                     
         } catch (Exception e) {
             log.error("업비트 최대 주문 정보 조회 API 응답 파싱 실패", e);

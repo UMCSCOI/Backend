@@ -101,10 +101,7 @@ public class BithumbApiClient implements ExchangeApiClient {
             
             log.info("빗썸 최대 주문 정보 조회 완료 - balance: {}, maxQuantity: {}", balance, maxQuantity);
             
-            return MaxOrderInfoDTO.builder()
-                    .balance(balance)
-                    .maxQuantity(maxQuantity)
-                    .build();
+            return new MaxOrderInfoDTO(balance, maxQuantity);
                     
         } catch (Exception e) {
             log.error("빗썸 최대 주문 정보 조회 API 응답 파싱 실패", e);
