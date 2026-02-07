@@ -101,4 +101,16 @@ public class TransferResDTO {
         private String createdAt;
         private String state;           // 출금 신청 완료 (공통: 출금 상태)
     }
+
+    // 수취인 응답
+    @Getter
+    @Builder
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    @AllArgsConstructor
+    public static class WithdrawRecipients {
+        private String recipientKoName;
+        private String recipientEnName;
+        private String walletAddress;
+        private String exchangeType;
+    }
 }
