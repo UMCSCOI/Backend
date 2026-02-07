@@ -49,7 +49,7 @@ public class JwtApiUtil {
 
         // API키 객체 찾기
         MemberApiKey apiKey = memberApiKeyRepository
-                .findByMemberPhoneNumberAndExchangeType(phoneNumber, ExchangeType.UPBIT)
+                .findByMember_PhoneNumberAndExchangeType(phoneNumber, ExchangeType.UPBIT)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // API Key 정보 로깅 (디버깅용)
@@ -109,7 +109,7 @@ public class JwtApiUtil {
 
         // API키 객체 찾기
         MemberApiKey apiKey = memberApiKeyRepository
-                .findByMemberPhoneNumberAndExchangeType(phoneNumber, ExchangeType.BITHUMB)
+                .findByMember_PhoneNumberAndExchangeType(phoneNumber, ExchangeType.BITHUMB)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // query SHA512 암호화

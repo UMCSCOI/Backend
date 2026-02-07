@@ -9,6 +9,7 @@ import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.security.jwt.JwtUtil;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
