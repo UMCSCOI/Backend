@@ -8,6 +8,7 @@ import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
+import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.client.BithumbClient;
 import com.example.scoi.global.client.UpbitClient;
@@ -166,12 +167,20 @@ public class ChargeService {
     //보유 자산 조회
      
     public BalanceResDTO.BalanceListDTO getBalancesByPhone(String phoneNumber, ExchangeType exchangeType) {
+        log.info("getBalancesByPhone 호출 - phoneNumber: {}, exchangeType: {}", phoneNumber, exchangeType);
         try {
             List<BalanceResDTO.BalanceDTO> balances;
             
             switch (exchangeType) {
                 case UPBIT:
                     String jwt = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
+                    // 디버깅: Authorization 헤더 형식 확인
+                    log.debug("ChargeService - 업비트 API 호출 - phoneNumber: {}, authorization 시작: {}", 
+                            phoneNumber, jwt.substring(0, Math.min(30, jwt.length())));
+                    if (!jwt.startsWith("Bearer ")) {
+                        log.error("ChargeService - Authorization 헤더에 'Bearer '가 없습니다! - phoneNumber: {}, jwt: {}", 
+                                phoneNumber, jwt.substring(0, Math.min(50, jwt.length())));
+                    }
                     UpbitResDTO.BalanceResponse[] upbitResponses = upbitClient.getAccount(jwt);
                     balances = UpbitConverter.toBalanceDTOList(upbitResponses);
                     break;
@@ -187,30 +196,75 @@ public class ChargeService {
             return BalanceResDTO.BalanceListDTO.builder()
                     .balances(balances)
                     .build();
+        } catch (MemberException e) {
+            log.error("ChargeService - 업비트 API 키를 찾을 수 없습니다 - phoneNumber: {}", phoneNumber, e);
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
         } catch (GeneralSecurityException e) {
-            throw new RuntimeException(e);
-        } catch (FeignException.BadRequest | FeignException.NotFound e) {
-            ObjectMapper objectMapper = new ObjectMapper();
-            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
-
-            // API 키를 찾을 수 없는 경우
-            if (e instanceof FeignException.NotFound) {
-                throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
-            }
-
-            // 나머지 400 에러
+            log.error("ChargeService - 보유자산 조회 JWT 생성 실패", e);
             throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-        } catch (FeignException.Unauthorized e) {
-            // Error 변환
-            ObjectMapper objectMapper = new ObjectMapper();
-            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+        } catch (FeignException.BadRequest | FeignException.NotFound e) {
+            String errorBody = e.contentUTF8();
+            
+            // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
+            if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
 
-            // 권한 부족
-            if (error.error().name().equals("out_of_scope")) {
-                throw new ChargeException(ChargeErrorCode.EXCHANGE_FORBIDDEN);
+                    // API 키를 찾을 수 없는 경우
+                    if (e instanceof FeignException.NotFound) {
+                        throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
+                    }
+
+                    // 나머지 400 에러
+                    throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+                } catch (Exception parseException) {
+                    // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
+                    log.error("ChargeService - 보유자산 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                            e.status(), errorBody, parseException.getMessage());
+                    throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+                }
+            } else {
+                // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
+                log.warn("ChargeService - 보유자산 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                        e.status(), errorBody);
+                throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
             }
+        } catch (FeignException.Unauthorized e) {
+            String errorBody = e.contentUTF8();
+            
+            // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
+            if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
 
-            // 그 이외에는 JWT 관련 오류
+                    // 권한이 부족한 경우
+                    if (error.error().name().equals("out_of_scope")) {
+                        throw new ChargeException(ChargeErrorCode.EXCHANGE_FORBIDDEN);
+                    }
+
+                    // 나머지 JWT 관련 오류
+                    throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+                } catch (Exception parseException) {
+                    // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
+                    log.error("ChargeService - 보유자산 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                            e.status(), errorBody, parseException.getMessage());
+                    throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+                }
+            } else {
+                // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
+                log.warn("ChargeService - 보유자산 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                        e.status(), errorBody);
+                throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+            }
+        } catch (FeignException e) {
+            // 다른 FeignException 타입들(Forbidden, InternalServerError 등)은 그대로 전파
+            log.error("ChargeService - 보유자산 조회 API 호출 실패 - FeignException: status: {}", e.status(), e);
+            throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
+        } catch (Exception e) {
+            // FeignException이 아닌 경우에만 ChargeException으로 변환
+            log.error("ChargeService - 보유자산 조회 API 호출 실패", e);
             throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
         }
     }

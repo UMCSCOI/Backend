@@ -4,6 +4,9 @@ import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseErrorCode;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.apiPayload.exception.ScoiException;
+import com.example.scoi.global.client.dto.ClientErrorDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.FeignException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -152,6 +155,60 @@ public class GeneralExceptionAdvice {
                                 null
                         )
                 );
+    }
+
+    // FeignException 처리 - JSON 에러 응답 파싱 및 로깅
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ApiResponse<String>> handleFeignException(
+            FeignException ex
+    ) {
+        String errorBody = ex.contentUTF8();
+        ObjectMapper objectMapper = new ObjectMapper();
+        
+        // JSON 에러 응답 파싱 시도
+        if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
+            try {
+                ClientErrorDTO.Errors errorResponse = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
+                if (errorResponse != null && errorResponse.error() != null) {
+                    // JSON 에러 응답 파싱 성공 - error.name과 error.message 로깅
+                    log.error("[ FeignException ] - status: {}, reason: {}, errorName: {}, errorMessage: {}", 
+                            ex.status(), ex.getMessage(), 
+                            errorResponse.error().name(), errorResponse.error().message());
+                } else {
+                    log.error("[ FeignException ] - status: {}, reason: {}, responseBody: {}", 
+                            ex.status(), ex.getMessage(), errorBody);
+                }
+            } catch (Exception e) {
+                // JSON 파싱 실패 - 원본 응답 본문 로깅
+                log.error("[ FeignException ] (JSON 파싱 실패) - status: {}, reason: {}, 파싱 에러: {}, responseBody: {}", 
+                        ex.status(), ex.getMessage(), e.getMessage(), errorBody);
+            }
+        } else {
+            log.error("[ FeignException ] - status: {}, reason: {}, responseBody: {}", 
+                    ex.status(), ex.getMessage(), errorBody);
+        }
+        
+        // HTTP 상태 코드에 따라 적절한 에러 코드 반환
+        BaseErrorCode errorCode;
+        if (ex.status() >= 400 && ex.status() < 500) {
+            errorCode = GeneralErrorCode.BAD_REQUEST;
+        } else if (ex.status() == 401) {
+            errorCode = GeneralErrorCode.UNAUTHORIZED;
+        } else if (ex.status() == 403) {
+            errorCode = GeneralErrorCode.FORBIDDEN;
+        } else if (ex.status() == 404) {
+            errorCode = GeneralErrorCode.NOT_FOUND;
+        } else {
+            errorCode = GeneralErrorCode.INTERNAL_SERVER_ERROR;
+        }
+        
+        ApiResponse<String> errorResponse = ApiResponse.onFailure(
+                errorCode,
+                null
+        );
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(errorResponse);
     }
 
     // 그 외의 정의되지 않은 모든 예외 처리
