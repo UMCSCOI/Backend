@@ -1,10 +1,11 @@
 package com.example.scoi.domain.charge.controller;
 
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
-import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.charge.exception.code.ChargeSuccessCode;
 import com.example.scoi.domain.charge.service.ChargeService;
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
 
@@ -15,12 +16,9 @@ import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -30,24 +28,24 @@ public class ChargeController implements ChargeControllerDocs{
 
     private final ChargeService chargeService;
 
-    // 원화 충전하기 (2차 인증서를 개발 단계에선 못함)
+    // 원화 충전하기
     @PostMapping("/deposits/krw")
     public ApiResponse<ChargeResDTO.ChargeKrw> chargeKrw(
-            @AuthenticationPrincipal String phoneNumber,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody ChargeReqDTO.ChargeKrw dto
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
-        return ApiResponse.onSuccess(code, chargeService.chargeKrw(phoneNumber,dto));
+        return ApiResponse.onSuccess(code, chargeService.chargeKrw(user.getUsername(),dto));
     }
 
     // 특정 주문 확인하기
     @PostMapping("/deposits")
     public ApiResponse<String> getOrders(
-            @AuthenticationPrincipal String phoneNumber,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody ChargeReqDTO.GetOrder dto
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
-        return ApiResponse.onSuccess(code, chargeService.getOrders(phoneNumber, dto));
+        return ApiResponse.onSuccess(code, chargeService.getOrders(user.getUsername(), dto));
     }
 
     //보유자산 조회하기
@@ -58,15 +56,42 @@ public class ChargeController implements ChargeControllerDocs{
     ) {
         String phoneNumber = user.getUsername();
         log.info("자산 조회 API 호출 - exchangeType: {}, phoneNumber: {}", exchangeType, phoneNumber);
-        
+
         // try-catch 제거 - ExceptionAdvice에서 자동 처리
         ExchangeType exchangeTypeEnum = ExchangeType.fromString(exchangeType);
         log.info("ExchangeType 변환 완료: {}", exchangeTypeEnum);
 
         // JWT에서 가져온 phoneNumber로 조회
-        BalanceResDTO.BalanceListDTO result = chargeService.getBalancesByPhone(phoneNumber, exchangeTypeEnum);
+        BalanceResDTO.BalanceListDTO result = chargeService.getBalancesByPhone(user.getUsername(), exchangeTypeEnum);
         log.info("자산 조회 완료 - balances count: {}", result.balances() != null ? result.balances().size() : 0);
 
         return ApiResponse.onSuccess(ChargeSuccessCode.OK, result);
+    }
+
+    // 입금 주소 확인하기
+    @GetMapping("/deposits/address")
+    public ApiResponse<List<ChargeResDTO.GetDepositAddress>> getDepositAddress(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam ExchangeType exchangeType,
+            @RequestParam(defaultValue = "") List<String> coinType,
+            @RequestParam(defaultValue = "") List<String> netType
+    ){
+        BaseSuccessCode code = ChargeSuccessCode.OK;
+        return ApiResponse.onSuccess(code, chargeService.getDepositAddress(
+                user.getUsername(),
+                exchangeType,
+                coinType.stream().map(String::toUpperCase).toList(),
+                netType.stream().map(String::toUpperCase).toList()
+        ));
+    }
+
+    // 입금 주소 생성하기
+    @PostMapping("/deposits/address")
+    public ApiResponse<List<String>> createDepositAddress(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestBody ChargeReqDTO.CreateDepositAddress dto
+    ){
+        BaseSuccessCode code = ChargeSuccessCode.OK;
+        return ApiResponse.onSuccess(code, chargeService.createDepositAddress(user.getUsername(), dto));
     }
 }

@@ -2,7 +2,6 @@ package com.example.scoi.domain.member.dto;
 
 import com.example.scoi.domain.member.enums.ExchangeType;
 import jakarta.validation.constraints.Pattern;
-import lombok.Builder;
 
 public class MemberReqDTO {
 
@@ -34,12 +33,5 @@ public class MemberReqDTO {
     // FCM 토큰 등록
     public record PostFcmToken(
             String token
-    ){}
-
-    // JWTAPIUtil 테스트
-    @Builder
-    public record Test(
-            String currency,
-            String net_type
     ){}
 }

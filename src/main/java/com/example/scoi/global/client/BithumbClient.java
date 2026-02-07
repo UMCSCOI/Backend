@@ -1,6 +1,7 @@
 package com.example.scoi.global.client;
 
 import com.example.scoi.domain.member.dto.MemberReqDTO;
+import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -26,6 +27,14 @@ public interface BithumbClient {
             @RequestParam("uuid") String uuid
     );
 
+    // 개별 입금 조회
+    @GetMapping("/v1/deposit")
+    BithumbResDTO.GetDeposit getDeposit(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("uuid") String uuid,
+            @RequestParam("currency") String currency
+    );
+
     // 전체 계좌 조회
     // 쿼리파라미터 & Request Body X
     // @GetMapping("/v1/accounts")
@@ -33,7 +42,7 @@ public interface BithumbClient {
     
     // 전체 계좌 조회 (DTO 반환)
     @GetMapping("/v1/accounts")
-    BithumbResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String authorization);
+    BithumbResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String token);
 
     //보유자산 조회
     // @GetMapping("/v1/accounts")
@@ -43,15 +52,40 @@ public interface BithumbClient {
     // 쿼리파라미터 O
     @GetMapping("/v1/orders/chance")
     String getOrderChance(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader("Authorization") String token,
             @RequestParam("market") String market
     );
 
     // 입금 주소 생성 요청
     // Request Body O
     @PostMapping("/v1/deposits/generate_coin_address")
-    String getDepositAddress(
+    BithumbResDTO.CreateDepositAddress createDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestBody BithumbReqDTO.CreateDepositAddress dto
+    );
+
+    // 개별 입금 주소 조회
+    @GetMapping("/v1/deposits/coin_address")
+    BithumbResDTO.GetDepositAddress getDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
+    );
+
+    // 이체 출금 가능 정보
+    // 쿼리 파라미터 O
+    @GetMapping("/v1/withdraws/chance")
+    BithumbResDTO.WithdrawsChance getWithdrawsChance(
             @RequestHeader("Authorization") String authorization,
-            @RequestBody MemberReqDTO.Test dto
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
+    );
+
+    // 이체
+    // Request Body O
+    @PostMapping("/v1/withdraws/coin")
+    BithumbResDTO.WithdrawResDTO withdrawCoin(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody TransferReqDTO.BithumbWithdrawRequest dto
     );
 }

@@ -19,7 +19,18 @@ public class BithumbConverter {
     ){
         return BithumbReqDTO.ChargeKrw.builder()
                 .amount(dto.amount().toString())
-                .two_factor_type(dto.MFA().name())
+                .two_factor_type(dto.MFA().name().toLowerCase())
+                .build();
+    }
+
+    // 입금 주소 생성 요청
+    public static BithumbReqDTO.CreateDepositAddress toCreateDepositAddress(
+            String currency,
+            String netType
+    ){
+        return BithumbReqDTO.CreateDepositAddress.builder()
+                .currency(currency)
+                .net_type(netType)
                 .build();
     }
 

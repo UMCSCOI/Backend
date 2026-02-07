@@ -11,6 +11,13 @@ public class BithumbReqDTO {
             String two_factor_type
     ){}
 
+    // 입금 주소 생성 요청 & JWT 테스트용
+    @Builder
+    public record CreateDepositAddress(
+            String currency,
+            String net_type
+    ){}
+
     // 주문 생성
     @Builder
     public record CreateOrder(

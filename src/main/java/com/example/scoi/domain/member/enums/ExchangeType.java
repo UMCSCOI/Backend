@@ -5,8 +5,7 @@ import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 
 public enum ExchangeType {
     BITHUMB("Bithumb"),
-    UPBIT("Upbit"),
-    BINANCE("Binance");
+    UPBIT("Upbit");
 
     private final String displayName;
 

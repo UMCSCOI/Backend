@@ -23,4 +23,11 @@ public class UpbitReqDTO {
             String price,     // 지정가 주문 시 필수
             String volume     // 주문 수량
     ){}
+
+    // 입금 주소 생성 요청 & JWT 테스트용
+    @Builder
+    public record CreateDepositAddress(
+            String currency,
+            String net_type
+    ){}
 }

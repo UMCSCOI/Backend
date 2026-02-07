@@ -19,7 +19,18 @@ public class UpbitConverter {
     ){
         return UpbitReqDTO.ChargeKrw.builder()
                 .amount(dto.amount().toString())
-                .two_factor_type(dto.MFA().name())
+                .two_factor_type(dto.MFA().name().toLowerCase())
+                .build();
+    }
+
+    // 입금 주소 생성 요청
+    public static UpbitReqDTO.CreateDepositAddress toCreateDepositAddress(
+            String currency,
+            String netType
+    ){
+        return UpbitReqDTO.CreateDepositAddress.builder()
+                .currency(currency)
+                .net_type(netType)
                 .build();
     }
 

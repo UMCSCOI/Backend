@@ -9,6 +9,7 @@ import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -31,12 +33,12 @@ public class InvestController implements InvestControllerDocs {
     public ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
-            @RequestParam(required = false) String price,
+            @RequestParam(required = false) String price,  // 가격 (선택적)
             @AuthenticationPrincipal CustomUserDetails user
-    ) {
+    ){
         String phoneNumber = user.getUsername();
         // JWT에서 추출한 phoneNumber로 조회
-        MaxOrderInfoDTO result = investService.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
+        MaxOrderInfoDTO result = investService.getMaxOrderInfo(user.getUsername(), exchangeType, coinType, price);
 
         return ApiResponse.onSuccess(InvestSuccessCode.MAX_ORDER_INFO_SUCCESS, result);
     }
@@ -71,7 +73,7 @@ public class InvestController implements InvestControllerDocs {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         String phoneNumber = user.getUsername();
-        
+
         // 주문 생성 테스트 (password 불필요)
         InvestResDTO.OrderDTO result = investService.testCreateOrder(
                 phoneNumber,
@@ -94,7 +96,7 @@ public class InvestController implements InvestControllerDocs {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         String phoneNumber = user.getUsername();
-        
+
         // 주문 생성
         InvestResDTO.OrderDTO result = investService.createOrder(
                 phoneNumber,
@@ -118,14 +120,14 @@ public class InvestController implements InvestControllerDocs {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         String phoneNumber = user.getUsername();
-        
+
         InvestResDTO.CancelOrderDTO result = investService.cancelOrder(
                 phoneNumber,
                 request.exchangeType(),
                 request.uuid(),
                 request.txid()
         );
-        
+
         return ApiResponse.onSuccess(InvestSuccessCode.ORDER_CANCEL_SUCCESS, result);
     }
 }
