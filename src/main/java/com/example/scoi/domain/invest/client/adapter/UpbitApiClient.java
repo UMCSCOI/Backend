@@ -311,6 +311,18 @@ public class UpbitApiClient implements ExchangeApiClient {
                 throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
             }
             
+            // 매도 주문 타입 검증
+            if ("limit".equals(orderType)) {
+                // 지정가 매도: volume과 price 필요
+                if (price == null || price.isEmpty()) {
+                    throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+                }
+            } else if ("market".equals(orderType)) {
+                // 시장가 매도: volume만 필요 (price 불필요)
+            } else {
+                throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+            }
+            
             BigDecimal volumeDecimal = new BigDecimal(volume);
             requiredAmountStr = volume; // 매도 시 필요한 수량
             
