@@ -29,14 +29,11 @@ public class TradeHistory {
     private ExchangeType exchangeType;
 
     @Column(name = "coin_count", nullable = false)
-    private Long coinCount;
+    private String coinCount;
 
     @Column(name = "created_at", columnDefinition = "DATETIME(6)")
     @CreatedDate
     private LocalDateTime createdAt;
-
-    @Column(name = "total_balance", nullable = false)
-    private Long totalBalance;
 
     @Column(name = "trade_type", nullable = false)
     @Enumerated(EnumType.STRING)
@@ -45,6 +42,15 @@ public class TradeHistory {
     @Column(name = "coin_type", nullable = false)
     @Enumerated(EnumType.STRING)
     private CoinType coinType;
+
+    @Column(name = "status")
+    private String status;
+
+    @Column(name = "uuid")
+    private String uuid;
+
+    @Column(name = "idempotent_key", unique = true, nullable = false)
+    private String idempotentKey;
 
     // 연관관계
     @ManyToOne(fetch = FetchType.LAZY)

@@ -64,4 +64,30 @@ public class TransferController implements TransferControllerDocs{
         return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_4,
                 transferService.changeToNotFavoriteRecipient(recipientId));
     }
+
+    @PostMapping("/recipients/validate")
+    public ApiResponse<TransferResDTO.CheckRecipientResDTO> checkRecipientInput(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestBody TransferReqDTO.RecipientInformation recipientInformation
+    ){
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_5,
+                transferService.checkRecipientInput(recipientInformation, user.getUsername()));
+    }
+
+    @PostMapping("/quotes")
+    public ApiResponse<TransferResDTO.QuoteValidDTO> checkQuotes(
+            @RequestBody TransferReqDTO.Quote quotes
+    ){
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_6,
+                transferService.checkQuotes(quotes));
+    }
+
+    @PostMapping("/execute")
+    public ApiResponse<TransferResDTO.WithdrawResult> executeWithdraw(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestBody TransferReqDTO.WithdrawRequest request
+        ) {
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_7,
+                transferService.executeWithdraw(user.getUsername(), request));
+    }
 }

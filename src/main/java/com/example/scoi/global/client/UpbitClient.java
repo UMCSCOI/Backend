@@ -1,5 +1,8 @@
 package com.example.scoi.global.client;
 
+import com.example.scoi.domain.member.dto.MemberReqDTO;
+import com.example.scoi.domain.transfer.dto.TransferReqDTO;
+import com.example.scoi.global.client.dto.BithumbResDTO;
 import com.example.scoi.global.client.dto.UpbitReqDTO;
 import com.example.scoi.global.client.dto.UpbitResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -72,5 +75,22 @@ public interface UpbitClient {
             @RequestHeader("Authorization") String token,
             @RequestParam("currency") String currency,
             @RequestParam("net_type") String netType
+    );
+
+    // 출금(이체) 가능 금액 조회
+    // 쿼리파라미터 O
+    @GetMapping("/v1/withdraws/chance")
+    UpbitResDTO.WithdrawsChance getWithdrawsChance(
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
+    );
+
+    // 이체
+    // Request Body O
+    @PostMapping("/v1/withdraws/coin")
+    UpbitResDTO.WithdrawResDTO withdrawCoin(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody TransferReqDTO.UpbitWithdrawRequest dto
     );
 }

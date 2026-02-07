@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 public interface TradeHistoryRepository extends JpaRepository<TradeHistory,Long> {
 
@@ -28,4 +29,6 @@ public interface TradeHistoryRepository extends JpaRepository<TradeHistory,Long>
             @Param("lastId") Long lastId,
             Pageable pageable
     );
+
+    Optional<TradeHistory> findTradeHistoryByIdempotentKey(String idempotentKey);
 }
