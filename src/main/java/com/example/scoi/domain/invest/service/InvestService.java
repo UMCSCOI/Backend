@@ -196,7 +196,6 @@ public class InvestService {
         return switch (exchangeType) {
             case BITHUMB -> bithumbApiClient;
             case UPBIT -> upbitApiClient;
-            case BINANCE -> throw new InvestException(InvestErrorCode.INVALID_EXCHANGE_TYPE);
         };
     }
 }

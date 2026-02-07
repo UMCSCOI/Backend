@@ -6,7 +6,7 @@ public class InvestReqDTO {
 
     // 주문 요청 (실제 주문 생성용)
     public record OrderDTO(
-            ExchangeType exchangeType,  // 거래소 타입 (Bithumb/Upbit/Binance)
+            ExchangeType exchangeType,  // 거래소 타입 (Bithumb/Upbit)
             String market,        // 마켓 타입 (ex. KRW-BTC)
             String side,          // 주문 타입 (bid: 매수, ask: 매도)
             String orderType,     // 주문 방식 (limit: 지정가, price: 시장가 매수, market: 시장가 매도)
@@ -17,7 +17,7 @@ public class InvestReqDTO {
 
     // 주문 테스트 요청 (주문 생성 테스트용, password 불필요)
     public record TestOrderDTO(
-            ExchangeType exchangeType,  // 거래소 타입 (Bithumb/Upbit/Binance)
+            ExchangeType exchangeType,  // 거래소 타입 (Bithumb/Upbit)
             String market,        // 마켓 타입 (ex. KRW-BTC)
             String side,          // 주문 타입 (bid: 매수, ask: 매도)
             String orderType,     // 주문 방식 (limit: 지정가, price: 시장가 매수, market: 시장가 매도)

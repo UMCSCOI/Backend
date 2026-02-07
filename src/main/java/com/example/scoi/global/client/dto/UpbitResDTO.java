@@ -26,7 +26,8 @@ public class UpbitResDTO {
             String amount,
             String fee,
             String transaction_type
-    ){}
+    ) {
+    }
 
     // 개별 주문 조회
     public record GetOrder(
@@ -51,7 +52,8 @@ public class UpbitResDTO {
             String identifier,
             String trades_count,
             List<Trades> trades
-    ){}
+    ) {
+    }
 
     // 개별 주문 조회
     public record Trades(
@@ -63,7 +65,8 @@ public class UpbitResDTO {
             String trend,
             String created_at,
             String side
-    ){}
+    ) {
+    }
 
     // 출금(이체) 가능 정보
     public record WithdrawsChance(
@@ -81,19 +84,25 @@ public class UpbitResDTO {
                 Boolean two_factor_auth_verified,
                 Boolean locked,
                 Boolean wallet_locked
-        ) {}
+        ) {
+        }
+
         public record Currency(
                 String code,
                 String withdraw_fee,            // 출금 수수료
                 Boolean is_coin,
                 String wallet_state             // 지갑 상태 (working, etc.)
-        ) {}
+        ) {
+        }
+
         public record Account(
                 String currency,
                 String balance,                 // 주문 가능 금액
                 String locked,                  // 주문 중 묶인 금액
                 String avg_buy_price
-        ) {}
+        ) {
+        }
+
         public record WithdrawLimit(
                 String currency,
                 String minimum,                 // 최소 출금 금액
@@ -101,7 +110,8 @@ public class UpbitResDTO {
                 String daily,                  // 1일 출금 한도
                 String remaining_daily,        // 1일 잔여 출금 한도
                 Boolean can_withdraw           // 출금 지원 여부
-        ) {}
+        ) {
+        }
     }
 
     //이체 결과
@@ -118,7 +128,8 @@ public class UpbitResDTO {
             String fee,                 // 출금 수수료
             String transactionType,     // 출금 유형 (default: 일반, internal: 바로출금)
             Boolean isCancelable        // 출금 취소 가능 여부
-    ) {}
+    ) {
+    }
 
     // 개별 입금 조회
     public record GetDeposit(
@@ -133,7 +144,8 @@ public class UpbitResDTO {
             String amount,
             String fee,
             String transaction_type
-    ){}
+    ) {
+    }
 
     // 주문 가능 정보 조회
     @JsonIgnoreProperties(ignoreUnknown = true) // DTO에 정의되지 않은 필드들이 와도 무시해달라는 설정정 - 추후 추가될 필드들을 위해 필요요
@@ -150,7 +162,8 @@ public class UpbitResDTO {
             AskAccount ask_account,
             Boolean avg_buy_price_modified,
             String unit_currency
-    ){}
+    ) {
+    }
 
     // 주문 가능 정보 조회 - Market
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -161,7 +174,8 @@ public class UpbitResDTO {
             List<String> order_sides,
             List<String> bid_types,
             List<String> ask_types
-    ){}
+    ) {
+    }
 
     // 주문 가능 정보 조회 - Bid
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -169,7 +183,8 @@ public class UpbitResDTO {
             String currency,
             Double price_unit,  // deprecated
             String min_total
-    ){}
+    ) {
+    }
 
     // 주문 가능 정보 조회 - Ask
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -179,7 +194,8 @@ public class UpbitResDTO {
             String min_total,
             String max_total,
             String state
-    ){}
+    ) {
+    }
 
     // 주문 가능 정보 조회 - BidAccount
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -190,7 +206,8 @@ public class UpbitResDTO {
             String avg_buy_price,
             Boolean avg_buy_price_modified,
             String unit_currency
-    ){}
+    ) {
+    }
 
     // 주문 가능 정보 조회 - AskAccount
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -201,7 +218,8 @@ public class UpbitResDTO {
             String avg_buy_price,
             Boolean avg_buy_price_modified,
             String unit_currency
-    ){}
+    ) {
+    }
 
     // 전체 계좌 조회
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -213,7 +231,8 @@ public class UpbitResDTO {
             Boolean avg_buy_price_modified,
             String unit_currency,
             String available  // 매수 가능 금액/수량
-    ){}
+    ) {
+    }
 
     // 개별 입금 주소 조회
     public record GetDepositAddress(
@@ -221,7 +240,8 @@ public class UpbitResDTO {
             String net_type,
             String deposit_address,
             String secondary_address
-    ){}
+    ) {
+    }
 
     // 입금 주소 생성 요청
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -232,7 +252,8 @@ public class UpbitResDTO {
             String net_type, // 200 생성 이후
             String deposit_address, // 200 생성 이후
             String secondary_address // 200 생성 이후
-    ){}
+    ) {
+    }
 
     /**
      * 업비트 계정 잔고 조회 응답 (배열)
@@ -246,69 +267,61 @@ public class UpbitResDTO {
      * - avg_buy_price_modified: 매수평균가 수정 여부
      * - unit_currency: 평단가 기준 화폐
      */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BalanceResponse {
 
-        private String currency;  // 화폐를 의미하는 영문 대문자 코드
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record BalanceResponse(
+                String currency,  // 화폐를 의미하는 영문 대문자 코드
+                String balance,  // 주문가능 금액/수량
+                String locked,  // 주문 중 묶여있는 금액/수량
+                @JsonProperty("avg_buy_price")
+                String avgBuyPrice,  // 매수평균가
+                @JsonProperty("avg_buy_price_modified")
+                Boolean avgBuyPriceModified,  // 매수평균가 수정 여부
+                @JsonProperty("unit_currency")
+                String unitCurrency  // 평단가 기준 화폐
+        ) {
+        }
 
-        private String balance;  // 주문가능 금액/수량
+        // 주문 생성 응답
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record CreateOrder(
+                String uuid,
+                String side,
+                String ord_type,
+                String price,
+                String state,
+                String market,
+                String created_at,
+                String volume,
+                String remaining_volume,
+                String executed_volume,
+                String reserved_fee,
+                String remaining_fee,
+                String paid_fee,
+                String locked,
+                String time_in_force
+        ) {
+        }
 
-        private String locked;  // 주문 중 묶여있는 금액/수량
+        // 주문 취소 응답
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record CancelOrder(
+                String uuid,
+                String side,
+                String ord_type,
+                String price,
+                String state,
+                String market,
+                String created_at,
+                String volume,
+                String remaining_volume,
+                String executed_volume,
+                String reserved_fee,
+                String remaining_fee,
+                String paid_fee,
+                String locked,
+                String time_in_force
+        ) {
+        }
 
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record BalanceResponse(
-            String currency,  // 화폐를 의미하는 영문 대문자 코드
-            String balance,  // 주문가능 금액/수량
-            String locked,  // 주문 중 묶여있는 금액/수량
-        @JsonProperty("avg_buy_price")
-            String avgBuyPrice,  // 매수평균가
-        @JsonProperty("avg_buy_price_modified")
-            Boolean avgBuyPriceModified,  // 매수평균가 수정 여부
-        @JsonProperty("unit_currency")
-            String unitCurrency  // 평단가 기준 화폐
-    ){}
-
-    // 주문 생성 응답
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record CreateOrder(
-            String uuid,
-            String side,
-            String ord_type,
-            String price,
-            String state,
-            String market,
-            String created_at,
-            String volume,
-            String remaining_volume,
-            String executed_volume,
-            String reserved_fee,
-            String remaining_fee,
-            String paid_fee,
-            String locked,
-            String time_in_force
-    ){}
-
-    // 주문 취소 응답
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record CancelOrder(
-            String uuid,
-            String side,
-            String ord_type,
-            String price,
-            String state,
-            String market,
-            String created_at,
-            String volume,
-            String remaining_volume,
-            String executed_volume,
-            String reserved_fee,
-            String remaining_fee,
-            String paid_fee,
-            String locked,
-            String time_in_force
-    ){}
-}
+    }
