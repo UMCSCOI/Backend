@@ -23,6 +23,17 @@ public class UpbitConverter {
                 .build();
     }
 
+    // 입금 주소 생성 요청
+    public static UpbitReqDTO.CreateDepositAddress toCreateDepositAddress(
+            String currency,
+            String netType
+    ){
+        return UpbitReqDTO.CreateDepositAddress.builder()
+                .currency(currency)
+                .net_type(netType)
+                .build();
+    }
+
     // 업비트 계정 잔고 조회 응답 -> BalanceDTO 리스트로 변환
     public static List<BalanceResDTO.BalanceDTO> toBalanceDTOList(@NotNull UpbitResDTO.BalanceResponse[] responses) {
         List<BalanceResDTO.BalanceDTO> result = new ArrayList<>();

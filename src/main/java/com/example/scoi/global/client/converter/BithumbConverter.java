@@ -23,6 +23,17 @@ public class BithumbConverter {
                 .build();
     }
 
+    // 입금 주소 생성 요청
+    public static BithumbReqDTO.CreateDepositAddress toCreateDepositAddress(
+            String currency,
+            String netType
+    ){
+        return BithumbReqDTO.CreateDepositAddress.builder()
+                .currency(currency)
+                .net_type(netType)
+                .build();
+    }
+
     // 빗썸 전체 계좌 조회 -> BalanceDTO 리스트
     public static List<BalanceResDTO.BalanceDTO> toBalanceDTOList(@NotNull BithumbResDTO.BalanceResponse[] responses) {
         List<BalanceResDTO.BalanceDTO> result = new ArrayList<>();
