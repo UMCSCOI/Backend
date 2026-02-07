@@ -4,6 +4,7 @@ import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
 import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,6 +32,6 @@ public interface ChargeControllerDocs {
     )
     ApiResponse<BalanceResDTO.BalanceListDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,
-            @AuthenticationPrincipal String phoneNumber
+            @AuthenticationPrincipal CustomUserDetails user
     );
 }
