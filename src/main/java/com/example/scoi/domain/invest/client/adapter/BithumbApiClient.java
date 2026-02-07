@@ -13,9 +13,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.FeignException;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -29,83 +35,84 @@ public class BithumbApiClient implements ExchangeApiClient {
     @Override
     public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice) {
         try {
-            // coinType을 마켓 형식으로
-            String market = convertCoinTypeToMarket(coinType);
-            
             // coinType에서 실제 코인 추출 (KRW-USDC -> USDC, USDC -> USDC, KRW -> KRW)
             String targetCoin = extractCoinFromCoinType(coinType);
             
-            log.info("빗썸 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}, 대상 코인: {}), unitPrice: {}", 
-                    phoneNumber, coinType, market, targetCoin, unitPrice);
+            String authorization = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);
+            log.info("빗썸 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (대상 코인: {}), unitPrice: {}", 
+                    phoneNumber, coinType, targetCoin, unitPrice);
             
-            // 주문 가능 정보 조회 
-            BithumbResDTO.OrderChance orderChance = getOrderChance(phoneNumber, market);
+            // 전체 계좌 조회
+            String accountsJson = bithumbFeignClient.getAccounts(authorization);
             
-            log.info("빗썸 최대 주문 정보 조회 API 응답 수신 완료");
+            // 응답 로깅 (디버깅용)
+            log.debug("빗썸 API 응답 원본: {}", accountsJson);
             
-            // 응답 파싱 및 변환 (대상 코인의 잔고 조회)
-            return parseMaxOrderInfoFromOrderChance(orderChance, targetCoin, unitPrice);
+            // JSON 파싱
+            ObjectMapper objectMapper = new ObjectMapper();
+            BithumbResDTO.BalanceResponse[] accounts;
+            try {
+                accounts = objectMapper.readValue(accountsJson, BithumbResDTO.BalanceResponse[].class);
+            } catch (JsonProcessingException e) {
+                log.error("빗썸 API 응답 JSON 파싱 실패 - 응답 본문: {}", accountsJson, e);
+                throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+            }
+            List<BithumbResDTO.BalanceResponse> accountList = Arrays.asList(accounts);
             
+            log.info("빗썸 최대 주문 정보 조회 API 응답 수신 - 계좌 개수: {}", accountList.size());
+            // 디버깅: 실제 응답 값 확인
+            for (BithumbResDTO.BalanceResponse account : accountList) {
+                log.info("계좌 정보 - currency: {}, balance: {}, locked: {}", 
+                        account.currency(), account.balance(), account.locked());
+            }
+            
+            return parseMaxOrderInfoResponse(accountList, targetCoin, unitPrice);
+            
+        } catch (GeneralSecurityException e) {
+            log.error("빗썸 JWT 생성 실패", e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (FeignException e) {
+            log.error("빗썸 최대 주문 정보 조회 API 호출 실패 (FeignException)", e);
+            throw e;
         } catch (Exception e) {
             log.error("빗썸 최대 주문 정보 조회 API 호출 실패", e);
-            throw new RuntimeException("빗썸 API 호출 실패: " + e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
     
     /**
-     * /v1/orders/chance API 응답에서 최대 주문 정보 파싱
-     * targetCoin에 해당하는 잔고를 조회 (KRW-USDC에서 USDC 잔고 조회)
+     * /v1/accounts API 응답에서 최대 주문 정보 파싱
+     * targetCoin에 해당하는 잔고를 조회
      * unitPrice가 있으면 balance / unitPrice로 최대 주문 수량(maxQuantity)
      */
-    private MaxOrderInfoDTO parseMaxOrderInfoFromOrderChance(BithumbResDTO.OrderChance orderChance, String targetCoin, String unitPrice) {
+    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<BithumbResDTO.BalanceResponse> accounts, String targetCoin, String unitPrice) {
         try {
             String balance = "0";
             
-            // bid_account와 ask_account 정보 로깅
-            if (orderChance.bid_account() != null) {
-                BithumbResDTO.BidAccount bidAccount = orderChance.bid_account();
-                log.info("빗썸 bid_account 정보 - currency: {}, balance: {}, locked: {}, avg_buy_price: {}", 
-                        bidAccount.currency(), bidAccount.balance(), bidAccount.locked(), bidAccount.avg_buy_price());
-            }
-            if (orderChance.ask_account() != null) {
-                BithumbResDTO.AskAccount askAccount = orderChance.ask_account();
-                log.info("빗썸 ask_account 정보 - currency: {}, balance: {}, locked: {}, avg_buy_price: {}", 
-                        askAccount.currency(), askAccount.balance(), askAccount.locked(), askAccount.avg_buy_price());
-            }
-            
-            // targetCoin에 해당하는 잔고 찾기
-            // KRW인 경우 bid_account에서, 그 외 코인(USDC, BTC 등)은 ask_account에서 조회
-            if ("KRW".equals(targetCoin)) {
-                // KRW 잔고는 bid_account에서 조회
-                if (orderChance.bid_account() != null) {
-                    BithumbResDTO.BidAccount bidAccount = orderChance.bid_account();
-                    if (bidAccount.currency() != null && "KRW".equals(bidAccount.currency())) {
-                        if (bidAccount.balance() != null && !bidAccount.balance().isEmpty()) {
-                            balance = bidAccount.balance();
-                            log.info("빗썸 KRW 잔고 조회 완료 - bid_account balance: {}", balance);
-                        } else {
-                            log.warn("빗썸 주문 가능 정보 응답에 bid_account.balance가 없습니다.");
+            // targetCoin에 해당하는 계좌 찾기
+            for (BithumbResDTO.BalanceResponse account : accounts) {
+                if (targetCoin.equals(account.currency())) {
+                    log.info("해당 currency 계좌 발견 - currency: {}, balance: {}, locked: {}", 
+                            account.currency(), account.balance(), account.locked());
+                    
+                    // balance - locked로 사용 가능 잔고 계산
+                    if (account.balance() != null && !account.balance().isEmpty()) {
+                        try {
+                            BigDecimal balanceDecimal = new BigDecimal(account.balance());
+                            BigDecimal lockedDecimal = account.locked() != null && !account.locked().isEmpty() 
+                                    ? new BigDecimal(account.locked()) 
+                                    : BigDecimal.ZERO;
+                            BigDecimal availableDecimal = balanceDecimal.subtract(lockedDecimal);
+                            balance = availableDecimal.toPlainString();
+                            log.info("사용 가능 잔고 계산 - balance: {}, locked: {}, available: {}", 
+                                    account.balance(), account.locked(), balance);
+                        } catch (NumberFormatException e) {
+                            // 계산 실패 시 balance 그대로 사용
+                            balance = account.balance();
+                            log.warn("사용 가능 잔고 계산 실패, balance 사용: {}", balance);
                         }
                     }
-                } else {
-                    log.warn("빗썸 주문 가능 정보 응답에 bid_account가 없습니다.");
-                }
-            } else {
-                // USDC, BTC 등 다른 코인은 ask_account에서 조회
-                if (orderChance.ask_account() != null) {
-                    BithumbResDTO.AskAccount askAccount = orderChance.ask_account();
-                    if (askAccount.currency() != null && targetCoin.equals(askAccount.currency())) {
-                        if (askAccount.balance() != null && !askAccount.balance().isEmpty()) {
-                            balance = askAccount.balance();
-                            log.info("빗썸 {} 잔고 조회 완료 - ask_account balance: {}", targetCoin, balance);
-                        } else {
-                            log.warn("빗썸 주문 가능 정보 응답에 ask_account.balance가 없습니다.");
-                        }
-                    } else {
-                        log.warn("빗썸 ask_account currency 불일치 - 기대: {}, 실제: {}", targetCoin, askAccount.currency());
-                    }
-                } else {
-                    log.warn("빗썸 주문 가능 정보 응답에 ask_account가 없습니다.");
+                    break;
                 }
             }
             
@@ -136,7 +143,7 @@ public class BithumbApiClient implements ExchangeApiClient {
                     
         } catch (Exception e) {
             log.error("빗썸 최대 주문 정보 조회 API 응답 파싱 실패", e);
-            throw new RuntimeException("응답 파싱 실패: " + e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
     
@@ -329,8 +336,9 @@ public class BithumbApiClient implements ExchangeApiClient {
             }
         }
         
-        // 변환 불가능한 경우 그대로 반환
-        return market;
+        // 코인 타입만 있는 경우 (예: USDC, BTC) -> KRW-XXX 형식으로 변환
+        // 빗썸 API는 KRW-USDC 형식을 사용
+        return "KRW-" + market;
     }
   
     private void validateOrderAvailability(
