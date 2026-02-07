@@ -28,14 +28,14 @@ public class UpbitApiClient implements ExchangeApiClient {
     private final JwtApiUtil jwtApiUtil; 
     
     @Override
-    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
+    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice) {
         try {
             // coinType을 업비트 형식으로 정규화 (KRW-BTC 형식으로 통일)
             String normalizedCoinType = normalizeCoinType(coinType);
             
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
-            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), price: {}", 
-                    phoneNumber, coinType, normalizedCoinType, price);
+            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), unitPrice: {}", 
+                    phoneNumber, coinType, normalizedCoinType, unitPrice);
             
             // Feign Client가 자동으로 List<Account>로 변환해줌 (ObjectMapper 불필요!)
             List<UpbitResDTO.Account> accounts = upbitFeignClient.getAccounts(authorization);
@@ -47,7 +47,7 @@ public class UpbitApiClient implements ExchangeApiClient {
                         account.currency(), account.balance(), account.locked(), account.available());
             }
             
-            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, price);
+            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, unitPrice);
             
         } catch (GeneralSecurityException e) {
             log.error("업비트 JWT 생성 실패", e);
@@ -58,7 +58,7 @@ public class UpbitApiClient implements ExchangeApiClient {
         }
     }
     
-    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String price) {
+    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String unitPrice) {
         try {
             // coinType이 KRW-BTC 형식이면, 매수 시 KRW 잔액을 조회해야 함
             String currency;
@@ -105,24 +105,24 @@ public class UpbitApiClient implements ExchangeApiClient {
                 }
             }
             
-            // price가 있으면 최대 주문 수량 계산 (balance / price)
+            // unitPrice가 있으면 최대 주문 수량 계산 (balance / unitPrice)
             // 소수점 절사하여 정수로 반환 (0.8개 → 0개, 1.2개 → 1개)
             String maxQuantity = null;
-            if (price != null && !price.isEmpty()) {
+            if (unitPrice != null && !unitPrice.isEmpty()) {
                 try {
                     BigDecimal balanceDecimal = new BigDecimal(balance);
-                    BigDecimal priceDecimal = new BigDecimal(price);
+                    BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
                     
-                    if (priceDecimal.compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal quantity = balanceDecimal.divide(priceDecimal, 8, RoundingMode.DOWN);
+                    if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal quantity = balanceDecimal.divide(unitPriceDecimal, 8, RoundingMode.DOWN);
                         // 소수점 절사하여 정수로 변환
                         maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
-                        log.info("업비트 최대 주문 수량 계산 - balance: {}, price: {}, maxQuantity: {} (정수)", balance, price, maxQuantity);
+                        log.info("업비트 최대 주문 수량 계산 - balance: {}, unitPrice: {}, maxQuantity: {} (정수)", balance, unitPrice, maxQuantity);
                     } else {
-                        log.warn("가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
+                        log.warn("단위 가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
                     }
                 } catch (NumberFormatException e) {
-                    log.warn("가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. price: {}", price);
+                    log.warn("단위 가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. unitPrice: {}", unitPrice);
                 }
             }
             
