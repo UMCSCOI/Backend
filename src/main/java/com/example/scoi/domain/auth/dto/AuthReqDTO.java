@@ -93,7 +93,10 @@ public class AuthReqDTO {
 
             @NotBlank(message = "간편비밀번호는 필수입니다.")
             @Schema(description = "AES 암호화된 6자리 간편비밀번호 (Base64)", example = "ItfrsoB1J0hl3O60mahB1A==")
-            String simplePassword
+            String simplePassword,
+
+            @Schema(description = "SMS 재인증 토큰 (계정 잠금/RT 만료 시 필수, 일반 로그인 시 생략)", nullable = true)
+            String verificationToken
     ) {}
 
     // 토큰 재발급 요청
