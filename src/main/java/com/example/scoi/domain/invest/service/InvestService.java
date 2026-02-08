@@ -10,6 +10,7 @@ import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.repository.MemberRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,12 @@ public class InvestService {
             return apiClient.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
         } catch (InvestException e) {
             throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 API 호출 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, coinType: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, coinType, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (Exception e) {
             log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, coinType: {}, error: {}",
                     exchangeType, phoneNumber, coinType, e.getMessage(), e);
@@ -77,6 +84,12 @@ public class InvestService {
             );
         } catch (InvestException e) {
             throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 API 호출 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, market, side, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (Exception e) {
             log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
                     exchangeType, phoneNumber, market, side, e.getMessage(), e);
@@ -115,6 +128,12 @@ public class InvestService {
             );
         } catch (InvestException e) {
             throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 주문 생성 테스트 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, market, side, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (Exception e) {
             log.error("거래소 주문 생성 테스트 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
                     exchangeType, phoneNumber, market, side, e.getMessage(), e);
@@ -158,6 +177,12 @@ public class InvestService {
             );
         } catch (InvestException e) {
             throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 주문 생성 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, market, side, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (Exception e) {
             log.error("거래소 주문 생성 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
                     exchangeType, phoneNumber, market, side, e.getMessage(), e);
@@ -185,6 +210,12 @@ public class InvestService {
             return apiClient.cancelOrder(phoneNumber, exchangeType, uuid, txid);
         } catch (InvestException e) {
             throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 주문 취소 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, uuid: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, uuid, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (Exception e) {
             log.error("거래소 주문 취소 실패 - exchangeType: {}, phoneNumber: {}, uuid: {}, error: {}",
                     exchangeType, phoneNumber, uuid, e.getMessage(), e);
