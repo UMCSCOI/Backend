@@ -18,8 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import feign.FeignException;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
@@ -63,10 +61,6 @@ public class UpbitApiClient implements ExchangeApiClient {
             throw new InvestException(InvestErrorCode.API_KEY_NOT_FOUND);
         } catch (GeneralSecurityException e) {
             log.error("업비트 JWT 생성 실패", e);
-            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
-        } catch (FeignException e) {
-            log.error("업비트 최대 주문 정보 조회 API 호출 실패 (FeignException)", e);
-            throw e;
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (FeignException.BadRequest | FeignException.NotFound e) {
             String errorBody = e.contentUTF8();
@@ -361,9 +355,13 @@ public class UpbitApiClient implements ExchangeApiClient {
                     ObjectMapper objectMapper = new ObjectMapper();
                     ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
 
-                    // 권한이 부족한 경우
-                    if (error.error().name().equals("out_of_scope")) {
-                        throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
+                    if (error != null && error.error() != null) {
+                        String errorName = error.error().name();
+
+                        // 권한이 부족한 경우
+                        if ("out_of_scope".equals(errorName)) {
+                            throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
+                        }
                     }
 
                     // 나머지 JWT 관련 오류
