@@ -1,15 +1,18 @@
 package com.example.scoi.global.security.filter;
 
 import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
+import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.redis.RedisUtil;
 import com.example.scoi.global.security.jwt.JwtUtil;
 import com.example.scoi.global.security.userdetails.CustomUserDetailsService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,10 +31,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
     private final CustomUserDetailsService userDetailsService;
+    private final ObjectMapper objectMapper;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final String ERROR_CODE_ATTRIBUTE = "authErrorCode";
     private static final String BLACKLIST_PREFIX = "blacklist:";
 
     // 인증 없이 접근 가능한 경로 (SecurityConfig와 동일하게 유지)
@@ -130,11 +133,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 인증 실패 처리 (중복 제거)
+     * 인증 실패 처리
      */
     private void handleAuthenticationError(HttpServletRequest request, HttpServletResponse response,
                                           AuthErrorCode errorCode) throws IOException {
-        request.setAttribute(ERROR_CODE_ATTRIBUTE, errorCode);
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        log.warn("JWT 인증 실패: {} - {} ({})", request.getRequestURI(), errorCode.getMessage(), errorCode.getCode());
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+
+        ApiResponse<Object> apiResponse = ApiResponse.onFailure(errorCode);
+        response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
     }
 }
