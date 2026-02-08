@@ -154,13 +154,15 @@ public class TransferConverter {
     // 빗썸 요청으로 변환
     public static TransferReqDTO.BithumbWithdrawRequest toBithumbWithdrawRequest(TransferReqDTO.WithdrawRequest dto) {
 
+        String mappedReceiverType = dto.receiverType().equals("INDIVIDUAL") ? "personal" : "corporation";
+
         return TransferReqDTO.BithumbWithdrawRequest.builder()
                 .currency(dto.currency())
                 .netType(dto.netType())
                 .amount(Double.valueOf(dto.amount()))
                 .address(dto.address())
                 .exchangeName(String.valueOf(dto.exchangeName()))
-                .receiverType(dto.receiverType())
+                .receiverType(MemberType.valueOf(mappedReceiverType))
                 .receiverKoName(dto.receiverKoName())
                 .receiverEnName(dto.receiverEnName())
 //                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
