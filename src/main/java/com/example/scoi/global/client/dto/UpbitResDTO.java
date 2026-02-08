@@ -246,13 +246,39 @@ public class UpbitResDTO {
      * - avg_buy_price_modified: 매수평균가 수정 여부
      * - unit_currency: 평단가 기준 화폐
      */
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record BalanceResponse(
-            String currency,  // 화폐를 의미하는 영문 대문자 코드
-            String balance,  // 주문가능 금액/수량
-            String locked,  // 주문 중 묶여있는 금액/수량
-            @JsonProperty("avg_buy_price") String avgBuyPrice,  // 매수평균가
-            @JsonProperty("avg_buy_price_modified") Boolean avgBuyPriceModified,  // 매수평균가 수정 여부
-            @JsonProperty("unit_currency") String unitCurrency  // 평단가 기준 화폐
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BalanceResponse {
+
+        private String currency;  // 화폐를 의미하는 영문 대문자 코드
+
+        private String balance;  // 주문가능 금액/수량
+
+        private String locked;  // 주문 중 묶여있는 금액/수량
+
+        @JsonProperty("avg_buy_price")
+        private String avgBuyPrice;  // 매수평균가
+
+        @JsonProperty("avg_buy_price_modified")
+        private Boolean avgBuyPriceModified;  // 매수평균가 수정 여부
+
+        @JsonProperty("unit_currency")
+        private String unitCurrency;  // 평단가 기준 화폐
+    }
+
+    // 출금 허용 주소 리스트 조회 (수취인 조회)
+    public record WithdrawalAddressResponse(
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String beneficiary_name,
+            String beneficiary_company_name,
+            String beneficiary_type,
+            String exchange_name,
+            String wallet_type
     ) {}
 }
