@@ -1,6 +1,7 @@
 package com.example.scoi.domain.transfer.service;
 
 import com.example.scoi.domain.member.entity.Member;
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.enums.MemberType;
 import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
@@ -234,8 +235,7 @@ public class TransferService {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            ClientErrorDTO.Errors error = null;
-            error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
             log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
 
             // 파라미터(네트워크 타입)가 잘못된 경우
@@ -371,8 +371,7 @@ public class TransferService {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            ClientErrorDTO.Errors error = null;
-            error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
             log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
 
             // 파라미터가 잘못된 경우
@@ -447,6 +446,58 @@ public class TransferService {
         // 4. 수취인 이름이 2 - 5자가 아닌 경우
         if(recipient.recipientName().length() > 5 || recipient.recipientName().length() < 2){
             throw new TransferException(TransferErrorCode.INVALID_RECIPIENT_INFORMATION);
+        }
+    }
+
+    public List<TransferResDTO.WithdrawRecipients> getRecipients(String phoneNumber, ExchangeType exchangeType) {
+        String token;
+        List<TransferResDTO.WithdrawRecipients> result;
+        try{
+            switch (exchangeType){
+                case UPBIT:
+                    token = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
+
+                    List<UpbitResDTO.WithdrawalAddressResponse> upbitResult = upbitClient.getRecipients(token);
+                    result = TransferConverter.toWithdrawRecipientsUpbit(upbitResult);
+                    break;
+                case BITHUMB:
+                    token = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);
+
+                    List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult = bithumbClient.getRecipients(token);
+                    result = TransferConverter.toWithdrawRecipientsBithumb(bithumbResult);
+                    break;
+                default:
+                    throw new TransferException(TransferErrorCode.UNSUPPORTED_EXCHANGE);
+            }
+            return result;
+
+
+        // 토큰을 못 만들었을 경우
+        }catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
+        // 잘못된 요청 형식
+        catch (FeignException.BadRequest | FeignException.NotFound e) {
+            String rawBody = e.contentUTF8(); // 원본 응답 저장
+            log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
+
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
+
+            // 나머지 400 에러
+            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+        }
+        // 권한이 부족한 경우
+        catch (FeignException.Unauthorized e) {
+            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+
+            // 권한이 부족한 경우
+            if (error.error().name().equals("out_of_scope")) {
+                throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+            }
+
+            // 나머지 JWT 관련 오류
+            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
         }
     }
 }
