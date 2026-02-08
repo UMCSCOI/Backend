@@ -15,7 +15,7 @@ public interface BithumbFeignClient {
 
     //전체 계좌 조회
     @GetMapping("/v1/accounts")
-    String getAccounts(@RequestHeader("Authorization") String authorization);
+    BithumbResDTO.BalanceResponse[] getAccounts(@RequestHeader("Authorization") String authorization);
 
     //주문 가능 정보 조회
     @GetMapping("/v1/orders/chance")

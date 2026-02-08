@@ -13,7 +13,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import feign.FeignException;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
@@ -27,14 +30,14 @@ public class UpbitApiClient implements ExchangeApiClient {
     private final JwtApiUtil jwtApiUtil; 
     
     @Override
-    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
+    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice) {
         try {
             // coinType을 업비트 형식으로 정규화 (KRW-BTC 형식으로 통일)
             String normalizedCoinType = normalizeCoinType(coinType);
             
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
-            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), price: {}", 
-                    phoneNumber, coinType, normalizedCoinType, price);
+            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), unitPrice: {}", 
+                    phoneNumber, coinType, normalizedCoinType, unitPrice);
             
             // Feign Client가 자동으로 List<Account>로 변환해줌 (ObjectMapper 불필요!)
             List<UpbitResDTO.Account> accounts = upbitFeignClient.getAccounts(authorization);
@@ -46,18 +49,21 @@ public class UpbitApiClient implements ExchangeApiClient {
                         account.currency(), account.balance(), account.locked(), account.available());
             }
             
-            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, price);
+            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, unitPrice);
             
         } catch (GeneralSecurityException e) {
             log.error("업비트 JWT 생성 실패", e);
-            throw new RuntimeException("JWT 생성 실패", e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (FeignException e) {
+            log.error("업비트 최대 주문 정보 조회 API 호출 실패 (FeignException)", e);
+            throw e;
         } catch (Exception e) {
             log.error("업비트 최대 주문 정보 조회 API 호출 실패", e);
-            throw new RuntimeException("업비트 API 호출 실패: " + e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
     
-    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String price) {
+    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String unitPrice) {
         try {
             // coinType이 KRW-BTC 형식이면, 매수 시 KRW 잔액을 조회해야 함
             String currency;
@@ -104,30 +110,30 @@ public class UpbitApiClient implements ExchangeApiClient {
                 }
             }
             
-            // price가 있으면 최대 주문 수량 계산 (balance / price)
+            // unitPrice가 있으면 최대 주문 수량 계산 (balance / unitPrice)
+            // 소수점 절사하여 정수로 반환 (0.8개 → 0개, 1.2개 → 1개)
             String maxQuantity = null;
-            if (price != null && !price.isEmpty()) {
+            if (unitPrice != null && !unitPrice.isEmpty()) {
                 try {
-                    java.math.BigDecimal balanceDecimal = new java.math.BigDecimal(balance);
-                    java.math.BigDecimal priceDecimal = new java.math.BigDecimal(price);
+                    BigDecimal balanceDecimal = new BigDecimal(balance);
+                    BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
                     
-                    if (priceDecimal.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        maxQuantity = balanceDecimal.divide(priceDecimal, 8, java.math.RoundingMode.DOWN).toPlainString();
-                        log.info("업비트 최대 주문 수량 계산 - balance: {}, price: {}, maxQuantity: {}", balance, price, maxQuantity);
+                    if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal quantity = balanceDecimal.divide(unitPriceDecimal, 8, RoundingMode.DOWN);
+                        // 소수점 절사하여 정수로 변환
+                        maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
+                        log.info("업비트 최대 주문 수량 계산 - balance: {}, unitPrice: {}, maxQuantity: {} (정수)", balance, unitPrice, maxQuantity);
                     } else {
-                        log.warn("가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
+                        log.warn("단위 가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
                     }
                 } catch (NumberFormatException e) {
-                    log.warn("가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. price: {}", price);
+                    log.warn("단위 가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. unitPrice: {}", unitPrice);
                 }
             }
             
             log.info("업비트 최대 주문 정보 조회 완료 - coinType: {}, balance: {}, maxQuantity: {}", coinType, balance, maxQuantity);
             
-            return MaxOrderInfoDTO.builder()
-                    .balance(balance)
-                    .maxQuantity(maxQuantity)
-                    .build();
+            return new MaxOrderInfoDTO(balance, maxQuantity);
                     
         } catch (Exception e) {
             log.error("업비트 최대 주문 정보 조회 API 응답 파싱 실패", e);
@@ -179,8 +185,9 @@ public class UpbitApiClient implements ExchangeApiClient {
             return "KRW-BTC";
         }
         
-        // 변환 불가능한 경우 그대로 반환
-        return coinType;
+        // 코인 타입만 있는 경우 (예: USDC, BTC) -> KRW-XXX 형식으로 변환
+        // 업비트 API는 KRW-USDC 형식을 사용
+        return "KRW-" + coinType;
     }
     
     @Override
@@ -194,11 +201,14 @@ public class UpbitApiClient implements ExchangeApiClient {
             String volume
     ) {
         try {
-            log.info("업비트 주문 가능 여부 확인 API 호출 시작 - phoneNumber: {}, market: {}, side: {}", 
-                    phoneNumber, market, side);
+            // market을 업비트 형식으로 정규화 (KRW-BTC 형식으로 통일)
+            String normalizedMarket = normalizeCoinType(market);
             
-            UpbitResDTO.OrderChance orderChance = getOrderChance(phoneNumber, market);
-            validateOrderAvailability(market, side, orderType, price, volume, orderChance);
+            log.info("업비트 주문 가능 여부 확인 API 호출 시작 - phoneNumber: {}, market: {} (정규화: {}), side: {}", 
+                    phoneNumber, market, normalizedMarket, side);
+            
+            UpbitResDTO.OrderChance orderChance = getOrderChance(phoneNumber, normalizedMarket);
+            validateOrderAvailability(normalizedMarket, side, orderType, price, volume, orderChance);
             
             log.info("업비트 주문 가능 여부 확인 완료 - 주문 가능");
             
@@ -307,6 +317,18 @@ public class UpbitApiClient implements ExchangeApiClient {
         } else if ("ask".equals(side)) {
             // 매도 주문: volume은 필수
             if (volume == null || volume.isEmpty()) {
+                throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+            }
+            
+            // 매도 주문 타입 검증
+            if ("limit".equals(orderType)) {
+                // 지정가 매도: volume과 price 필요
+                if (price == null || price.isEmpty()) {
+                    throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+                }
+            } else if ("market".equals(orderType)) {
+                // 시장가 매도: volume만 필요 (price 불필요)
+            } else {
                 throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
             }
             
