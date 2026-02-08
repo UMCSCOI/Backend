@@ -246,6 +246,20 @@ public class UpbitResDTO {
      * - avg_buy_price_modified: 매수평균가 수정 여부
      * - unit_currency: 평단가 기준 화폐
      */
+
+    // 출금 허용 주소 리스트 조회 (수취인 조회)
+    public record WithdrawalAddressResponse(
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String beneficiary_name,
+            String beneficiary_company_name,
+            String beneficiary_type,
+            String exchange_name,
+            String wallet_type
+    ) {}
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record BalanceResponse(
             String currency,  // 화폐를 의미하는 영문 대문자 코드

@@ -12,8 +12,8 @@ import com.example.scoi.domain.transfer.enums.TradeType;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import com.example.scoi.global.client.dto.UpbitResDTO;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -260,5 +260,34 @@ public class TransferConverter {
             // 파싱 실패 시 기본값 반환 혹은 에러 처리
             return amountStr;
         }
+    }
+
+    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsUpbit(List<UpbitResDTO.WithdrawalAddressResponse> upbitResult) {
+        // 수취인이 없는 경우 빈 리스트 반환
+        if (upbitResult == null) {
+            return Collections.emptyList();
+        }
+
+        return upbitResult.stream()
+                .map(item -> TransferResDTO.WithdrawRecipients.builder()
+                        .recipientKoName(item.beneficiary_name())
+                        .recipientEnName(null)
+                        .walletAddress(item.withdraw_address())
+                        .exchangeType(item.net_type())
+                        .build()).toList();
+    }
+    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsBithumb(List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult) {
+        // 수취인이 없는 경우 빈 리스트 반환
+        if (bithumbResult == null) {
+            return Collections.emptyList();
+        }
+
+        return bithumbResult.stream()
+                .map(item -> TransferResDTO.WithdrawRecipients.builder()
+                        .recipientKoName(item.owner_ko_name())
+                        .recipientEnName(item.owner_en_name())
+                        .walletAddress(item.withdraw_address())
+                        .exchangeType(item.net_type())
+                        .build()).toList();
     }
 }
