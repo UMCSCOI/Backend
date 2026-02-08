@@ -15,23 +15,53 @@ public class TransferReqDTO {
 
     // 출금 시 필요한 수취인 값
     public record RecipientInformation(
+            @Schema(description = "수취인 유형 (개인/법인)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
+            @NotNull(message = "수취인 유형은 필수입니다.")
             MemberType memberType,
+
+            @Schema(description = "수취인 국문 이름", example = "김철수")
+            @NotBlank(message = "수취인 이름은 필수입니다.")
             String recipientKoName,
+
+            @Schema(description = "수취인 영문 이름(빗썸 이체 시 필요)", example = "김철수")
             String recipientEnName,
 //            String recipientCorpKoName,
 //            String recipientCorpEnName,
+
+            @Schema(description = "수취인 지갑 주소", example = "TQ6r2x3B9kzJHf8M4YpP1CwD7eRVaS5tKU")
+            @NotBlank(message = "수취인 지갑 주소는 필수입니다.")
             String walletAddress,
+
+            @Schema(description = "상대방 지갑 주소 거래소 (빗썸 전용)", example = "UPBIT", allowableValues = {"UPBIT", "BITHUMB"})
             ExchangeType exchangeType,
+
+            @Schema(description = "화폐 코드 (대문자)", example = "USDT")
+            @NotBlank(message = "화폐 코드는 필수입니다.")
             CoinType coinType,
+
+            @Schema(description = "네트워크 타입 (출금 체인)", example = "TRX")
+            @NotNull(message = "네트워크 타입은 필수입니다.")
             String netType
     ) { }
 
     // 견적 검증 시 필요한 값
     public record Quote(
+            @Schema(description = "출금 가능 금액", example = "10")
+            @NotBlank(message = "출금 가능 금액은 필수입니다.")
             String available,
+
+            @Schema(description = "출금할 금액", example = "5")
+            @NotBlank(message = "출금할 금액은 필수입니다.")
             String amount,
+
+            @Schema(description = "화폐 코드 (대문자)", example = "USDT")
             CoinType coinType,
+
+            @Schema(description = "네트워크 타입 (출금 체인)", example = "TRX")
             NetworkType networkType,
+
+            @Schema(description = "네트워크 수수료", example = "1")
+            @NotBlank(message = "네트워크 수수료는 필수입니다.")
             String networkFee
     ) {}
 
@@ -42,10 +72,10 @@ public class TransferReqDTO {
             String currency,
 
             @Schema(description = "네트워크 타입 (출금 체인)", example = "TRX")
-            @NotBlank(message = "네트워크 타입은 필수입니다.")
+            @NotNull(message = "네트워크 타입은 필수입니다.")
             NetworkType netType,
 
-            @Schema(description = "출금 수량 (소수점X)", example = "10")
+            @Schema(description = "출금 수량 (소수점X)", example = "3")
             @NotBlank(message = "출금 수량은 필수입니다.")
             String amount,
 
@@ -53,21 +83,20 @@ public class TransferReqDTO {
             @NotBlank(message = "출금 주소는 필수입니다.")
             String address,
 
-            @Schema(description = "상대방 출금 거래소", example = "UPBIT", allowableValues = {"UPBIT", "BITHUMB"})
-            @NotNull(message = "거래소 타입은 필수입니다.")
+            @Schema(description = "상대방 지갑 주소 거래소 (빗썸 전용)", example = "UPBIT", allowableValues = {"UPBIT", "BITHUMB"})
             ExchangeType exchangeName,
 
-            @Schema(description = "출금 실행 거래소 타입", example = "UPBIT", allowableValues = {"UPBIT", "BITHUMB"})
+            @Schema(description = "출금 실행 거래소 타입(내 API키가 등록된 거래소)", example = "UPBIT", allowableValues = {"UPBIT", "BITHUMB"})
             @NotNull(message = "거래소 타입은 필수입니다.")
             ExchangeType exchangeType,
 
-            @Schema(description = "수취인 유형 (빗썸 전용)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
+            @Schema(description = "수취인 유형 (빗썸 전용, 상대방 거래소)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
             MemberType receiverType,
 
-            @Schema(description = "수취인 성명 (국문)", example = "김철수")
+            @Schema(description = "수취인 성명 (국문, 빗썸 전용)", example = "김철수")
             String receiverKoName,
 
-            @Schema(description = "수취인 성명 (영문)", example = "KIMCHULSU")
+            @Schema(description = "수취인 성명 (영문, 빗썸 전용)", example = "KIMCHULSU")
             String receiverEnName,
 
 //            @Schema(description = "법인 국문명 (법인일 경우만)", example = "(주)스카이")
