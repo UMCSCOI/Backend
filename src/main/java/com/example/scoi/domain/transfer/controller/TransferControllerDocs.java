@@ -1,5 +1,6 @@
 package com.example.scoi.domain.transfer.controller;
 
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;
@@ -13,8 +14,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
+
 @Tag(name = "이체 API")
 public interface TransferControllerDocs {
+    /*
     @Operation(
             summary = "최근 수취인 목록 조회 API By 김민규",
             description = "최근 거래한 수취인 목록을 커서 기반 무한스크롤 방식으로 조회합니다. 최신순으로 정렬됩니다.")
@@ -50,6 +54,7 @@ public interface TransferControllerDocs {
             summary = "별 모양 클릭 시 즐겨찾기 수취인으로 해제 API By 김민규",
             description = "최근 거래 내역에서 별모양을 눌러 즐겨찾기 수취인으로 등록을 해제합니다.")
     ApiResponse<Long> changeToNotFavorite(@PathVariable Long recipientId);
+     */
 
     @Operation(
             summary = "입력받은 수취인 값을 검증 API By 김민규",
@@ -72,5 +77,13 @@ public interface TransferControllerDocs {
     ApiResponse<TransferResDTO.WithdrawResult> executeWithdraw(
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody TransferReqDTO.WithdrawRequest request
+    );
+
+    @Operation(
+            summary = "수취인 조회 API By 김민규",
+            description = "사용자가 사전에 등록한 수취인 목록을 조회합니다.")
+    ApiResponse<List<TransferResDTO.WithdrawRecipients>> getRecipients(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam(name = "exchangeType")ExchangeType exchangeType
     );
 }

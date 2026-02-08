@@ -206,8 +206,7 @@ public class UpbitResDTO {
             String avg_buy_price,
             Boolean avg_buy_price_modified,
             String unit_currency
-    ) {
-    }
+    ){}
 
     // 주문 가능 정보 조회 - AskAccount
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -218,8 +217,7 @@ public class UpbitResDTO {
             String avg_buy_price,
             Boolean avg_buy_price_modified,
             String unit_currency
-    ) {
-    }
+    ){}
 
     // 전체 계좌 조회
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -231,8 +229,7 @@ public class UpbitResDTO {
             Boolean avg_buy_price_modified,
             String unit_currency,
             String available  // 매수 가능 금액/수량
-    ) {
-    }
+    ){}
 
     // 개별 입금 주소 조회
     public record GetDepositAddress(
@@ -240,8 +237,7 @@ public class UpbitResDTO {
             String net_type,
             String deposit_address,
             String secondary_address
-    ) {
-    }
+    ){}
 
     // 입금 주소 생성 요청
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -252,8 +248,7 @@ public class UpbitResDTO {
             String net_type, // 200 생성 이후
             String deposit_address, // 200 생성 이후
             String secondary_address // 200 생성 이후
-    ) {
-    }
+    ){}
 
     /**
      * 업비트 계정 잔고 조회 응답 (배열)
@@ -324,4 +319,18 @@ public class UpbitResDTO {
         ) {
         }
 
-    }
+    // 출금 허용 주소 리스트 조회 (수취인 조회)
+    public record WithdrawalAddressResponse(
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String beneficiary_name,
+            String beneficiary_company_name,
+            String beneficiary_type,
+            String exchange_name,
+            String wallet_type
+    ) {}
+
+}

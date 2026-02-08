@@ -22,7 +22,7 @@ public interface InvestControllerDocs {
     ApiResponse<MaxOrderInfoDTO> getMaxOrderInfo(
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
-            @RequestParam(required = false) String price,
+            @RequestParam(required = false) String unitPrice,
             @AuthenticationPrincipal CustomUserDetails user
     );
 

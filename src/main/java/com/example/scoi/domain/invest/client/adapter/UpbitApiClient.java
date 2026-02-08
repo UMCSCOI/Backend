@@ -17,6 +17,9 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import feign.FeignException;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
@@ -34,14 +37,14 @@ public class UpbitApiClient implements ExchangeApiClient {
     private final JwtApiUtil jwtApiUtil; 
     
     @Override
-    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
+    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice) {
         try {
             // coinType을 업비트 형식으로 정규화 (KRW-BTC 형식으로 통일)
             String normalizedCoinType = normalizeCoinType(coinType);
             
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
-            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), price: {}", 
-                    phoneNumber, coinType, normalizedCoinType, price);
+            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), unitPrice: {}",
+                    phoneNumber, coinType, normalizedCoinType, unitPrice);
             
             // Feign Client가 자동으로 List<Account>로 변환해줌 (ObjectMapper 불필요!)
             List<UpbitResDTO.Account> accounts = upbitFeignClient.getAccounts(authorization);
@@ -53,7 +56,7 @@ public class UpbitApiClient implements ExchangeApiClient {
                         account.currency(), account.balance(), account.locked(), account.available());
             }
             
-            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, price);
+            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, unitPrice);
             
         } catch (MemberException e) {
             log.error("업비트 API 키를 찾을 수 없습니다 - phoneNumber: {}", phoneNumber, e);
@@ -61,9 +64,13 @@ public class UpbitApiClient implements ExchangeApiClient {
         } catch (GeneralSecurityException e) {
             log.error("업비트 JWT 생성 실패", e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (FeignException e) {
+            log.error("업비트 최대 주문 정보 조회 API 호출 실패 (FeignException)", e);
+            throw e;
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (FeignException.BadRequest | FeignException.NotFound e) {
             String errorBody = e.contentUTF8();
-            
+
             // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
             if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                 try {
@@ -79,23 +86,23 @@ public class UpbitApiClient implements ExchangeApiClient {
                     throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
                 } catch (Exception parseException) {
                     // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
-                    log.error("UpbitApiClient - 최대 주문 개수 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                    log.error("UpbitApiClient - 최대 주문 개수 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                             e.status(), errorBody, parseException.getMessage());
                     throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
                 }
             } else {
                 // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
-                log.warn("UpbitApiClient - 최대 주문 개수 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                log.warn("UpbitApiClient - 최대 주문 개수 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                         e.status(), errorBody);
                 throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
             }
         } catch (FeignException.Unauthorized e) {
             String errorBody = e.contentUTF8();
-            
+
             log.error("=== 업비트 API 인증 실패 (401 Unauthorized) ===");
             log.error("phoneNumber: {}, status: {}", phoneNumber, e.status());
             log.error("응답 본문: {}", errorBody);
-            
+
             // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
             if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                 try {
@@ -105,15 +112,15 @@ public class UpbitApiClient implements ExchangeApiClient {
                     if (error != null && error.error() != null) {
                         String errorName = error.error().name();
                         String errorMessage = error.error().message();
-                        
+
                         log.error("업비트 API 에러 - errorName: {}, errorMessage: {}", errorName, errorMessage);
-                        
+
                         // 권한이 부족한 경우 (API Key 권한 문제)
                         if ("out_of_scope".equals(errorName)) {
                             log.error("⚠️ API Key 권한 부족 - 업비트에서 설정한 API Key 권한이 부족합니다.");
                             throw new InvestException(InvestErrorCode.INSUFFICIENT_API_PERMISSION);
                         }
-                        
+
                         // query_hash 관련 에러
                         if (errorMessage != null && errorMessage.contains("query_hash")) {
                             log.error("⚠️ query_hash mismatch - query_hash 계산이 잘못되었을 수 있습니다.");
@@ -126,13 +133,13 @@ public class UpbitApiClient implements ExchangeApiClient {
                     throw investEx;
                 } catch (Exception parseException) {
                     // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
-                    log.error("UpbitApiClient - 최대 주문 개수 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                    log.error("UpbitApiClient - 최대 주문 개수 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                             e.status(), errorBody, parseException.getMessage());
                     throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
                 }
             } else {
                 // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
-                log.warn("UpbitApiClient - 최대 주문 개수 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                log.warn("UpbitApiClient - 최대 주문 개수 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                         e.status(), errorBody);
                 throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
             }
@@ -147,7 +154,7 @@ public class UpbitApiClient implements ExchangeApiClient {
         }
     }
     
-    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String price) {
+    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String unitPrice) {
         try {
             // coinType이 KRW-BTC 형식이면, 매수 시 KRW 잔액을 조회해야 함
             String currency;
@@ -188,20 +195,28 @@ public class UpbitApiClient implements ExchangeApiClient {
                 }
             }
             
-            // price가 있으면 최대 주문 수량 계산 (balance / price)
+            // unitPrice가 있으면 최대 주문 수량 계산 (balance / unitPrice)
+            // 소수점 절사하여 정수로 반환 (0.8개 → 0개, 1.2개 → 1개)
             String maxQuantity = null;
-            if (price != null && !price.isEmpty()) {
+            if (unitPrice != null && !unitPrice.isEmpty()) {
                 try {
                     BigDecimal balanceDecimal = new BigDecimal(balance);
-                    BigDecimal priceDecimal = new BigDecimal(price);
+                    BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
                     
-                    if (priceDecimal.compareTo(BigDecimal.ZERO) > 0) {
-                        maxQuantity = balanceDecimal.divide(priceDecimal, 8, RoundingMode.DOWN).toPlainString();
+                    if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal quantity = balanceDecimal.divide(unitPriceDecimal, 8, RoundingMode.DOWN);
+                        // 소수점 절사하여 정수로 변환
+                        maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
+                        log.info("업비트 최대 주문 수량 계산 - balance: {}, unitPrice: {}, maxQuantity: {} (정수)", balance, unitPrice, maxQuantity);
+                    } else {
+                        log.warn("단위 가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
                     }
                 } catch (NumberFormatException e) {
-                    log.warn("가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. price: {}", price);
+                    log.warn("단위 가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. unitPrice: {}", unitPrice);
                 }
             }
+            
+            log.info("업비트 최대 주문 정보 조회 완료 - coinType: {}, balance: {}, maxQuantity: {}", coinType, balance, maxQuantity);
             
             return new MaxOrderInfoDTO(balance, maxQuantity);
                     
@@ -254,14 +269,15 @@ public class UpbitApiClient implements ExchangeApiClient {
         if (!coinType.contains("-") && !coinType.contains("_")) {
             return "KRW-" + coinType;
         }
-        
+
         // KRW만 있는 경우
         if ("KRW".equals(coinType)) {
             return "KRW-BTC";
         }
         
-        // 변환 불가능한 경우 그대로 반환
-        return coinType;
+        // 코인 타입만 있는 경우 (예: USDC, BTC) -> KRW-XXX 형식으로 변환
+        // 업비트 API는 KRW-USDC 형식을 사용
+        return "KRW-" + coinType;
     }
     
     @Override
@@ -275,11 +291,14 @@ public class UpbitApiClient implements ExchangeApiClient {
             String volume
     ) {
         try {
-            log.info("업비트 주문 가능 여부 확인 API 호출 시작 - phoneNumber: {}, market: {}, side: {}", 
-                    phoneNumber, market, side);
+            // market을 업비트 형식으로 정규화 (KRW-BTC 형식으로 통일)
+            String normalizedMarket = normalizeCoinType(market);
             
-            UpbitResDTO.OrderChance orderChance = getOrderChance(phoneNumber, market);
-            validateOrderAvailability(market, side, orderType, price, volume, orderChance);
+            log.info("업비트 주문 가능 여부 확인 API 호출 시작 - phoneNumber: {}, market: {} (정규화: {}), side: {}",
+                    phoneNumber, market, normalizedMarket, side);
+
+            UpbitResDTO.OrderChance orderChance = getOrderChance(phoneNumber, normalizedMarket);
+            validateOrderAvailability(normalizedMarket, side, orderType, price, volume, orderChance);
             
             log.info("업비트 주문 가능 여부 확인 완료 - 주문 가능");
             
@@ -307,7 +326,7 @@ public class UpbitApiClient implements ExchangeApiClient {
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (FeignException.BadRequest | FeignException.NotFound e) {
             String errorBody = e.contentUTF8();
-            
+
             // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
             if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                 try {
@@ -323,19 +342,19 @@ public class UpbitApiClient implements ExchangeApiClient {
                     throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
                 } catch (Exception parseException) {
                     // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
-                    log.error("UpbitApiClient - 주문 가능여부 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                    log.error("UpbitApiClient - 주문 가능여부 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                             e.status(), errorBody, parseException.getMessage());
                     throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
                 }
             } else {
                 // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
-                log.warn("UpbitApiClient - 주문 가능여부 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                log.warn("UpbitApiClient - 주문 가능여부 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                         e.status(), errorBody);
                 throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
             }
         } catch (FeignException.Unauthorized e) {
             String errorBody = e.contentUTF8();
-            
+
             // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
             if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                 try {
@@ -351,13 +370,13 @@ public class UpbitApiClient implements ExchangeApiClient {
                     throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
                 } catch (Exception parseException) {
                     // JSON 파싱 실패 시 로깅하고 원본 FeignException을 그대로 던짐
-                    log.error("UpbitApiClient - 주문 가능여부 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                    log.error("UpbitApiClient - 주문 가능여부 조회 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                             e.status(), errorBody, parseException.getMessage());
                     throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
                 }
             } else {
                 // 응답 본문이 없거나 JSON이 아닌 경우 - 원본 FeignException을 그대로 던짐
-                log.warn("UpbitApiClient - 주문 가능여부 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                log.warn("UpbitApiClient - 주문 가능여부 조회 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                         e.status(), errorBody);
                 throw e; // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
             }
@@ -449,7 +468,19 @@ public class UpbitApiClient implements ExchangeApiClient {
             if (volume == null || volume.isEmpty()) {
                 throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
             }
-            
+
+            // 매도 주문 타입 검증
+            if ("limit".equals(orderType)) {
+                // 지정가 매도: volume과 price 필요
+                if (price == null || price.isEmpty()) {
+                    throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+                }
+            } else if ("market".equals(orderType)) {
+                // 시장가 매도: volume만 필요 (price 불필요)
+            } else {
+                throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+            }
+
             BigDecimal volumeDecimal = new BigDecimal(volume);
             requiredAmountStr = volume; // 매도 시 필요한 수량
             
@@ -482,12 +513,12 @@ public class UpbitApiClient implements ExchangeApiClient {
         try {
             // market을 업비트 형식으로 정규화 (KRW-USDC 형식으로 통일)
             String normalizedMarket = normalizeCoinType(market);
-            
-            log.info("업비트 주문 생성 테스트 API 호출 시작 - phoneNumber: {}, market: {} (정규화: {}), side: {}, orderType: {}", 
+
+            log.info("업비트 주문 생성 테스트 API 호출 시작 - phoneNumber: {}, market: {} (정규화: {}), side: {}, orderType: {}",
                     phoneNumber, market, normalizedMarket, side, orderType);
 
             // 주문 생성 요청 DTO 생성 (빈 문자열은 null로 변환하여 JSON에 포함되지 않도록 함)
-            UpbitReqDTO.CreateOrder request = 
+            UpbitReqDTO.CreateOrder request =
                     UpbitReqDTO.CreateOrder.builder()
                             .market(normalizedMarket)
                             .side(side)
@@ -496,7 +527,7 @@ public class UpbitApiClient implements ExchangeApiClient {
                             .volume((volume != null && !volume.isEmpty()) ? volume : null)
                             .build();
 
-            log.info("업비트 주문 생성 테스트 요청 정보 - market: {}, side: {}, ord_type: {}, price: {}, volume: {}", 
+            log.info("업비트 주문 생성 테스트 요청 정보 - market: {}, side: {}, ord_type: {}, price: {}, volume: {}",
                     request.market(), request.side(), request.ord_type(), request.price(), request.volume());
 
             // 요청 DTO 검증
@@ -550,7 +581,7 @@ public class UpbitApiClient implements ExchangeApiClient {
                         log.error("전체 응답: {}", errorBody);
                     }
                 } catch (Exception parseException) {
-                    log.error("업비트 주문 생성 테스트 실패 (401) - JSON 파싱 실패: {}, responseBody: {}", 
+                    log.error("업비트 주문 생성 테스트 실패 (401) - JSON 파싱 실패: {}, responseBody: {}",
                             parseException.getMessage(), errorBody);
                 }
             }
@@ -570,7 +601,7 @@ public class UpbitApiClient implements ExchangeApiClient {
                         log.error("업비트 주문 생성 테스트 실패 (400) - responseBody: {}", errorBody);
                     }
                 } catch (Exception parseException) {
-                    log.error("업비트 주문 생성 테스트 실패 (400) - JSON 파싱 실패: {}, responseBody: {}", 
+                    log.error("업비트 주문 생성 테스트 실패 (400) - JSON 파싱 실패: {}, responseBody: {}",
                             parseException.getMessage(), errorBody);
                 }
             } else {
@@ -599,12 +630,12 @@ public class UpbitApiClient implements ExchangeApiClient {
         try {
             // market을 업비트 형식으로 정규화 (KRW-USDC 형식으로 통일)
             String normalizedMarket = normalizeCoinType(market);
-            
-            log.info("업비트 주문 생성 API 호출 시작 - phoneNumber: {}, market: {} (정규화: {}), side: {}, orderType: {}", 
+
+            log.info("업비트 주문 생성 API 호출 시작 - phoneNumber: {}, market: {} (정규화: {}), side: {}, orderType: {}",
                     phoneNumber, market, normalizedMarket, side, orderType);
 
             // 주문 생성 요청 DTO 생성 (빈 문자열은 null로 변환하여 JSON에 포함되지 않도록 함)
-            UpbitReqDTO.CreateOrder request = 
+            UpbitReqDTO.CreateOrder request =
                     UpbitReqDTO.CreateOrder.builder()
                             .market(normalizedMarket)
                             .side(side)
@@ -615,7 +646,7 @@ public class UpbitApiClient implements ExchangeApiClient {
 
             // JWT 생성 (POST 요청이므로 body 사용)
             log.info("업비트 주문 생성 JWT 생성 시작 - body를 query string으로 변환하여 query_hash 계산");
-            log.info("업비트 주문 생성 요청 DTO 상세 - market: {}, side: {}, ord_type: {}, price: {}, volume: {}", 
+            log.info("업비트 주문 생성 요청 DTO 상세 - market: {}, side: {}, ord_type: {}, price: {}, volume: {}",
                     request.market(), request.side(), request.ord_type(), request.price(), request.volume());
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, request);
 
@@ -624,54 +655,54 @@ public class UpbitApiClient implements ExchangeApiClient {
                 UpbitResDTO.CreateOrder testResponse = upbitFeignClient.testCreateOrder(authorization, request);
             } catch (FeignException.BadRequest | FeignException.NotFound e) {
                 String errorBody = e.contentUTF8();
-                
+
                 // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
                 if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                     try {
                         ObjectMapper objectMapper = new ObjectMapper();
                         ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
                         if (error != null && error.error() != null) {
-                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, errorName: {}, errorMessage: {}", 
+                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, errorName: {}, errorMessage: {}",
                                     e.status(), error.error().name(), error.error().message());
                         } else {
-                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, responseBody: {}", 
+                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, responseBody: {}",
                                     e.status(), errorBody);
                         }
                     } catch (Exception parseException) {
                         // JSON 파싱 실패 시 로깅
-                        log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                        log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                                 e.status(), errorBody, parseException.getMessage());
                     }
                 } else {
                     // 응답 본문이 없거나 JSON이 아닌 경우
-                    log.warn("UpbitApiClient - 주문 생성 테스트 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                    log.warn("UpbitApiClient - 주문 생성 테스트 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                             e.status(), errorBody);
                 }
                 // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
                 throw e;
             } catch (FeignException.Unauthorized e) {
                 String errorBody = e.contentUTF8();
-                
+
                 // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
                 if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                     try {
                         ObjectMapper objectMapper = new ObjectMapper();
                         ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
                         if (error != null && error.error() != null) {
-                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, errorName: {}, errorMessage: {}", 
+                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, errorName: {}, errorMessage: {}",
                                     e.status(), error.error().name(), error.error().message());
                         } else {
-                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, responseBody: {}", 
+                            log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 - status: {}, responseBody: {}",
                                     e.status(), errorBody);
                         }
                     } catch (Exception parseException) {
                         // JSON 파싱 실패 시 로깅
-                        log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                        log.error("UpbitApiClient - 주문 생성 테스트 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                                 e.status(), errorBody, parseException.getMessage());
                     }
                 } else {
                     // 응답 본문이 없거나 JSON이 아닌 경우
-                    log.warn("UpbitApiClient - 주문 생성 테스트 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                    log.warn("UpbitApiClient - 주문 생성 테스트 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                             e.status(), errorBody);
                 }
                 // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
@@ -686,7 +717,7 @@ public class UpbitApiClient implements ExchangeApiClient {
             // 중요: 업비트는 각 요청마다 고유한 nonce를 요구하므로, 실제 주문 생성 시 새로운 JWT를 생성해야 함
             log.info("업비트 실제 주문 생성 JWT 생성 시작 - 새로운 nonce 사용");
             String actualOrderAuthorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, request);
-            
+
             UpbitResDTO.CreateOrder response = upbitFeignClient.createOrder(actualOrderAuthorization, request);
 
             log.info("업비트 주문 생성 완료 - uuid: {}, market: {}", response.uuid(), response.market());
@@ -709,54 +740,54 @@ public class UpbitApiClient implements ExchangeApiClient {
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (FeignException.BadRequest | FeignException.NotFound e) {
             String errorBody = e.contentUTF8();
-            
+
             // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
             if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                 try {
                     ObjectMapper objectMapper = new ObjectMapper();
                     ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
                     if (error != null && error.error() != null) {
-                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, errorName: {}, errorMessage: {}", 
+                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, errorName: {}, errorMessage: {}",
                                 e.status(), error.error().name(), error.error().message());
                     } else {
-                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, responseBody: {}", 
+                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, responseBody: {}",
                                 e.status(), errorBody);
                     }
                 } catch (Exception parseException) {
                     // JSON 파싱 실패 시 로깅
-                    log.error("UpbitApiClient - 주문 생성 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                    log.error("UpbitApiClient - 주문 생성 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                             e.status(), errorBody, parseException.getMessage());
                 }
             } else {
                 // 응답 본문이 없거나 JSON이 아닌 경우
-                log.warn("UpbitApiClient - 주문 생성 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                log.warn("UpbitApiClient - 주문 생성 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                         e.status(), errorBody);
             }
             // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
             throw e;
         } catch (FeignException.Unauthorized e) {
             String errorBody = e.contentUTF8();
-            
+
             // 응답 본문이 있고 JSON 형식인 경우에만 파싱 시도
             if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                 try {
                     ObjectMapper objectMapper = new ObjectMapper();
                     ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
                     if (error != null && error.error() != null) {
-                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, errorName: {}, errorMessage: {}", 
+                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, errorName: {}, errorMessage: {}",
                                 e.status(), error.error().name(), error.error().message());
                     } else {
-                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, responseBody: {}", 
+                        log.error("UpbitApiClient - 주문 생성 에러 응답 - status: {}, responseBody: {}",
                                 e.status(), errorBody);
                     }
                 } catch (Exception parseException) {
                     // JSON 파싱 실패 시 로깅
-                    log.error("UpbitApiClient - 주문 생성 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}", 
+                    log.error("UpbitApiClient - 주문 생성 에러 응답 파싱 실패 - status: {}, responseBody: {}, 파싱 에러: {}",
                             e.status(), errorBody, parseException.getMessage());
                 }
             } else {
                 // 응답 본문이 없거나 JSON이 아닌 경우
-                log.warn("UpbitApiClient - 주문 생성 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}", 
+                log.warn("UpbitApiClient - 주문 생성 에러 응답 본문이 비어있거나 JSON 형식이 아님 - status: {}, responseBody: {}",
                         e.status(), errorBody);
             }
             // 원본 FeignException을 그대로 던져서 상위에서 세부적인 분기 가능
@@ -782,23 +813,23 @@ public class UpbitApiClient implements ExchangeApiClient {
     ) {
         try {
             log.info("업비트 주문 취소 API 호출 시작 - phoneNumber: {}, uuid: {}", phoneNumber, uuid);
-            
+
             // 업비트는 query parameter로 uuid 전달
             String query = "uuid=" + uuid;
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, query, null);
-            
+
             log.info("업비트 주문 취소 인증 헤더 생성 완료");
-            
+
             // 주문 취소 API 호출
             UpbitResDTO.CancelOrder response = upbitFeignClient.cancelOrder(authorization, uuid);
-            
+
             // 응답을 InvestResDTO.CancelOrderDTO로 변환
             return new InvestResDTO.CancelOrderDTO(
                     response.uuid(),
                     response.uuid(), // 업비트는 txid가 없으므로 uuid 사용
                     parseCreatedAt(response.created_at())
             );
-            
+
         } catch (MemberException e) {
             log.error("업비트 API 키를 찾을 수 없습니다 - phoneNumber: {}", phoneNumber, e);
             throw new InvestException(InvestErrorCode.API_KEY_NOT_FOUND);
@@ -811,16 +842,16 @@ public class UpbitApiClient implements ExchangeApiClient {
             if (errorBody != null && !errorBody.isEmpty() && errorBody.trim().startsWith("{")) {
                 try {
                     ObjectMapper objectMapper = new ObjectMapper();
-                    ClientErrorDTO.Errors errorResponse = 
+                    ClientErrorDTO.Errors errorResponse =
                             objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
-                    
+
                     if (errorResponse != null && errorResponse.error() != null) {
                         String errorName = errorResponse.error().name();
                         String errorMessage = errorResponse.error().message();
-                        
+
                         if ("canceled_order".equals(errorName)) {
                             log.warn("업비트 주문 취소 - 이미 취소된 주문입니다. uuid: {}, message: {}", uuid, errorMessage);
-                            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR, 
+                            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR,
                                     Map.of("error", "canceled_order", "message", "이미 취소된 주문입니다."));
                         } else if ("order_not_found".equals(errorName)) {
                             log.error("업비트 주문 취소 - 주문을 찾을 수 없습니다. uuid: {}, message: {}", uuid, errorMessage);

@@ -1,5 +1,6 @@
 package com.example.scoi.domain.transfer.controller;
 
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/transfers")
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ public class TransferController implements TransferControllerDocs{
 
     private final TransferService transferService;
 
+    /*
     @GetMapping("/recipients/recent")
     public ApiResponse<TransferResDTO.RecipientListDTO> getRecentRecipients(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -63,6 +67,15 @@ public class TransferController implements TransferControllerDocs{
     ){
         return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_4,
                 transferService.changeToNotFavoriteRecipient(recipientId));
+    }
+     */
+    @GetMapping("/recipients")
+    public ApiResponse<List<TransferResDTO.WithdrawRecipients>> getRecipients(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam(name = "exchangeType")ExchangeType exchangeType
+            ) {
+        return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_1,
+                transferService.getRecipients(user.getUsername(), exchangeType));
     }
 
     @PostMapping("/recipients/validate")

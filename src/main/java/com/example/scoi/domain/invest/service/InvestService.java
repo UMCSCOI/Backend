@@ -24,8 +24,8 @@ public class InvestService {
     private final MemberRepository memberRepository;
     private final BithumbApiClient bithumbApiClient;
     private final UpbitApiClient upbitApiClient;
-
-    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
+    
+    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice) {
         // 사용자 존재 여부 확인
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
@@ -36,7 +36,7 @@ public class InvestService {
 
         try {
             // 거래소 서버 응답 정제해 보내기
-            return apiClient.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
+            return apiClient.getMaxOrderInfo(phoneNumber, exchangeType, coinType, unitPrice);
         } catch (InvestException e) {
             throw e;
         } catch (Exception e) {
@@ -176,10 +176,10 @@ public class InvestService {
         // 사용자 존재 여부 확인
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
-        
+
         // 거래소별 분기
         ExchangeApiClient apiClient = getApiClient(exchangeType);
-        
+
         try {
             // 주문 취소
             return apiClient.cancelOrder(phoneNumber, exchangeType, uuid, txid);
