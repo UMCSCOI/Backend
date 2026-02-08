@@ -235,8 +235,7 @@ public class TransferService {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            ClientErrorDTO.Errors error = null;
-            error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
             log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
 
             // 파라미터(네트워크 타입)가 잘못된 경우
@@ -372,8 +371,7 @@ public class TransferService {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            ClientErrorDTO.Errors error = null;
-            error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
             log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
 
             // 파라미터가 잘못된 경우
@@ -483,8 +481,7 @@ public class TransferService {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            ClientErrorDTO.Errors error = null;
-            error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
             log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
 
             // 나머지 400 에러
