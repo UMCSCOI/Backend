@@ -216,6 +216,22 @@ public class BithumbResDTO {
             String secondary_address
     ){}
 
+    // 개별 출금 조회 (출금 목록 조회 응답 아이템과 동일 구조)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record GetWithdraw(
+            String type,
+            String uuid,
+            String currency,
+            String net_type,
+            String txid,
+            String state,
+            String created_at,
+            String done_at,
+            String amount,
+            String fee,
+            String transaction_type
+    ){}
+
     /**
      * 빗썸 전체 계좌 조회 응답 (배열)
      * 공식 문서: https://apidocs.bithumb.com/reference/전체-계좌-조회

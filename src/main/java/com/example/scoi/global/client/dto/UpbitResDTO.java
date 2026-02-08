@@ -139,6 +139,22 @@ public class UpbitResDTO {
             String transaction_type
     ){}
 
+    // 개별 출금 조회 (출금 목록 조회 응답 아이템과 동일 구조)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record GetWithdraw(
+            String type,
+            String uuid,
+            String currency,
+            String net_type,
+            String txid,
+            String state,
+            String created_at,
+            String done_at,
+            String amount,
+            String fee,
+            String transaction_type
+    ){}
+
     // 주문 가능 정보 조회
     @JsonIgnoreProperties(ignoreUnknown = true) // DTO에 정의되지 않은 필드들이 와도 무시해달라는 설정정 - 추후 추가될 필드들을 위해 필요요
 
