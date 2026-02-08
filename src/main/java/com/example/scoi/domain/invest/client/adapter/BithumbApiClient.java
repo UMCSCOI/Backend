@@ -13,8 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 
 import java.math.BigDecimal;
@@ -42,21 +40,8 @@ public class BithumbApiClient implements ExchangeApiClient {
             log.info("빗썸 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (대상 코인: {}), unitPrice: {}", 
                     phoneNumber, coinType, targetCoin, unitPrice);
             
-            // 전체 계좌 조회
-            String accountsJson = bithumbFeignClient.getAccounts(authorization);
-            
-            // 응답 로깅 (디버깅용)
-            log.debug("빗썸 API 응답 원본: {}", accountsJson);
-            
-            // JSON 파싱
-            ObjectMapper objectMapper = new ObjectMapper();
-            BithumbResDTO.BalanceResponse[] accounts;
-            try {
-                accounts = objectMapper.readValue(accountsJson, BithumbResDTO.BalanceResponse[].class);
-            } catch (JsonProcessingException e) {
-                log.error("빗썸 API 응답 JSON 파싱 실패 - 응답 본문: {}", accountsJson, e);
-                throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
-            }
+            // 전체 계좌 조회 (FeignClient가 자동으로 DTO로 파싱)
+            BithumbResDTO.BalanceResponse[] accounts = bithumbFeignClient.getAccounts(authorization);
             List<BithumbResDTO.BalanceResponse> accountList = Arrays.asList(accounts);
             
             log.info("빗썸 최대 주문 정보 조회 API 응답 수신 - 계좌 개수: {}", accountList.size());
