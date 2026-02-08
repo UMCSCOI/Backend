@@ -488,14 +488,34 @@ public class BithumbApiClient implements ExchangeApiClient {
             String convertedMarket = convertMarketForBithumb(market);
 
             // 주문 생성 요청 DTO 생성
+            // @JsonInclude(NON_NULL) 어노테이션으로 null 필드는 JSON에서 자동 제외됨
+            String finalPrice = (price != null && !price.isEmpty()) ? price : null;
+            String finalVolume = (volume != null && !volume.isEmpty()) ? volume : null;
+            
+            // 시장가 매수(order_type: "price")일 때는 volume을 null로 설정하여 JSON에서 제외
+            // order_type: "price"는 항상 매수이므로 side 체크 불필요
+            if ("price".equals(orderType)) {
+                finalVolume = null; // null로 설정 → @JsonInclude(NON_NULL)로 인해 JSON에서 제외됨
+                log.info("빗썸 시장가 매수 (order_type: price) - volume을 null로 설정하여 JSON에서 제외합니다.");
+            } 
+            // 시장가 매도(order_type: "market")일 때는 price를 null로 설정하여 JSON에서 제외
+            // order_type: "market"는 항상 매도이므로 side 체크 불필요
+            else if ("market".equals(orderType)) {
+                finalPrice = null; // null로 설정 → @JsonInclude(NON_NULL)로 인해 JSON에서 제외됨
+                log.info("빗썸 시장가 매도 (order_type: market) - price를 null로 설정하여 JSON에서 제외합니다.");
+            }
+            
             BithumbReqDTO.CreateOrder request = 
                     BithumbReqDTO.CreateOrder.builder()
                             .market(convertedMarket)
                             .side(side)
-                            .ord_type(orderType)
-                            .price(price)
-                            .volume(volume)
+                            .order_type(orderType)
+                            .price(finalPrice)
+                            .volume(finalVolume)
                             .build();
+            
+            log.info("빗썸 주문 생성 요청 DTO 상세 - market: {}, side: {}, order_type: {}, price: {}, volume: {}", 
+                    request.market(), request.side(), request.order_type(), request.price(), request.volume());
 
             // 주문 가능 정보 조회하여 최소 주문 금액 가져오기
             // getOrderChance에서 에러가 발생해도 주문 생성은 계속 진행
@@ -519,6 +539,7 @@ public class BithumbApiClient implements ExchangeApiClient {
             }
 
             // JWT 생성 (POST 요청이므로 body 사용)
+            log.info("빗썸 주문 생성 JWT 생성 시작 - body를 query string으로 변환하여 query_hash 계산");
             String authorization = jwtApiUtil.createBithumbJwt(phoneNumber, null, request);
 
             // 주문 생성 API 호출
