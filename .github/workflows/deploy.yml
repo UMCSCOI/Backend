@@ -2,7 +2,7 @@ name: Deploy (dev/main, Java 21, firebase shared)
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "develop" ]  # "main" 주석처리
 
 jobs:
   deploy:
@@ -27,15 +27,15 @@ jobs:
           ${{ secrets.FIREBASE_JSON }}
           EOF
 
-      # main application.yml
-      - name: Inject application.yml (main)
-        if: github.ref_name == 'main'
-        shell: bash
-        run: |
-          mkdir -p src/main/resources
-          cat > src/main/resources/application.yml <<'EOF'
-          ${{ secrets.APP_YML_MAIN }}
-          EOF
+      # # main application.yml (주석처리 — develop만 배포)
+      # - name: Inject application.yml (main)
+      #   if: github.ref_name == 'main'
+      #   shell: bash
+      #   run: |
+      #     mkdir -p src/main/resources
+      #     cat > src/main/resources/application.yml <<'EOF'
+      #     ${{ secrets.APP_YML_MAIN }}
+      #     EOF
 
       # dev application.yml
       - name: Inject application.yml (dev)
@@ -67,17 +67,17 @@ jobs:
           test -n "$JAR_PATH"
           scp "$JAR_PATH" ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/app.jar
 
-      - name: Deploy & restart (main)
-        if: github.ref_name == 'main'
-        run: |
-          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            set -e
-            sudo mkdir -p /opt/myapp-main
-            sudo mv /home/ec2-user/app.jar /opt/myapp-main/app.jar
-            sudo chown -R ec2-user:ec2-user /opt/myapp-main
-            sudo systemctl restart myapp-main
-            sudo systemctl status myapp-main --no-pager
-          EOF
+      # - name: Deploy & restart (main)  # 주석처리 — develop만 배포
+      #   if: github.ref_name == 'main'
+      #   run: |
+      #     ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+      #       set -e
+      #       sudo mkdir -p /opt/myapp-main
+      #       sudo mv /home/ec2-user/app.jar /opt/myapp-main/app.jar
+      #       sudo chown -R ec2-user:ec2-user /opt/myapp-main
+      #       sudo systemctl restart myapp-main
+      #       sudo systemctl status myapp-main --no-pager
+      #     EOF
 
       - name: Deploy & restart (dev)
         if: github.ref_name == 'develop'
