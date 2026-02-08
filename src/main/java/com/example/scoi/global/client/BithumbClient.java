@@ -45,7 +45,7 @@ public interface BithumbClient {
     
     // 전체 계좌 조회 (DTO 반환)
     @GetMapping("/v1/accounts")
-    BithumbResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String authorization);
+    BithumbResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String token);
 
     //보유자산 조회
     // @GetMapping("/v1/accounts")
@@ -55,16 +55,24 @@ public interface BithumbClient {
     // 쿼리파라미터 O
     @GetMapping("/v1/orders/chance")
     String getOrderChance(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader("Authorization") String token,
             @RequestParam("market") String market
     );
 
     // 입금 주소 생성 요청
     // Request Body O
     @PostMapping("/v1/deposits/generate_coin_address")
-    String getDepositAddress(
-            @RequestHeader("Authorization") String authorization,
-            @RequestBody MemberReqDTO.Test dto
+    BithumbResDTO.CreateDepositAddress createDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestBody BithumbReqDTO.CreateDepositAddress dto
+    );
+
+    // 개별 입금 주소 조회
+    @GetMapping("/v1/deposits/coin_address")
+    BithumbResDTO.GetDepositAddress getDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
     );
 
     // 이체 출금 가능 정보

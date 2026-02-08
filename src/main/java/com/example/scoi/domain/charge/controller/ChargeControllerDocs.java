@@ -1,8 +1,9 @@
 package com.example.scoi.domain.charge.controller;
 
+import com.example.scoi.domain.charge.dto.BalanceResDTO;
 import com.example.scoi.domain.charge.dto.ChargeReqDTO;
 import com.example.scoi.domain.charge.dto.ChargeResDTO;
-import com.example.scoi.domain.charge.dto.BalanceResDTO;
+import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @Tag(name = "충전 API")
 public interface ChargeControllerDocs {
@@ -33,5 +36,28 @@ public interface ChargeControllerDocs {
     ApiResponse<BalanceResDTO.BalanceListDTO> getBalances(
             @RequestParam(defaultValue = "Bithumb") String exchangeType,
             @AuthenticationPrincipal CustomUserDetails user
+    );
+
+    @Operation(
+            summary = "입금 주소 확인하기 API By 김주헌",
+            description = "코인의 입금 주소를 확인합니다. 리스트로 보내실때 꼭! 인덱스 맞춰서 보내주세요. 입금 주소가 없는 경우, 해당 코인은 제외하고 응답이 옵니다."
+    )
+    ApiResponse<List<ChargeResDTO.GetDepositAddress>> getDepositAddress(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam ExchangeType exchangeType,
+            @RequestParam(defaultValue = "") List<String> coinType,
+            @RequestParam(defaultValue = "") List<String> netType
+    );
+
+    @Operation(
+            summary = "입금 주소 생성하기 API By 김주헌",
+            description = """
+                    코인의 입금 주소를 생성합니다.
+                    각 거래소에 생성 요청을 보내기때문에 입금 주소가 즉시 안 올 수 있습니다. (비동기)
+                    따라서 주소가 필요하면 생성 → 조회 순으로 요청을 보내주세요"""
+    )
+    ApiResponse<List<String>> createDepositAddress(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestBody ChargeReqDTO.CreateDepositAddress dto
     );
 }

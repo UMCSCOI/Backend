@@ -4,6 +4,8 @@ import com.example.scoi.domain.charge.enums.DepositType;
 import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.member.enums.ExchangeType;
 
+import java.util.List;
+
 public class ChargeReqDTO {
 
     // 원화 입금
@@ -18,5 +20,12 @@ public class ChargeReqDTO {
             ExchangeType exchangeType,
             String uuid,
             DepositType depositType
+    ){}
+
+    // 입금 주소 생성하기
+    public record CreateDepositAddress(
+            ExchangeType exchangeType,
+            List<String> coinType,
+            List<String> netType
     ){}
 }
