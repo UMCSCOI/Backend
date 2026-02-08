@@ -9,6 +9,7 @@
 ### 민감한 개인 정보 제거 ###
 *.pem
 *.env
+data.sql
 
 
 ### Firebase JSON 제거 ###
