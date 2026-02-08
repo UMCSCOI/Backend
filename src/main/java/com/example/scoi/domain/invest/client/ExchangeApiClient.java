@@ -18,4 +18,35 @@ public interface ExchangeApiClient {
             String price,
             String volume //주문 수량
     );
+
+    // 주문 생성 테스트 (실제 주문 생성 없이 검증)
+    InvestResDTO.OrderDTO testCreateOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume
+    );
+
+    // 주문 생성
+    InvestResDTO.OrderDTO createOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume,
+            String password
+    );
+
+    // 주문 취소
+    InvestResDTO.CancelOrderDTO cancelOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String uuid,
+            String txid
+    );
 }

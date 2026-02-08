@@ -10,7 +10,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemberApiKeyRepository extends JpaRepository<MemberApiKey,Long> {
-    Optional<MemberApiKey> findByMemberPhoneNumberAndExchangeType(@NotNull String phoneNumber, @NotNull ExchangeType exchangeType);
+   
+    Optional<MemberApiKey> findByMember_PhoneNumberAndExchangeType(
+            @NotNull String phoneNumber, 
+            @NotNull ExchangeType exchangeType
+    );
 
     List<MemberApiKey> findAllByMember_PhoneNumber(String memberPhoneNumber);
 
@@ -18,5 +22,5 @@ public interface MemberApiKeyRepository extends JpaRepository<MemberApiKey,Long>
 
     void deleteByMember_PhoneNumberAndExchangeType(String memberPhoneNumber, ExchangeType exchangeType);
 
-    boolean existsByMember_phoneNumberAndExchangeType(String memberPhoneNumber, ExchangeType exchangeType);
+    boolean existsByMember_PhoneNumberAndExchangeType(String memberPhoneNumber, ExchangeType exchangeType);
 }

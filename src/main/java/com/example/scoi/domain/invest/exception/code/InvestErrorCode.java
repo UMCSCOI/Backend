@@ -14,7 +14,7 @@ public enum InvestErrorCode implements BaseErrorCode {
     EXCHANGE_API_ERROR(HttpStatus.BAD_REQUEST,
             "INVEST400_1",
             "거래소에 요청을 처리하지 못했습니다."),
-    
+
     INVALID_EXCHANGE_TYPE(HttpStatus.BAD_REQUEST,
             "INVEST400_2",
             "잘못된 거래소 타입입니다."),
@@ -22,16 +22,20 @@ public enum InvestErrorCode implements BaseErrorCode {
  INSUFFICIENT_BALANCE(HttpStatus.BAD_REQUEST,
             "INVEST400_3",
             "계좌에 잔고가 부족합니다."),
-    
+
     INSUFFICIENT_COIN_AMOUNT(HttpStatus.BAD_REQUEST,
             "INVEST400_4",
             "보유 수량을 초과할 수 없습니다."),
-    
+
+    MINIMUM_ORDER_AMOUNT(HttpStatus.BAD_REQUEST,
+            "INVEST400_5",
+            "주문 금액이 최소 주문 금액보다 낮습니다."),
+
     // 401 에러
     INSUFFICIENT_API_PERMISSION(HttpStatus.UNAUTHORIZED,
             "INVEST401_1",
             "거래소의 API키의 권한이 부족합니다."),
-    
+
     // 404 에러
     API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND,
             "INVEST404_1",
