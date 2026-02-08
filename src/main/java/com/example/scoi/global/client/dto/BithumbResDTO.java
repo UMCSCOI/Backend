@@ -282,4 +282,18 @@ public class BithumbResDTO {
             String executed_volume,
             String trades_count
     ){}
+    // 출금 허용 주소 리스트 조회 (수취인 조회)
+    public record WithdrawalAddressResponse(
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String exchange_name,
+            String owner_type,
+            String owner_ko_name,
+            String owner_en_name,
+            String owner_corp_ko_name,
+            String owner_corp_en_name
+    ) {}
 }

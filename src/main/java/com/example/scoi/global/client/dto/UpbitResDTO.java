@@ -325,3 +325,18 @@ public class UpbitResDTO {
         }
 
     }
+
+    // 출금 허용 주소 리스트 조회 (수취인 조회)
+    public record WithdrawalAddressResponse(
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String beneficiary_name,
+            String beneficiary_company_name,
+            String beneficiary_type,
+            String exchange_name,
+            String wallet_type
+    ) {}
+}
