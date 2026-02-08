@@ -3,6 +3,7 @@ package com.example.scoi.domain.transfer.dto;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.enums.MemberType;
 import com.example.scoi.domain.transfer.enums.CoinType;
+import com.example.scoi.domain.transfer.enums.NetworkType;
 import lombok.*;
 
 import java.util.List;
@@ -109,9 +110,12 @@ public class TransferResDTO {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     @AllArgsConstructor
     public static class WithdrawRecipients {
+        private MemberType memberType;
         private String recipientKoName;
         private String recipientEnName;
         private String walletAddress;
         private String exchangeType;
+        private CoinType currency;
+        private NetworkType netType;
     }
 }

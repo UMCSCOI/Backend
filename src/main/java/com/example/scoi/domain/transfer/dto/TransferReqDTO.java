@@ -13,6 +13,7 @@ import lombok.Builder;
 
 public class TransferReqDTO {
 
+    // 출금 시 필요한 수취인 값
     public record RecipientInformation(
             MemberType memberType,
             String recipientKoName,
@@ -25,6 +26,7 @@ public class TransferReqDTO {
             String netType
     ) { }
 
+    // 견적 검증 시 필요한 값
     public record Quote(
             String available,
             String amount,
@@ -41,7 +43,7 @@ public class TransferReqDTO {
 
             @Schema(description = "네트워크 타입 (출금 체인)", example = "TRX")
             @NotBlank(message = "네트워크 타입은 필수입니다.")
-            String netType,
+            NetworkType netType,
 
             @Schema(description = "출금 수량 (소수점X)", example = "10")
             @NotBlank(message = "출금 수량은 필수입니다.")
@@ -60,7 +62,7 @@ public class TransferReqDTO {
             ExchangeType exchangeType,
 
             @Schema(description = "수취인 유형 (빗썸 전용)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
-            String receiverType,
+            MemberType receiverType,
 
             @Schema(description = "수취인 성명 (국문)", example = "김철수")
             String receiverKoName,
@@ -87,7 +89,7 @@ public class TransferReqDTO {
     public record UpbitWithdrawRequest(
             String currency,
             @JsonProperty("net_type")
-            String netType,
+            NetworkType netType,
             String amount,
             String address
     ) {}
@@ -98,7 +100,7 @@ public class TransferReqDTO {
             @JsonProperty("currency")
             String currency,
             @JsonProperty("net_type")
-            String netType,
+            NetworkType netType,
             @JsonProperty("amount")
             Double amount, // 명세서의 Number 타입을 위해 Double로 변경
             @JsonProperty("address")
@@ -106,7 +108,7 @@ public class TransferReqDTO {
             @JsonProperty("exchange_name")
             String exchangeName, // 상대방 출금 거래소
             @JsonProperty("receiver_type")
-            String receiverType, // personal 또는 corporation
+            MemberType receiverType, // personal 또는 corporation
 
             // 수취인(대표자) 정보
             @JsonProperty("receiver_ko_name")
