@@ -361,7 +361,7 @@ public class AuthService {
         LocalDateTime now = LocalDateTime.now();
         if (memberToken.getExpirationDate().isBefore(now)) {
             memberTokenRepository.delete(memberToken);
-            redisUtil.set(SMS_REQUIRED_PREFIX + phoneNumber, "rt_expired", 30, TimeUnit.MINUTES);
+            redisUtil.set(SMS_REQUIRED_PREFIX + phoneNumber, "rt_expired");
             throw new AuthException(
                 AuthErrorCode.EXPIRED_REFRESH_TOKEN,
                 Map.of("smsRequired", "true")
@@ -373,7 +373,7 @@ public class AuthService {
         LocalDateTime absoluteExpiration = issuedAt.plusDays(REFRESH_TOKEN_ABSOLUTE_DAYS);
         if (absoluteExpiration.isBefore(now)) {
             memberTokenRepository.delete(memberToken);
-            redisUtil.set(SMS_REQUIRED_PREFIX + phoneNumber, "rt_absolute_expired", 30, TimeUnit.MINUTES);
+            redisUtil.set(SMS_REQUIRED_PREFIX + phoneNumber, "rt_absolute_expired");
             log.warn("RT 최대 수명 만료: phoneNumber={}, issuedAt={}", phoneNumber, issuedAt);
             throw new AuthException(
                 AuthErrorCode.EXPIRED_REFRESH_TOKEN,
