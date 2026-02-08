@@ -237,32 +237,33 @@ public class TransferService {
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
             ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
-            log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
+            String errorName = error.error().name();
+            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
 
-            // 파라미터(네트워크 타입)가 잘못된 경우
-            if (error.error().name().equals("validation_error")) {
-                throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
+            switch (errorName) {
+                // 파라미터(네트워크 타입, 코인 타입)가 잘못된 경우
+                case "validation_error" -> throw new TransferException(TransferErrorCode.INVALID_INPUT);
+                // 파라미터(네트워크 타입)가 잘못된 경우
+                case "invalid_network_type" -> throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
+                // 나머지 400 에러
+                default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
-
-            // 파라미터(네트워크 타입)가 잘못된 경우
-            if (error.error().name().equals("invalid_network_type")) {
-                throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
-            }
-
-            // 나머지 400 에러
-            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
 
         // 권한이 부족한 경우
         } catch (FeignException.Unauthorized e) {
-            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+            String rawBody = e.contentUTF8(); // 원본 응답 저장
+            log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            // 권한이 부족한 경우
-            if (error.error().name().equals("out_of_scope")) {
-                throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            String errorName = error.error().name();
+            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
+
+            switch (errorName) {
+                // 권한이 부족한 경우
+                case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                // 나머지 jwt 관련 오류
+                default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
-
-            // 나머지 JWT 관련 오류
-            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
         }
     }
 
@@ -374,52 +375,40 @@ public class TransferService {
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
             ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
-            log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
+            String errorName = error.error().name();
+            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
 
-            // 파라미터가 잘못된 경우
-            if (error.error().name().equals("validation_error")) {
-                throw new TransferException(TransferErrorCode.INVALID_INPUT);
+            switch (errorName) {
+                // 파라미터가 잘못된 경우
+                case "validation_error" -> throw new TransferException(TransferErrorCode.INVALID_INPUT);
+                // 네트워크가 잘못된 경우
+                case "invalid_network_type" -> throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
+                // 지갑 주소가 올바르지 않은 경우
+                case "invalid_withdraw_address" -> throw new TransferException(TransferErrorCode.INVALID_WALLET_ADDRESS);
+                // 거래소에서 요청을 처리하지 못한 경우
+                case "request_fail" -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                //등록된 출금주소가 아닌 경우
+                case "withdraw_address_not_registered" -> throw new TransferException(TransferErrorCode.UNREGISTERED_WALLET_ADDRESS);
+                // 출금 시스템이 점검 중인 경우
+                case "withdraw_maintain" -> throw new TransferException(TransferErrorCode.TRANSFER_CHECK);
+                // 나머지 400 에러
+                default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
-
-            // 네트워크가 잘못된 경우
-            if (error.error().name().equals("invalid_network_type")) {
-                throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
-            }
-
-            // 지갑 주소가 올바르지 않은 경우
-            if (error.error().name().equals("invalid_withdraw_address")) {
-                throw new TransferException(TransferErrorCode.INVALID_WALLET_ADDRESS);
-            }
-
-            // 거래소에서 요청을 처리하지 못한 경우
-            if(error.error().name().equals("request_fail")) {
-                throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
-            }
-
-            // 등록된 출금 주소가 아닌 경우
-            if(error.error().name().equals("withdraw_address_not_registered")) {
-                throw new TransferException(TransferErrorCode.UNREGISTERED_WALLET_ADDRESS);
-            }
-
-            // 출금 시스템 점검 중인 경우
-            if(error.error().name().equals("withdraw_maintain")) {
-                throw new TransferException(TransferErrorCode.TRANSFER_CHECK);
-            }
-
-            // 나머지 400 에러
-            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
-
             // 권한이 부족한 경우
         } catch (FeignException.Unauthorized e) {
-            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+            String rawBody = e.contentUTF8(); // 원본 응답 저장
+            log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            // 권한이 부족한 경우
-            if (error.error().name().equals("out_of_scope")) {
-                throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            String errorName = error.error().name();
+            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
+
+            switch (errorName){
+                // 권한이 부족한 경우
+                case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                // 나머지 jwt 관련 오류
+                default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
-
-            // 나머지 JWT 관련 오류
-            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
         }
         finally {
             // 성공하지 못했다면(예외 발생 시) Redis 키를 삭제하여 재시도 허용
@@ -495,22 +484,27 @@ public class TransferService {
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
             ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
-            log.error(">>>> 거래소 에러 코드명: {}", error.error().name()); // 파싱된 거래소 에러 코드명 확인
+            String errorName = error.error().name();
+            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
 
             // 나머지 400 에러
             throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
         }
         // 권한이 부족한 경우
         catch (FeignException.Unauthorized e) {
-            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+            String rawBody = e.contentUTF8(); // 원본 응답 저장
+            log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
-            // 권한이 부족한 경우
-            if (error.error().name().equals("out_of_scope")) {
-                throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+            String errorName = error.error().name();
+            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
+
+            switch (errorName){
+                // 권한이 부족한 경우
+                case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                // 나머지 jwt 관련 오류
+                default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
-
-            // 나머지 JWT 관련 오류
-            throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
         }
     }
 }
