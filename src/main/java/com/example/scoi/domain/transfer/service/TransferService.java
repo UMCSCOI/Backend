@@ -2,7 +2,6 @@ package com.example.scoi.domain.transfer.service;
 
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.enums.ExchangeType;
-import com.example.scoi.domain.member.enums.MemberType;
 import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.auth.exception.AuthException;
@@ -35,6 +34,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
@@ -187,6 +187,7 @@ public class TransferService {
         return changed.getId();
     }
 
+    // 수취인 정보 검증
     public TransferResDTO.CheckRecipientResDTO checkRecipientInput(
             TransferReqDTO.RecipientInformation recipientInformation,
             String phoneNumber
@@ -265,6 +266,7 @@ public class TransferService {
         }
     }
 
+    // 출금 견적 검증
     public TransferResDTO.QuoteValidDTO checkQuotes(TransferReqDTO.Quote quotes) {
 
         // 1. 이체 금액 + 수수료 계산
@@ -430,21 +432,32 @@ public class TransferService {
     // 수취인 입력값 검증 메서드
     private void validateRecipient(TransferReqDTO.RecipientInformation recipient) {
         // 1. 지갑 주소와 수취인 정보가 비어있는 경우
-        if (recipient.walletAddress().isEmpty() || recipient.recipientName().isEmpty()) {
+        if (!StringUtils.hasText(recipient.walletAddress())
+                || !StringUtils.hasText(recipient.recipientKoName())) {
             throw new TransferException(TransferErrorCode.INVALID_RECIPIENT_INFORMATION);
         }
         // 2. 지갑 주소 형식이 올바르지 않은 경우
         if (!WalletUtils.isValidAddress(recipient.walletAddress())) {
             throw new TransferException(TransferErrorCode.INVALID_WALLET_ADDRESS);
         }
-        // 3. 법인 회원인데 법인 정보가 없는 경우
+
+        /*
+        // 3. 법인 회원인데 법인 정보가 없는 경우 -> 법인 이체가 사라졌음
         if(recipient.memberType() == MemberType.CORPORATION &&
                 (recipient.corpKoreanName().isBlank() || recipient.corpEnglishName().isBlank())
         ){
             throw new TransferException(TransferErrorCode.INVALID_RECIPIENT_INFORMATION);
         }
+         */
+
         // 4. 수취인 이름이 2 - 5자가 아닌 경우
-        if(recipient.recipientName().length() > 5 || recipient.recipientName().length() < 2){
+        if(recipient.recipientKoName().length() > 5 || recipient.recipientKoName().length() < 2){
+            throw new TransferException(TransferErrorCode.INVALID_RECIPIENT_INFORMATION);
+        }
+
+        // 5. 수취인 영어 이름이 빗썸인데 없는 경우
+        if (recipient.exchangeType() == ExchangeType.BITHUMB
+                && (recipient.recipientEnName() == null || recipient.recipientEnName().isBlank())) {
             throw new TransferException(TransferErrorCode.INVALID_RECIPIENT_INFORMATION);
         }
     }

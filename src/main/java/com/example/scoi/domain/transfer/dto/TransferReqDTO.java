@@ -15,9 +15,10 @@ public class TransferReqDTO {
 
     public record RecipientInformation(
             MemberType memberType,
-            String recipientName,
-            String corpKoreanName,
-            String corpEnglishName,
+            String recipientKoName,
+            String recipientEnName,
+//            String recipientCorpKoName,
+//            String recipientCorpEnName,
             String walletAddress,
             ExchangeType exchangeType,
             CoinType coinType,
@@ -67,11 +68,11 @@ public class TransferReqDTO {
             @Schema(description = "수취인 성명 (영문)", example = "KIMCHULSU")
             String receiverEnName,
 
-            @Schema(description = "법인 국문명 (법인일 경우만)", example = "(주)스카이")
-            String receiverCorpKoName,
-
-            @Schema(description = "법인 영문명 (법인일 경우만)", example = "SCOI Co., Ltd.")
-            String receiverCorpEnName,
+//            @Schema(description = "법인 국문명 (법인일 경우만)", example = "(주)스카이")
+//            String receiverCorpKoName,
+//
+//            @Schema(description = "법인 영문명 (법인일 경우만)", example = "SCOI Co., Ltd.")
+//            String receiverCorpEnName,
 
             @Schema(description = "간편 비밀번호 (6자리)", example = "123456")
             @NotBlank(message = "비밀번호는 필수입니다.")
@@ -111,12 +112,12 @@ public class TransferReqDTO {
             @JsonProperty("receiver_ko_name")
             String receiverKoName,
             @JsonProperty("receiver_en_name")
-            String receiverEnName,
+            String receiverEnName
 
-            // 법인 정보 (receiverType이 corporation일 때만 포함됨)
-            @JsonProperty("receiver_corp_ko_name")
-            String receiverCorpKoName,
-            @JsonProperty("receiver_corp_en_name")
-            String receiverCorpEnName
+//            // 법인 정보 (receiverType이 corporation일 때만 포함됨)
+//            @JsonProperty("receiver_corp_ko_name")
+//            String receiverCorpKoName,
+//            @JsonProperty("receiver_corp_en_name")
+//            String receiverCorpEnName
     ) {}
 }

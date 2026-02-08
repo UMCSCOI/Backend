@@ -58,9 +58,10 @@ public class TransferResDTO {
     @AllArgsConstructor
     public static class RecipientDetailDTO {
         private MemberType recipientType;
-        private String recipientName;
-        private String corpKoreanName; // 법인일 경우 필수
-        private String corpEnglishName; // 법인일 경우 필수
+        private String recipientKoName;
+        private String recipientEnName;
+//        private String corpKoreanName; // 법인일 경우 필수
+//        private String corpEnglishName; // 법인일 경우 필수
         private String walletAddress;
     }
 

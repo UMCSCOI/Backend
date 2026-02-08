@@ -75,10 +75,10 @@ public class TransferConverter {
     public static Recipient toFavoriteRecipient(TransferReqDTO.RecipientInformation recipient, Member member){
         return Recipient.builder()
                 .walletAddress(recipient.walletAddress())
-                .recipientKoName(recipient.recipientName())
+                .recipientKoName(recipient.recipientKoName())
                 .recipientType(recipient.memberType())
-                .recipientCorpKoName(recipient.corpKoreanName())
-                .recipientCorpEnName(recipient.corpEnglishName())
+//                .recipientCorpKoName(recipient.corpKoreanName())
+//                .recipientCorpEnName(recipient.corpEnglishName())
                 .isFavorite(true)
                 .member(member)
                 .build();
@@ -123,9 +123,10 @@ public class TransferConverter {
     private static TransferResDTO.RecipientDetailDTO toRecipientDetailDTO(TransferReqDTO.RecipientInformation info) {
         return TransferResDTO.RecipientDetailDTO.builder()
                 .recipientType(info.memberType())
-                .recipientName(info.recipientName())
-                .corpKoreanName(info.corpKoreanName())
-                .corpEnglishName(info.corpEnglishName())
+                .recipientKoName(info.recipientKoName())
+                .recipientEnName(info.recipientEnName())
+//                .corpKoreanName(info.corpKoreanName())
+//                .corpEnglishName(info.corpEnglishName())
                 .walletAddress(info.walletAddress())
                 .build();
     }
@@ -163,8 +164,8 @@ public class TransferConverter {
                 .receiverType(mappedReceiverType)
                 .receiverKoName(dto.receiverKoName())
                 .receiverEnName(dto.receiverEnName())
-                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
-                .receiverCorpEnName(dto.receiverCorpEnName())
+//                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
+//                .receiverCorpEnName(dto.receiverCorpEnName())
                 .build();
     }
 
