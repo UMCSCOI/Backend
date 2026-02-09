@@ -8,10 +8,6 @@ import com.example.scoi.domain.charge.service.ChargeService;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
-
-import com.example.scoi.domain.charge.exception.ChargeException;
-import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
-import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,19 +66,12 @@ public class ChargeController implements ChargeControllerDocs{
 
     // 입금 주소 확인하기
     @GetMapping("/deposits/address")
-    public ApiResponse<List<ChargeResDTO.GetDepositAddress>> getDepositAddress(
+    public ApiResponse<String> getDepositAddress(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestParam ExchangeType exchangeType,
-            @RequestParam(defaultValue = "") List<String> coinType,
-            @RequestParam(defaultValue = "") List<String> netType
+            @RequestParam ExchangeType exchangeType
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
-        return ApiResponse.onSuccess(code, chargeService.getDepositAddress(
-                user.getUsername(),
-                exchangeType,
-                coinType.stream().map(String::toUpperCase).toList(),
-                netType.stream().map(String::toUpperCase).toList()
-        ));
+        return ApiResponse.onSuccess(code, chargeService.getDepositAddress(user.getUsername(), exchangeType));
     }
 
     // 입금 주소 생성하기
