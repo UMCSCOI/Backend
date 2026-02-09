@@ -376,6 +376,17 @@ public class TransferService {
         catch (FeignException.BadRequest | FeignException.NotFound e) {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
+            if (rawBody == null || rawBody.isBlank()) {
+
+                // 상태 코드에 따른 예외
+                if (e.status() == 401) {
+                    // 인증 실패 (JWT 서명 오류, 만료 등)
+                    throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                } else {
+                    // 권한 없음 (IP 차단 등)
+                    throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                }
+            }
 
             ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
             String errorName = error.error().name();
@@ -401,6 +412,17 @@ public class TransferService {
         } catch (FeignException.Unauthorized | FeignException.Forbidden e) {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
+            if (rawBody == null || rawBody.isBlank()) {
+
+                // 상태 코드에 따른 예외
+                if (e.status() == 401) {
+                    // 인증 실패 (JWT 서명 오류, 만료 등)
+                    throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                } else {
+                    // 권한 없음 (IP 차단 등)
+                    throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                }
+            }
 
             ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
             String errorName = error.error().name();
