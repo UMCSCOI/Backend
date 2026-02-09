@@ -14,7 +14,7 @@ public class SwaggerConfig {
 
     @Bean
     public OpenAPI swagger() {
-        Info info = new Info().title("스코이").description("스코이 Swagger").version("0.2.1");
+        Info info = new Info().title("스코이").description("스코이 Swagger").version("0.3.0");
 
         // JWT 토큰 헤더 방식
         String securityScheme = "JWT TOKEN";
@@ -29,7 +29,7 @@ public class SwaggerConfig {
 
         return new OpenAPI()
                 .info(info)
-                .addServersItem(new Server().url("/"))
+                .addServersItem(new Server().url("http://13.209.12.10:8081"))
                 .addSecurityItem(securityRequirement)
                 .components(components);
     }
