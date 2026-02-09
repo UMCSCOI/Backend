@@ -113,7 +113,7 @@ public class TransferReqDTO {
 //            @Schema(description = "법인 영문명 (법인일 경우만)", example = "SCOI Co., Ltd.")
 //            String receiverCorpEnName,
 
-            @Schema(description = "간편 비밀번호 (6자리)", example = "123456")
+            @Schema(description = "간편 비밀번호", example = "6v4RsQ+gOGi1NtheSTiA1w==")
             @NotBlank(message = "비밀번호는 필수입니다.")
             String simplePassword,
 
