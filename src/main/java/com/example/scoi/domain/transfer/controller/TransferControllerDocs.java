@@ -3,14 +3,11 @@ package com.example.scoi.domain.transfer.controller;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
-import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
