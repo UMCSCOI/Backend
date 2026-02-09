@@ -8,6 +8,7 @@ import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.entity.Recipient;
 import com.example.scoi.domain.transfer.entity.TradeHistory;
 import com.example.scoi.domain.transfer.enums.CoinType;
+import com.example.scoi.domain.transfer.enums.NetworkType;
 import com.example.scoi.domain.transfer.enums.TradeType;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import com.example.scoi.global.client.dto.UpbitResDTO;
@@ -75,10 +76,10 @@ public class TransferConverter {
     public static Recipient toFavoriteRecipient(TransferReqDTO.RecipientInformation recipient, Member member){
         return Recipient.builder()
                 .walletAddress(recipient.walletAddress())
-                .recipientKoName(recipient.recipientName())
+                .recipientKoName(recipient.recipientKoName())
                 .recipientType(recipient.memberType())
-                .recipientCorpKoName(recipient.corpKoreanName())
-                .recipientCorpEnName(recipient.corpEnglishName())
+//                .recipientCorpKoName(recipient.corpKoreanName())
+//                .recipientCorpEnName(recipient.corpEnglishName())
                 .isFavorite(true)
                 .member(member)
                 .build();
@@ -123,9 +124,10 @@ public class TransferConverter {
     private static TransferResDTO.RecipientDetailDTO toRecipientDetailDTO(TransferReqDTO.RecipientInformation info) {
         return TransferResDTO.RecipientDetailDTO.builder()
                 .recipientType(info.memberType())
-                .recipientName(info.recipientName())
-                .corpKoreanName(info.corpKoreanName())
-                .corpEnglishName(info.corpEnglishName())
+                .recipientKoName(info.recipientKoName())
+                .recipientEnName(info.recipientEnName())
+//                .corpKoreanName(info.corpKoreanName())
+//                .corpEnglishName(info.corpEnglishName())
                 .walletAddress(info.walletAddress())
                 .build();
     }
@@ -151,7 +153,7 @@ public class TransferConverter {
 
     // 빗썸 요청으로 변환
     public static TransferReqDTO.BithumbWithdrawRequest toBithumbWithdrawRequest(TransferReqDTO.WithdrawRequest dto) {
-        // MemberType(Enum)을 빗썸 규격 문자열로 매핑
+
         String mappedReceiverType = dto.receiverType().equals("INDIVIDUAL") ? "personal" : "corporation";
 
         return TransferReqDTO.BithumbWithdrawRequest.builder()
@@ -160,11 +162,11 @@ public class TransferConverter {
                 .amount(Double.valueOf(dto.amount()))
                 .address(dto.address())
                 .exchangeName(String.valueOf(dto.exchangeName()))
-                .receiverType(mappedReceiverType)
+                .receiverType(MemberType.valueOf(mappedReceiverType))
                 .receiverKoName(dto.receiverKoName())
                 .receiverEnName(dto.receiverEnName())
-                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
-                .receiverCorpEnName(dto.receiverCorpEnName())
+//                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
+//                .receiverCorpEnName(dto.receiverCorpEnName())
                 .build();
     }
 
@@ -213,7 +215,7 @@ public class TransferConverter {
                 .walletAddress(request.address())
                 .recipientEnName(request.receiverEnName())
                 .recipientKoName(request.receiverKoName())
-                .recipientType(MemberType.valueOf(request.receiverType()))
+                .recipientType(request.receiverType())
                 .member(member)
                 .build();
     }
@@ -270,10 +272,13 @@ public class TransferConverter {
 
         return upbitResult.stream()
                 .map(item -> TransferResDTO.WithdrawRecipients.builder()
+                        .memberType(MemberType.from(item.beneficiary_type()))
                         .recipientKoName(item.beneficiary_name())
                         .recipientEnName(null)
                         .walletAddress(item.withdraw_address())
-                        .exchangeType(item.net_type())
+                        .exchangeType(ExchangeType.valueOf(item.net_type()))
+                        .currency(CoinType.valueOf(item.currency()))
+                        .netType(NetworkType.valueOf(item.net_type()))
                         .build()).toList();
     }
     public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsBithumb(List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult) {
@@ -284,10 +289,13 @@ public class TransferConverter {
 
         return bithumbResult.stream()
                 .map(item -> TransferResDTO.WithdrawRecipients.builder()
+                        .memberType(MemberType.from(item.owner_type()))
                         .recipientKoName(item.owner_ko_name())
                         .recipientEnName(item.owner_en_name())
                         .walletAddress(item.withdraw_address())
-                        .exchangeType(item.net_type())
+                        .exchangeType(ExchangeType.valueOf(item.net_type()))
+                        .currency(CoinType.valueOf(item.currency()))
+                        .netType(NetworkType.valueOf(item.net_type()))
                         .build()).toList();
     }
 }

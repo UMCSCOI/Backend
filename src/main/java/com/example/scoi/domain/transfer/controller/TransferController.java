@@ -7,6 +7,7 @@ import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;
 import com.example.scoi.domain.transfer.service.TransferService;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -81,7 +82,7 @@ public class TransferController implements TransferControllerDocs{
     @PostMapping("/recipients/validate")
     public ApiResponse<TransferResDTO.CheckRecipientResDTO> checkRecipientInput(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody TransferReqDTO.RecipientInformation recipientInformation
+            @Valid @RequestBody TransferReqDTO.RecipientInformation recipientInformation
     ){
         return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_5,
                 transferService.checkRecipientInput(recipientInformation, user.getUsername()));
@@ -89,7 +90,7 @@ public class TransferController implements TransferControllerDocs{
 
     @PostMapping("/quotes")
     public ApiResponse<TransferResDTO.QuoteValidDTO> checkQuotes(
-            @RequestBody TransferReqDTO.Quote quotes
+            @Valid @RequestBody TransferReqDTO.Quote quotes
     ){
         return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_6,
                 transferService.checkQuotes(quotes));
@@ -98,7 +99,7 @@ public class TransferController implements TransferControllerDocs{
     @PostMapping("/execute")
     public ApiResponse<TransferResDTO.WithdrawResult> executeWithdraw(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody TransferReqDTO.WithdrawRequest request
+            @Valid @RequestBody TransferReqDTO.WithdrawRequest request
         ) {
         return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_7,
                 transferService.executeWithdraw(user.getUsername(), request));
