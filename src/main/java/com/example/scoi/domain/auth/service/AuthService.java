@@ -415,4 +415,18 @@ public class AuthService {
 
         log.info("로그아웃 성공: phoneNumber={}", phoneNumber);
     }
+
+    // 임시
+    public String generateSmsToken(
+            String phoneNumber
+    ) {
+        // 4. Verification Token 발급
+        String verificationToken = jwtUtil.createVerificationToken(phoneNumber);
+
+        // 5. Redis 저장 (10분 TTL)
+        String tokenKey = VERIFICATION_PREFIX + verificationToken;
+        redisUtil.set(tokenKey, phoneNumber, VERIFICATION_EXPIRATION_MINUTES, TimeUnit.MINUTES);
+
+        return verificationToken;
+    }
 }

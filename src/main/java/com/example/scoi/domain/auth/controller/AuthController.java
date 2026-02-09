@@ -6,6 +6,8 @@ import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.service.AuthService;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.apiPayload.ApiResponse;
+import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
+import com.example.scoi.global.apiPayload.code.GeneralSuccessCode;
 import com.example.scoi.global.security.jwt.JwtUtil;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,8 +25,15 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final JwtUtil jwtUtil;
-    private final MemberRepository memberRepository;
+
+    // SMS 인증 토큰 발급용: 최종 제출때는 삭제해야 함
+    @GetMapping("/sms-token")
+    public ApiResponse<String> generateSmsToken(
+            @RequestParam String phoneNumber
+    ){
+        BaseSuccessCode code = GeneralSuccessCode.OK;
+        return ApiResponse.onSuccess(code, authService.generateSmsToken(phoneNumber));
+    }
 
     @Operation(summary = "SMS 발송 By 장명준", description = "휴대폰 번호로 인증번호를 발송합니다.")
     @PostMapping("/sms/send")
