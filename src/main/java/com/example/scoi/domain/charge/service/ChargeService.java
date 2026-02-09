@@ -312,7 +312,7 @@ public class ChargeService {
                     token = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
                     List<UpbitResDTO.GetDepositAddress> upbitResult = upbitClient.getDepositAddresses(token);
 
-                    // 만약 해당 유저 입금 주소가 존재하지 않을 때 (추측)
+                    // 만약 해당 유저 입금 주소가 존재하지 않을 때: 업비트는 빈 리스트 반환
                     if (upbitResult.isEmpty()) {
                         throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND);
                     }
