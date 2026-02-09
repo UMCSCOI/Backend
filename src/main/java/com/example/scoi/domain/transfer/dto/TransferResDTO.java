@@ -3,6 +3,7 @@ package com.example.scoi.domain.transfer.dto;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.enums.MemberType;
 import com.example.scoi.domain.transfer.enums.CoinType;
+import com.example.scoi.domain.transfer.enums.NetworkType;
 import lombok.*;
 
 import java.util.List;
@@ -58,9 +59,10 @@ public class TransferResDTO {
     @AllArgsConstructor
     public static class RecipientDetailDTO {
         private MemberType recipientType;
-        private String recipientName;
-        private String corpKoreanName; // 법인일 경우 필수
-        private String corpEnglishName; // 법인일 경우 필수
+        private String recipientKoName;
+        private String recipientEnName;
+//        private String corpKoreanName; // 법인일 경우 필수
+//        private String corpEnglishName; // 법인일 경우 필수
         private String walletAddress;
     }
 
@@ -72,7 +74,7 @@ public class TransferResDTO {
     public static class BalanceDTO {
         private ExchangeType exchangeType;
         private CoinType coinType; // 예: "USDT"
-        private String network;     // 예: "TRON"
+        private NetworkType network;     // 예: "TRON"
         private String networkFee; // 네트워크 수수료
         private String availableAmount; // 출금 가능 금액
         private String updatedAt;   // 날짜 형식 문자열
@@ -108,9 +110,12 @@ public class TransferResDTO {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     @AllArgsConstructor
     public static class WithdrawRecipients {
+        private MemberType memberType;
         private String recipientKoName;
         private String recipientEnName;
         private String walletAddress;
-        private String exchangeType;
+        private ExchangeType exchangeType;
+        private CoinType currency;
+        private NetworkType netType;
     }
 }

@@ -589,6 +589,7 @@ public class BithumbApiClient implements ExchangeApiClient {
                     .build();
 
             // JWT 생성 (POST 요청이므로 body 사용)
+            log.info("빗썸 주문 생성 JWT 생성 시작 - body를 query string으로 변환하여 query_hash 계산");
             String authorization = jwtApiUtil.createBithumbJwt(phoneNumber, null, request);
 
             // 주문 생성 API 호출
