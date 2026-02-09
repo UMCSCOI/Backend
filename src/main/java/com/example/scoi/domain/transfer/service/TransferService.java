@@ -23,6 +23,7 @@ import com.example.scoi.global.client.UpbitClient;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import com.example.scoi.global.client.dto.ClientErrorDTO;
 import com.example.scoi.global.client.dto.UpbitResDTO;
+import com.example.scoi.global.util.HashUtil;
 import com.example.scoi.global.util.JwtApiUtil;
 import feign.FeignException;
 import lombok.AccessLevel;
@@ -42,6 +43,7 @@ import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
@@ -52,6 +54,7 @@ public class TransferService {
     private final MemberRepository memberRepository;
     private final RecipientRepository recipientRepository;
     private final PasswordEncoder passwordEncoder;
+    private final HashUtil hashUtil;
 
     private final JwtApiUtil jwtApiUtil;
     private final BithumbClient bithumbClient;
@@ -318,13 +321,49 @@ public class TransferService {
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        if (member.getLoginFailCount() >= 5) {
-            throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
+        String rawPassword;
+        try {
+            rawPassword = new String(hashUtil.decryptAES(request.simplePassword()));
+        } catch (GeneralSecurityException e) {
+            log.error("AES 복호화 실패: phoneNumber={}", phoneNumber, e);
+            member.increaseLoginFailCount();
+            int failCount = member.getLoginFailCount();
+            int remainingAttempts = Math.max(5 - failCount, 0);
+            throw new AuthException(
+                    AuthErrorCode.INVALID_PASSWORD,
+                    Map.of(
+                            "loginFailCount", String.valueOf(failCount),
+                            "remainingAttempts", String.valueOf(remainingAttempts)
+                    )
+            );
+        }
+        if (!rawPassword.matches("^\\d{6}$")) {
+            log.warn("간편비밀번호 형식 오류: phoneNumber={}", phoneNumber);
+            member.increaseLoginFailCount();
+            int failCount = member.getLoginFailCount();
+            int remainingAttempts = Math.max(5 - failCount, 0);
+            throw new AuthException(
+                    AuthErrorCode.INVALID_PASSWORD,
+                    Map.of(
+                            "loginFailCount", String.valueOf(failCount),
+                            "remainingAttempts", String.valueOf(remainingAttempts)
+                    )
+            );
         }
 
-        if (!passwordEncoder.matches(request.simplePassword(), member.getSimplePassword())) {
+        if (!passwordEncoder.matches(rawPassword, member.getSimplePassword())) {
             member.increaseLoginFailCount();
-            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+            int failCount = member.getLoginFailCount();
+            int remainingAttempts = Math.max(5 - failCount, 0);
+            log.warn("비밀번호 인증 실패: phoneNumber={}, failCount={}, remainingAttempts={}",
+                    phoneNumber, failCount, remainingAttempts);
+            throw new AuthException(
+                    AuthErrorCode.INVALID_PASSWORD,
+                    Map.of(
+                            "loginFailCount", String.valueOf(failCount),
+                            "remainingAttempts", String.valueOf(remainingAttempts)
+                    )
+            );
         }
         // 비밀번호 일치 시 실패 횟수 초기화
         member.resetLoginFailCount();
