@@ -8,6 +8,8 @@ import com.example.scoi.global.client.dto.UpbitResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @FeignClient(
         name = "upbitClient",
         url = "https://api.upbit.com"
@@ -92,5 +94,11 @@ public interface UpbitClient {
     UpbitResDTO.WithdrawResDTO withdrawCoin(
             @RequestHeader("Authorization") String authorization,
             @RequestBody TransferReqDTO.UpbitWithdrawRequest dto
+    );
+
+    // 출금 허용 주소 목록 조회 (수취인 조회)
+    @GetMapping("/v1/withdraws/coin_addresses")
+    List<UpbitResDTO.WithdrawalAddressResponse> getRecipients(
+            @RequestHeader("Authorization") String authorization
     );
 }
