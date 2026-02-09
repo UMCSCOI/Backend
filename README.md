@@ -34,9 +34,10 @@
     |   └── transfer    # 이체 관련
     ├── global
     |   ├── apiPayload  # 응답 통일
-    |   ├── auth        # JWT
+    |   ├── security    # 시큐리티
     |   ├── client      # 외부 API 호출
     |   ├── config      # 각종 설정
-    |   └── util        # 유틸
+    |   ├── util        # 유틸
+    |   └── redis       # Redis
     └── ScoiApplication
 ```
