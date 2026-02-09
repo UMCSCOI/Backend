@@ -583,7 +583,7 @@ public class BithumbApiClient implements ExchangeApiClient {
             BithumbReqDTO.CreateOrder request = BithumbReqDTO.CreateOrder.builder()
                     .market(convertedMarket)
                     .side(side)
-                    .ord_type(orderType)
+                    .order_type(orderType)
                     .price(price)
                     .volume(volume)
                     .build();
