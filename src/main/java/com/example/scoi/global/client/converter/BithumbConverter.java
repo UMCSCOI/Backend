@@ -35,18 +35,28 @@ public class BithumbConverter {
     }
 
     // 빗썸 전체 계좌 조회 -> BalanceDTO 리스트
+    // USDC, USDT, KRW만 반환
     public static List<BalanceResDTO.BalanceDTO> toBalanceDTOList(@NotNull BithumbResDTO.BalanceResponse[] responses) {
         List<BalanceResDTO.BalanceDTO> result = new ArrayList<>();
         
+        // 허용된 통화 목록
+        List<String> allowedCurrencies = List.of("USDC", "USDT", "KRW");
+        
         for (BithumbResDTO.BalanceResponse response : responses) {
             try {
+                // USDC, USDT, KRW만 필터링
+                String currency = response.currency();
+                if (!allowedCurrencies.contains(currency)) {
+                    continue;
+                }
+                
                 // 잔고가 0보다 큰 자산만 추가
                 double balance = Double.parseDouble(response.balance());
                 double locked = Double.parseDouble(response.locked());
                 
                 if (balance > 0 || locked > 0) {
                     result.add(BalanceResDTO.BalanceDTO.builder()
-                            .currency(response.currency())
+                            .currency(currency)
                             .balance(response.balance())
                             .locked(response.locked())
                             .build());

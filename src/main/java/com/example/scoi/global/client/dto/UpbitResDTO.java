@@ -2,10 +2,6 @@ package com.example.scoi.global.client.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -30,7 +26,8 @@ public class UpbitResDTO {
             String amount,
             String fee,
             String transaction_type
-    ){}
+    ) {
+    }
 
     // 개별 주문 조회
     public record GetOrder(
@@ -250,27 +247,64 @@ public class UpbitResDTO {
      * - avg_buy_price_modified: 매수평균가 수정 여부
      * - unit_currency: 평단가 기준 화폐
      */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BalanceResponse {
 
-        private String currency;  // 화폐를 의미하는 영문 대문자 코드
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record BalanceResponse(
+                String currency,  // 화폐를 의미하는 영문 대문자 코드
+                String balance,  // 주문가능 금액/수량
+                String locked,  // 주문 중 묶여있는 금액/수량
+                @JsonProperty("avg_buy_price")
+                String avgBuyPrice,  // 매수평균가
+                @JsonProperty("avg_buy_price_modified")
+                Boolean avgBuyPriceModified,  // 매수평균가 수정 여부
+                @JsonProperty("unit_currency")
+                String unitCurrency  // 평단가 기준 화폐
+        ) {
+        }
 
-        private String balance;  // 주문가능 금액/수량
+        // 주문 생성 응답
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record CreateOrder(
+                String uuid,
+                String side,
+                String ord_type,
+                String price,
+                String state,
+                String market,
+                String created_at,
+                String volume,
+                String remaining_volume,
+                String executed_volume,
+                String reserved_fee,
+                String remaining_fee,
+                String paid_fee,
+                String locked,
+                String time_in_force
+        ) {
+        }
 
-        private String locked;  // 주문 중 묶여있는 금액/수량
+        // 주문 취소 응답
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record CancelOrder(
+                String uuid,
+                String side,
+                String ord_type,
+                String price,
+                String state,
+                String market,
+                String created_at,
+                String volume,
+                String remaining_volume,
+                String executed_volume,
+                String reserved_fee,
+                String remaining_fee,
+                String paid_fee,
+                String locked,
+                String time_in_force
+        ) {
+        }
 
-        @JsonProperty("avg_buy_price")
-        private String avgBuyPrice;  // 매수평균가
 
-        @JsonProperty("avg_buy_price_modified")
-        private Boolean avgBuyPriceModified;  // 매수평균가 수정 여부
-
-        @JsonProperty("unit_currency")
-        private String unitCurrency;  // 평단가 기준 화폐
-    }
 
     // 출금 허용 주소 리스트 조회 (수취인 조회)
     public record WithdrawalAddressResponse(
