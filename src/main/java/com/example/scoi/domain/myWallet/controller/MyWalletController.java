@@ -108,6 +108,20 @@ public class MyWalletController implements MyWalletControllerDocs {
         return ApiResponse.onSuccess(MyWalletSuccessCode.TRANSACTION_DETAIL_SUCCESS, result);
     }
 
+    // 원화 자산 조회
+    @GetMapping("/krw")
+    public ApiResponse<MyWalletResDTO.KrwBalanceDTO> getKrwBalance(
+            @RequestParam(defaultValue = "BITHUMB") ExchangeType exchangeType,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        MyWalletResDTO.KrwBalanceDTO result = myWalletService.getKrwBalance(
+                user.getUsername(),
+                exchangeType
+        );
+
+        return ApiResponse.onSuccess(MyWalletSuccessCode.KRW_BALANCE_SUCCESS, result);
+    }
+
     /**
      * order 파라미터 검증 (desc 또는 asc만 허용)
      */

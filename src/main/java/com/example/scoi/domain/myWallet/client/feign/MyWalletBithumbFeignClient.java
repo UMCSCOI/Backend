@@ -2,9 +2,12 @@ package com.example.scoi.domain.myWallet.client.feign;
 
 import com.example.scoi.domain.myWallet.dto.BalanceClientDTO;
 import com.example.scoi.domain.myWallet.dto.TopupClientDTO;
+import com.example.scoi.domain.myWallet.dto.WithdrawClientDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -77,5 +80,12 @@ public interface MyWalletBithumbFeignClient {
     BithumbResDTO.GetOrder getOrder(
             @RequestHeader("Authorization") String authorization,
             @RequestParam(value = "uuid") String uuid
+    );
+
+    // 원화 출금 요청
+    @PostMapping("/v1/withdraws/krw")
+    WithdrawClientDTO.WithdrawKrwResponse withdrawKrw(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody WithdrawClientDTO.WithdrawKrwRequest dto
     );
 }

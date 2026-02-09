@@ -124,4 +124,27 @@ public class MyWalletResDTO {
             RemitDetailDTO remitDetail,  // 입출금 상세 (category=REMIT일 때)
             TopupDetailDTO topupDetail   // 충전 상세 (category=TOPUP일 때)
     ) {}
+
+    // ==================== 원화 자산 조회 ====================
+
+    /**
+     * 원화(KRW) 자산 조회 응답
+     */
+    @Builder
+    public record KrwBalanceDTO(
+            String currency,             // 화폐 코드 (KRW)
+            String balance               // 주문 가능 금액
+    ) {}
+
+    // ==================== 원화 출금 ====================
+
+    /**
+     * 원화(KRW) 출금 요청 응답
+     */
+    @Builder
+    public record WithdrawKrwDTO(
+            String currency,             // 화폐 코드 (KRW)
+            String uuid,                 // 출금 고유 ID
+            String txid                  // 트랜잭션 ID
+    ) {}
 }
