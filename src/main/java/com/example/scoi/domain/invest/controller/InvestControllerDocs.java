@@ -23,6 +23,8 @@ public interface InvestControllerDocs {
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String unitPrice,
+            @RequestParam(required = false) String orderType,
+            @RequestParam(required = false) String side,
             @AuthenticationPrincipal CustomUserDetails user
     );
 

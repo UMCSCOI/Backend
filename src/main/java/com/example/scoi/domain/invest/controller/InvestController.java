@@ -34,10 +34,12 @@ public class InvestController implements InvestControllerDocs {
             @RequestParam ExchangeType exchangeType,
             @RequestParam String coinType,
             @RequestParam(required = false) String unitPrice,  // 단위 가격 (선택적)
+            @RequestParam(required = false) String orderType,    // 주문 타입 (limit, price, market)
+            @RequestParam(required = false) String side,        // 주문 방향 (bid, ask)
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         // JWT에서 추출한 phoneNumber로 조회
-        MaxOrderInfoDTO result = investService.getMaxOrderInfo(user.getUsername(), exchangeType, coinType, unitPrice);
+        MaxOrderInfoDTO result = investService.getMaxOrderInfo(user.getUsername(), exchangeType, coinType, unitPrice, orderType, side);
         
         return ApiResponse.onSuccess(InvestSuccessCode.MAX_ORDER_INFO_SUCCESS, result);
     }

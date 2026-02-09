@@ -46,4 +46,9 @@ public interface BithumbFeignClient {
     //마켓 코드 조회 (PUBLIC API - 인증 불필요)
     @GetMapping("/v1/market/all")
     String getMarketAll(@RequestParam(value = "isDetails", required = false) Boolean isDetails);
+
+    //현재가 조회 (PUBLIC API - 인증 불필요)
+    // 빗썸 API는 배열을 반환하거나 다른 형식을 사용할 수 있으므로 String으로 받아서 파싱
+    @GetMapping("/v1/ticker")
+    String getTicker(@RequestParam("markets") String markets);
 }
