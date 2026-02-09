@@ -2,10 +2,6 @@ package com.example.scoi.global.client.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -30,7 +26,8 @@ public class UpbitResDTO {
             String amount,
             String fee,
             String transaction_type
-    ){}
+    ) {
+    }
 
     // 개별 주문 조회
     public record GetOrder(
@@ -139,6 +136,22 @@ public class UpbitResDTO {
             String transaction_type
     ){}
 
+    // 개별 출금 조회 (출금 목록 조회 응답 아이템과 동일 구조)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record GetWithdraw(
+            String type,
+            String uuid,
+            String currency,
+            String net_type,
+            String txid,
+            String state,
+            String created_at,
+            String done_at,
+            String amount,
+            String fee,
+            String transaction_type
+    ){}
+
     // 주문 가능 정보 조회
     @JsonIgnoreProperties(ignoreUnknown = true) // DTO에 정의되지 않은 필드들이 와도 무시해달라는 설정정 - 추후 추가될 필드들을 위해 필요요
 
@@ -218,6 +231,26 @@ public class UpbitResDTO {
             String unit_currency,
             String available  // 매수 가능 금액/수량
     ){}
+
+    // 개별 입금 주소 조회
+    public record GetDepositAddress(
+            String currency,
+            String net_type,
+            String deposit_address,
+            String secondary_address
+    ){}
+
+    // 입금 주소 생성 요청
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CreateDepositAddress(
+            String success, // 201 생성 요청 직후
+            String message, // 201 생성 요청 직후
+            String currency, // 200 생성 이후
+            String net_type, // 200 생성 이후
+            String deposit_address, // 200 생성 이후
+            String secondary_address // 200 생성 이후
+    ){}
+
     /**
      * 업비트 계정 잔고 조회 응답 (배열)
      * 공식 문서: https://docs.upbit.com/kr/reference/get-balance
@@ -230,25 +263,107 @@ public class UpbitResDTO {
      * - avg_buy_price_modified: 매수평균가 수정 여부
      * - unit_currency: 평단가 기준 화폐
      */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BalanceResponse {
 
-        private String currency;  // 화폐를 의미하는 영문 대문자 코드
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record BalanceResponse(
+                String currency,  // 화폐를 의미하는 영문 대문자 코드
+                String balance,  // 주문가능 금액/수량
+                String locked,  // 주문 중 묶여있는 금액/수량
+                @JsonProperty("avg_buy_price")
+                String avgBuyPrice,  // 매수평균가
+                @JsonProperty("avg_buy_price_modified")
+                Boolean avgBuyPriceModified,  // 매수평균가 수정 여부
+                @JsonProperty("unit_currency")
+                String unitCurrency  // 평단가 기준 화폐
+        ) {
+        }
 
-        private String balance;  // 주문가능 금액/수량
+        // 주문 생성 응답
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record CreateOrder(
+                String uuid,
+                String side,
+                String ord_type,
+                String price,
+                String state,
+                String market,
+                String created_at,
+                String volume,
+                String remaining_volume,
+                String executed_volume,
+                String reserved_fee,
+                String remaining_fee,
+                String paid_fee,
+                String locked,
+                String time_in_force
+        ) {
+        }
 
-        private String locked;  // 주문 중 묶여있는 금액/수량
+        // 주문 취소 응답
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record CancelOrder(
+                String uuid,
+                String side,
+                String ord_type,
+                String price,
+                String state,
+                String market,
+                String created_at,
+                String volume,
+                String remaining_volume,
+                String executed_volume,
+                String reserved_fee,
+                String remaining_fee,
+                String paid_fee,
+                String locked,
+                String time_in_force
+        ) {
+        }
 
-        @JsonProperty("avg_buy_price")
-        private String avgBuyPrice;  // 매수평균가
 
-        @JsonProperty("avg_buy_price_modified")
-        private Boolean avgBuyPriceModified;  // 매수평균가 수정 여부
 
-        @JsonProperty("unit_currency")
-        private String unitCurrency;  // 평단가 기준 화폐
-    }
+    // 출금 허용 주소 리스트 조회 (수취인 조회)
+    public record WithdrawalAddressResponse(
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String beneficiary_name,
+            String beneficiary_company_name,
+            String beneficiary_type,
+            String exchange_name,
+            String wallet_type
+    ) {}
+
+    // 현재가 조회 (Ticker)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Ticker(
+            String market,
+            String trade_date,
+            String trade_time,
+            String trade_date_kst,
+            String trade_time_kst,
+            Long trade_timestamp,
+            Double opening_price,
+            Double high_price,
+            Double low_price,
+            Double trade_price,  // 현재가
+            Double prev_closing_price,
+            String change,
+            Double change_price,
+            Double change_rate,
+            Double signed_change_price,
+            Double signed_change_rate,
+            Double trade_volume,
+            Double acc_trade_volume,
+            Double acc_trade_volume_24h,
+            Double acc_trade_price,
+            Double acc_trade_price_24h,
+            Long highest_52_week_price,
+            String highest_52_week_date,
+            Long lowest_52_week_price,
+            String lowest_52_week_date,
+            Long timestamp
+    ) {}
 }

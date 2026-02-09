@@ -36,6 +36,7 @@ public class SecurityConfig {
             "/auth/signup",      // 회원가입
             "/auth/login",       // 로그인
             "/auth/reissue",     // 토큰 재발급
+            "/auth/sms-token",   // 임시
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-resources/**",

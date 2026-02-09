@@ -8,6 +8,8 @@ import com.example.scoi.global.client.dto.UpbitResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @FeignClient(
         name = "upbitClient",
         url = "https://api.upbit.com"
@@ -64,9 +66,17 @@ public interface UpbitClient {
     // 입금 주소 생성 요청
     // Request Body O
     @PostMapping("/v1/deposits/generate_coin_address")
-    String getDepositAddress(
+    UpbitResDTO.CreateDepositAddress createDepositAddress(
             @RequestHeader("Authorization") String token,
-            @RequestBody MemberReqDTO.Test dto
+            @RequestBody UpbitReqDTO.CreateDepositAddress dto
+    );
+
+    // 개별 입금 주소 조회
+    @GetMapping("/v1/deposits/coin_address")
+    UpbitResDTO.GetDepositAddress getDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
     );
 
     // 출금(이체) 가능 금액 조회
@@ -84,5 +94,11 @@ public interface UpbitClient {
     UpbitResDTO.WithdrawResDTO withdrawCoin(
             @RequestHeader("Authorization") String authorization,
             @RequestBody TransferReqDTO.UpbitWithdrawRequest dto
+    );
+
+    // 출금 허용 주소 목록 조회 (수취인 조회)
+    @GetMapping("/v1/withdraws/coin_addresses")
+    List<UpbitResDTO.WithdrawalAddressResponse> getRecipients(
+            @RequestHeader("Authorization") String authorization
     );
 }

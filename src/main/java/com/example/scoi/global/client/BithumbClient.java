@@ -4,8 +4,11 @@ import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
+import com.example.scoi.global.client.dto.UpbitResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @FeignClient(
         name = "bithumbClient",
@@ -42,7 +45,7 @@ public interface BithumbClient {
     
     // 전체 계좌 조회 (DTO 반환)
     @GetMapping("/v1/accounts")
-    BithumbResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String authorization);
+    BithumbResDTO.BalanceResponse[] getAccount(@RequestHeader("Authorization") String token);
 
     //보유자산 조회
     // @GetMapping("/v1/accounts")
@@ -52,16 +55,24 @@ public interface BithumbClient {
     // 쿼리파라미터 O
     @GetMapping("/v1/orders/chance")
     String getOrderChance(
-            @RequestHeader("Authorization") String authorization,
+            @RequestHeader("Authorization") String token,
             @RequestParam("market") String market
     );
 
     // 입금 주소 생성 요청
     // Request Body O
     @PostMapping("/v1/deposits/generate_coin_address")
-    String getDepositAddress(
-            @RequestHeader("Authorization") String authorization,
-            @RequestBody MemberReqDTO.Test dto
+    BithumbResDTO.CreateDepositAddress createDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestBody BithumbReqDTO.CreateDepositAddress dto
+    );
+
+    // 개별 입금 주소 조회
+    @GetMapping("/v1/deposits/coin_address")
+    BithumbResDTO.GetDepositAddress getDepositAddress(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("currency") String currency,
+            @RequestParam("net_type") String netType
     );
 
     // 이체 출금 가능 정보
@@ -79,5 +90,11 @@ public interface BithumbClient {
     BithumbResDTO.WithdrawResDTO withdrawCoin(
             @RequestHeader("Authorization") String authorization,
             @RequestBody TransferReqDTO.BithumbWithdrawRequest dto
+    );
+
+    // 출금 허용 주소 목록 조회 (수취인 조회)
+    @GetMapping("/v1/withdraws/coin_addresses")
+    List<BithumbResDTO.WithdrawalAddressResponse> getRecipients(
+            @RequestHeader("Authorization") String authorization
     );
 }

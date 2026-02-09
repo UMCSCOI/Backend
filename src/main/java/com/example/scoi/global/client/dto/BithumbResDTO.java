@@ -200,6 +200,38 @@ public class BithumbResDTO {
             String unit_currency
     ){}
 
+    // 개별 입금 주소 조회
+    public record GetDepositAddress(
+            String currency,
+            String net_type,
+            String deposit_address,
+            String secondary_address
+    ){}
+
+    // 입금 주소 생성 요청
+    public record CreateDepositAddress(
+            String currency,
+            String net_type,
+            String deposit_address,
+            String secondary_address
+    ){}
+
+    // 개별 출금 조회 (출금 목록 조회 응답 아이템과 동일 구조)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record GetWithdraw(
+            String type,
+            String uuid,
+            String currency,
+            String net_type,
+            String txid,
+            String state,
+            String created_at,
+            String done_at,
+            String amount,
+            String fee,
+            String transaction_type
+    ){}
+
     /**
      * 빗썸 전체 계좌 조회 응답 (배열)
      * 공식 문서: https://apidocs.bithumb.com/reference/전체-계좌-조회
@@ -225,5 +257,91 @@ public class BithumbResDTO {
             String avg_buy_price,
             Boolean avg_buy_price_modified,
             String unit_currency
+    ) {}
+
+    // 주문 생성 응답
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CreateOrder(
+            String uuid,
+            String side,
+            String ord_type,
+            String price,
+            String state,
+            String market,
+            String created_at,
+            String volume,
+            String remaining_volume,
+            String reserved_fee,
+            String remaining_fee,
+            String paid_fee,
+            String locked,
+            String executed_volume,
+            String trades_count
+    ){}
+
+    // 주문 취소 응답
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CancelOrder(
+            String uuid,
+            String side,
+            String ord_type,
+            String price,
+            String state,
+            String market,
+            String created_at,
+            String volume,
+            String remaining_volume,
+            String reserved_fee,
+            String remaining_fee,
+            String paid_fee,
+            String locked,
+            String executed_volume,
+            String trades_count
+    ){}
+
+    // 출금 허용 주소 리스트 조회 (수취인 조회)
+    public record WithdrawalAddressResponse(
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String exchange_name,
+            String owner_type,
+            String owner_ko_name,
+            String owner_en_name,
+            String owner_corp_ko_name,
+            String owner_corp_en_name
+    ) {}
+
+    // 현재가 조회 (Ticker)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Ticker(
+            String market,
+            String trade_date,
+            String trade_time,
+            String trade_date_kst,
+            String trade_time_kst,
+            Long trade_timestamp,
+            Double opening_price,
+            Double high_price,
+            Double low_price,
+            Double trade_price,  // 현재가
+            Double prev_closing_price,
+            String change,
+            Double change_price,
+            Double change_rate,
+            Double signed_change_price,
+            Double signed_change_rate,
+            Double trade_volume,
+            Double acc_trade_volume,
+            Double acc_trade_volume_24h,
+            Double acc_trade_price,
+            Double acc_trade_price_24h,
+            Long highest_52_week_price,
+            String highest_52_week_date,
+            Long lowest_52_week_price,
+            String lowest_52_week_date,
+            Long timestamp
     ) {}
 }

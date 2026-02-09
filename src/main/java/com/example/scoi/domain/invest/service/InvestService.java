@@ -10,6 +10,7 @@ import com.example.scoi.domain.invest.exception.code.InvestErrorCode;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.repository.MemberRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ public class InvestService {
     private final BithumbApiClient bithumbApiClient;
     private final UpbitApiClient upbitApiClient;
     
-    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String price) {
+    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice, String orderType, String side) {
         // 사용자 존재 여부 확인
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
@@ -33,20 +34,26 @@ public class InvestService {
         // 시크릿 키 복호화하기 (JwtApiUtil 내부)
         // 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기
         ExchangeApiClient apiClient = getApiClient(exchangeType);
-        
+
         try {
             // 거래소 서버 응답 정제해 보내기
-            return apiClient.getMaxOrderInfo(phoneNumber, exchangeType, coinType, price);
+            return apiClient.getMaxOrderInfo(phoneNumber, exchangeType, coinType, unitPrice, orderType, side);
         } catch (InvestException e) {
             throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 API 호출 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, coinType: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, coinType, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (Exception e) {
-            log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, coinType: {}, error: {}", 
+            log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, coinType: {}, error: {}",
                     exchangeType, phoneNumber, coinType, e.getMessage(), e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
 
-    // 주문 가능 여부 확인 
+    // 주문 가능 여부 확인
     public void checkOrderAvailability(
             String phoneNumber,
             ExchangeType exchangeType,
@@ -63,9 +70,9 @@ public class InvestService {
         // 시크릿 키 복호화하기
         // 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기
         ExchangeApiClient apiClient = getApiClient(exchangeType);
-        
+
         try {
-            // 거래소 API 호출하여 주문 가능 여부 확인 
+            // 거래소 API 호출하여 주문 가능 여부 확인
             apiClient.checkOrderAvailability(
                     phoneNumber,
                     exchangeType,
@@ -77,13 +84,144 @@ public class InvestService {
             );
         } catch (InvestException e) {
             throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 API 호출 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, market, side, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         } catch (Exception e) {
-            log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}", 
+            log.error("거래소 API 호출 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
                     exchangeType, phoneNumber, market, side, e.getMessage(), e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
         }
     }
 
+
+    // 주문 생성 테스트
+    public InvestResDTO.OrderDTO testCreateOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume
+    ) {
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
+
+        // 거래소별 분기
+        ExchangeApiClient apiClient = getApiClient(exchangeType);
+
+        try {
+            // 주문 생성 테스트
+            return apiClient.testCreateOrder(
+                    phoneNumber,
+                    exchangeType,
+                    market,
+                    side,
+                    orderType,
+                    price,
+                    volume
+            );
+        } catch (InvestException e) {
+            throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 주문 생성 테스트 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, market, side, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (Exception e) {
+            log.error("거래소 주문 생성 테스트 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
+                    exchangeType, phoneNumber, market, side, e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
+
+    // 주문 생성
+    @Transactional
+    public InvestResDTO.OrderDTO createOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String market,
+            String side,
+            String orderType,
+            String price,
+            String volume,
+            String password
+    ) {
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
+
+        // 간편 비밀번호 검증 (password는 암호화된 상태로 전달됨)
+        // TODO: 비밀번호 검증 로직 추가 필요
+
+        // 거래소별 분기
+        ExchangeApiClient apiClient = getApiClient(exchangeType);
+
+        try {
+            // 주문 생성
+            return apiClient.createOrder(
+                    phoneNumber,
+                    exchangeType,
+                    market,
+                    side,
+                    orderType,
+                    price,
+                    volume,
+                    password
+            );
+        } catch (InvestException e) {
+            throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 주문 생성 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, market, side, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (Exception e) {
+            log.error("거래소 주문 생성 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
+                    exchangeType, phoneNumber, market, side, e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
+
+    // 주문 취소
+    @Transactional
+    public InvestResDTO.CancelOrderDTO cancelOrder(
+            String phoneNumber,
+            ExchangeType exchangeType,
+            String uuid,
+            String txid
+    ) {
+        // 사용자 존재 여부 확인
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
+
+        // 거래소별 분기
+        ExchangeApiClient apiClient = getApiClient(exchangeType);
+
+        try {
+            // 주문 취소
+            return apiClient.cancelOrder(phoneNumber, exchangeType, uuid, txid);
+        } catch (InvestException e) {
+            throw e;
+        } catch (FeignException e) {
+            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
+            String errorBody = e.contentUTF8();
+            log.error("거래소 주문 취소 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, uuid: {}, status: {}, responseBody: {}",
+                    exchangeType, phoneNumber, uuid, e.status(), errorBody);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        } catch (Exception e) {
+            log.error("거래소 주문 취소 실패 - exchangeType: {}, phoneNumber: {}, uuid: {}, error: {}",
+                    exchangeType, phoneNumber, uuid, e.getMessage(), e);
+            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
+        }
+    }
 
     private ExchangeApiClient getApiClient(ExchangeType exchangeType) {
         return switch (exchangeType) {

@@ -11,4 +11,11 @@ public class ChargeResDTO {
             String uuid,
             String txid
     ){}
+
+    // 입금 주소 확인하기
+    @Builder
+    public record GetDepositAddress(
+            String coinType,
+            String address
+    ){}
 }

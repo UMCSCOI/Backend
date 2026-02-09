@@ -20,11 +20,20 @@ public enum MemberType {
 
     @JsonCreator
     public static MemberType from(String value) {
-        for (MemberType type : MemberType.values()) {
-            if (type.value.equals(value)) {
-                return type;
-            }
+        if (value == null) {
+            throw new IllegalArgumentException("Invalid MemberType: null");
         }
+
+        switch (value.toLowerCase()) {
+            case "individual":
+            case "personal":
+                return INDIVIDUAL;
+
+            case "corporation":
+            case "company":
+                return CORPORATION;
+        }
+
         throw new IllegalArgumentException("Invalid MemberType: " + value);
     }
 }

@@ -43,6 +43,7 @@ public class AuthService {
     private final RedisUtil redisUtil;
     private final CoolSmsClient coolSmsClient;
     private final HashUtil hashUtil;
+    private final LoginFailCountManager loginFailCountManager;
 
     @Value("${coolsms.from-number}")
     private String fromNumber;
@@ -57,6 +58,8 @@ public class AuthService {
     private static final String SMS_PREFIX = "sms:";
     private static final String VERIFICATION_PREFIX = "verification:";
     private static final String BLACKLIST_PREFIX = "blacklist:";
+    private static final String SMS_COOLDOWN_PREFIX = "sms:cooldown:";
+    private static final String SMS_REQUIRED_PREFIX = "sms_required:";
 
     // 상수
     private static final int SMS_CODE_LENGTH = 6;
@@ -64,8 +67,15 @@ public class AuthService {
     private static final long VERIFICATION_EXPIRATION_MINUTES = 10;
     private static final long REFRESH_TOKEN_SLIDING_DAYS = 14;  // 비활성 기준 만료
     private static final long REFRESH_TOKEN_ABSOLUTE_DAYS = 30; // 최대 수명
+    private static final long SMS_COOLDOWN_SECONDS = 60;
 
     public AuthResDTO.SmsSendResponse sendSms(AuthReqDTO.SmsSendRequest request) {
+        // 0. 쿨다운 체크 (1분)
+        String cooldownKey = SMS_COOLDOWN_PREFIX + request.phoneNumber();
+        if (redisUtil.exists(cooldownKey)) {
+            throw new AuthException(AuthErrorCode.SMS_COOLDOWN);
+        }
+
         // 1. 인증번호 생성 (6자리)
         String verificationCode = String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
 
@@ -92,7 +102,10 @@ public class AuthService {
             log.warn("[DEV/QA MODE] SMS 발송 건너뛰기: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
         }
 
-        // 4. 응답
+        // 4. 쿨다운 설정 (1분)
+        redisUtil.set(cooldownKey, "1", SMS_COOLDOWN_SECONDS, TimeUnit.SECONDS);
+
+        // 5. 응답
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(SMS_EXPIRATION_MINUTES);
         String codeToExpose = exposeCode ? verificationCode : null;
         return new AuthResDTO.SmsSendResponse(expiredAt, codeToExpose);
@@ -148,7 +161,8 @@ public class AuthService {
             throw new AuthException(AuthErrorCode.INVALID_TOKEN);
         }
 
-        log.debug("Verification Token 검증 성공: phoneNumber={}", phoneNumber);
+        redisUtil.delete(tokenKey);
+        log.debug("Verification Token 검증 성공 및 삭제: phoneNumber={}", phoneNumber);
         return verifiedPhoneNumber;
     }
 
@@ -222,9 +236,38 @@ public class AuthService {
         Member member = memberRepository.findByPhoneNumber(request.phoneNumber())
             .orElseThrow(() -> new AuthException(AuthErrorCode.MEMBER_NOT_FOUND));
 
-        // 2. 계정 잠금 체크
+        // 2. verificationToken 사전 검증 및 소멸 (일회성 보장)
+        boolean smsVerified = false;
+        if (request.verificationToken() != null) {
+            validateVerificationToken(request.verificationToken(), request.phoneNumber());
+            smsVerified = true;
+        }
+
+        // 3. 계정 잠금 체크 → SMS 재인증 필수
         if (member.getLoginFailCount() >= 5) {
-            throw new AuthException(AuthErrorCode.ACCOUNT_LOCKED);
+            if (smsVerified) {
+                loginFailCountManager.resetFailCount(member.getId());
+                log.info("SMS 재인증으로 계정 잠금 해제: phoneNumber={}", request.phoneNumber());
+            } else {
+                throw new AuthException(
+                    AuthErrorCode.ACCOUNT_LOCKED,
+                    Map.of("smsRequired", "true")
+                );
+            }
+        }
+
+        // 3-1. RT 만료로 인한 SMS 재인증 필수 체크
+        String smsRequiredKey = SMS_REQUIRED_PREFIX + request.phoneNumber();
+        if (redisUtil.exists(smsRequiredKey)) {
+            if (smsVerified) {
+                redisUtil.delete(smsRequiredKey);
+                log.info("SMS 재인증으로 RT 만료 플래그 해제: phoneNumber={}", request.phoneNumber());
+            } else {
+                throw new AuthException(
+                    AuthErrorCode.ACCOUNT_LOCKED,
+                    Map.of("smsRequired", "true", "reason", "refresh_token_expired")
+                );
+            }
         }
 
         // 3. 비밀번호 AES 복호화 후 검증 (AES 암호문 → 평문 → 형식 검증 → BCrypt 해시와 비교)
@@ -233,46 +276,18 @@ public class AuthService {
             rawPassword = new String(hashUtil.decryptAES(request.simplePassword()));
         } catch (GeneralSecurityException e) {
             log.error("AES 복호화 실패: phoneNumber={}", request.phoneNumber(), e);
-            member.increaseLoginFailCount();
-            int failCount = member.getLoginFailCount();
-            int remainingAttempts = Math.max(5 - failCount, 0);
-            throw new AuthException(
-                AuthErrorCode.INVALID_PASSWORD,
-                Map.of(
-                    "loginFailCount", String.valueOf(failCount),
-                    "remainingAttempts", String.valueOf(remainingAttempts)
-                )
-            );
+            throw handleLoginFailure(member, request.phoneNumber());
         }
 
         // 복호화된 평문이 6자리 숫자인지 검증
         if (!rawPassword.matches("^\\d{6}$")) {
             log.warn("간편비밀번호 형식 오류: phoneNumber={}", request.phoneNumber());
-            member.increaseLoginFailCount();
-            int failCount = member.getLoginFailCount();
-            int remainingAttempts = Math.max(5 - failCount, 0);
-            throw new AuthException(
-                AuthErrorCode.INVALID_PASSWORD,
-                Map.of(
-                    "loginFailCount", String.valueOf(failCount),
-                    "remainingAttempts", String.valueOf(remainingAttempts)
-                )
-            );
+            throw handleLoginFailure(member, request.phoneNumber());
         }
 
         if (!passwordEncoder.matches(rawPassword, member.getSimplePassword())) {
-            member.increaseLoginFailCount();
-            int failCount = member.getLoginFailCount();
-            int remainingAttempts = Math.max(5 - failCount, 0);
-            log.warn("로그인 실패: phoneNumber={}, failCount={}, remainingAttempts={}",
-                request.phoneNumber(), failCount, remainingAttempts);
-            throw new AuthException(
-                AuthErrorCode.INVALID_PASSWORD,
-                Map.of(
-                    "loginFailCount", String.valueOf(failCount),
-                    "remainingAttempts", String.valueOf(remainingAttempts)
-                )
-            );
+            log.warn("로그인 실패: phoneNumber={}", request.phoneNumber());
+            throw handleLoginFailure(member, request.phoneNumber());
         }
 
         // 4. 성공 처리 (JPA 더티 체킹으로 자동 저장)
@@ -304,6 +319,30 @@ public class AuthService {
         );
     }
 
+    /**
+     * 로그인 실패 처리: failCount 증가 (별도 트랜잭션) + 5회 도달 시 즉시 ACCOUNT_LOCKED 응답
+     */
+    private AuthException handleLoginFailure(Member member, String phoneNumber) {
+        int failCount = loginFailCountManager.increaseFailCount(member.getId());
+        int remainingAttempts = Math.max(5 - failCount, 0);
+        log.warn("로그인 실패: phoneNumber={}, failCount={}, remainingAttempts={}",
+            phoneNumber, failCount, remainingAttempts);
+
+        if (failCount >= 5) {
+            return new AuthException(
+                AuthErrorCode.ACCOUNT_LOCKED,
+                Map.of("smsRequired", "true")
+            );
+        }
+        return new AuthException(
+            AuthErrorCode.INVALID_PASSWORD,
+            Map.of(
+                "loginFailCount", String.valueOf(failCount),
+                "remainingAttempts", String.valueOf(remainingAttempts)
+            )
+        );
+    }
+
     @Transactional
     public AuthResDTO.ReissueResponse reissue(AuthReqDTO.ReissueRequest request) {
         // 1. RT 검증
@@ -322,7 +361,11 @@ public class AuthService {
         LocalDateTime now = LocalDateTime.now();
         if (memberToken.getExpirationDate().isBefore(now)) {
             memberTokenRepository.delete(memberToken);
-            throw new AuthException(AuthErrorCode.EXPIRED_REFRESH_TOKEN);
+            redisUtil.set(SMS_REQUIRED_PREFIX + phoneNumber, "rt_expired");
+            throw new AuthException(
+                AuthErrorCode.EXPIRED_REFRESH_TOKEN,
+                Map.of("smsRequired", "true")
+            );
         }
 
         // 5. 최대 수명 확인 (Absolute Expiration)
@@ -330,8 +373,12 @@ public class AuthService {
         LocalDateTime absoluteExpiration = issuedAt.plusDays(REFRESH_TOKEN_ABSOLUTE_DAYS);
         if (absoluteExpiration.isBefore(now)) {
             memberTokenRepository.delete(memberToken);
+            redisUtil.set(SMS_REQUIRED_PREFIX + phoneNumber, "rt_absolute_expired");
             log.warn("RT 최대 수명 만료: phoneNumber={}, issuedAt={}", phoneNumber, issuedAt);
-            throw new AuthException(AuthErrorCode.EXPIRED_REFRESH_TOKEN);
+            throw new AuthException(
+                AuthErrorCode.EXPIRED_REFRESH_TOKEN,
+                Map.of("smsRequired", "true")
+            );
         }
 
         // 6. 새 토큰 생성
@@ -367,5 +414,19 @@ public class AuthService {
         }
 
         log.info("로그아웃 성공: phoneNumber={}", phoneNumber);
+    }
+
+    // 임시
+    public String generateSmsToken(
+            String phoneNumber
+    ) {
+        // 4. Verification Token 발급
+        String verificationToken = jwtUtil.createVerificationToken(phoneNumber);
+
+        // 5. Redis 저장 (10분 TTL)
+        String tokenKey = VERIFICATION_PREFIX + verificationToken;
+        redisUtil.set(tokenKey, phoneNumber, VERIFICATION_EXPIRATION_MINUTES, TimeUnit.MINUTES);
+
+        return verificationToken;
     }
 }

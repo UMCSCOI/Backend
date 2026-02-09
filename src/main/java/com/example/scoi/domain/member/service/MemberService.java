@@ -266,7 +266,7 @@ public class MemberService {
     ) {
         // 해당 연동 정보가 없다면
         if (
-                !memberApiKeyRepository.existsByMember_phoneNumberAndExchangeType(
+                !memberApiKeyRepository.existsByMember_PhoneNumberAndExchangeType(
                 phoneNumber, dto.exchangeType())
         ){
             throw new MemberException(MemberErrorCode.API_KEY_NOT_FOUND);
