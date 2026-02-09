@@ -9,8 +9,8 @@ import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
-import com.example.scoi.domain.member.repository.MemberApiKeyRepository;
 import com.example.scoi.domain.member.exception.MemberException;
+import com.example.scoi.domain.member.repository.MemberApiKeyRepository;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.client.BithumbClient;
 import com.example.scoi.global.client.UpbitClient;
@@ -27,9 +27,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -300,146 +298,58 @@ public class ChargeService {
     }
 
     // 입금 주소 확인하기
-    public List<ChargeResDTO.GetDepositAddress> getDepositAddress(
+    public String getDepositAddress(
             String phoneNumber,
-            ExchangeType exchangeType,
-            List<String> coinType,
-            List<String> netType
+            ExchangeType exchangeType
     ) {
 
         // 거래소별 요청 보내기
         String token;
-        List<ChargeResDTO.GetDepositAddress> result = new ArrayList<>();
-        Map<String, String> bindError = new HashMap<>();
-        switch (exchangeType){
-            case UPBIT:
-                for (int idx = 0; idx < coinType.size(); idx++) {
-                    try {
-                        token = jwtApiUtil
-                                .createUpBitJwt(
-                                        phoneNumber,
-                                        "currency=" + coinType.get(idx) + "&net_type=" + netType.get(idx),
-                                        null
-                                );
+        String result;
+        try{
+            switch (exchangeType) {
+                case UPBIT:
+                    token = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
+                    List<UpbitResDTO.GetDepositAddress> upbitResult = upbitClient.getDepositAddresses(token);
 
-                        UpbitResDTO.GetDepositAddress upbitResult = upbitClient
-                                .getDepositAddress(token, coinType.get(idx), netType.get(idx));
-
-                        // 그게 아닌 경우
-                        result.add(
-                                ChargeConverter.toGetDepositAddress(
-                                        upbitResult.currency(),
-                                        upbitResult.deposit_address()
-                                )
-                        );
-                        // JWT 토큰 제작 실패
-                    } catch (GeneralSecurityException e) {
-                        throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-                    // 해당 코인의 입금주소가 없는 경우
-                    } catch (FeignException.NotFound e) {
-                        ObjectMapper objectMapper = new ObjectMapper();
-                        ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
-
-                        if (!error.error().name().equals("coin_address_not_found")) {
-                            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-                        }
-                    // 잘못된 파라미터, 거래소에서 지원하지 않는 코인
-                    } catch (FeignException.BadRequest e) {
-                        ObjectMapper objectMapper = new ObjectMapper();
-                        ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
-
-                        // 잘못된 파라미터인 경우: DTO 코인 정보를 잘못 기입
-                        switch (error.error().name()) {
-
-                            // 잘못된 파라미터 입력
-                            case "validation_error":
-                            case "invalid_parameter":
-                                throw new ChargeException(ChargeErrorCode.WRONG_COIN_TYPE);
-
-                            // 거래소에서 지원하지 않는 코인
-                            case "currency does not have a valid value":
-                                bindError.put(coinType.get(idx), netType.get(idx));
-                                break;
-
-                            default:
-                                throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-                        }
-                        // JWT 토큰 생성 오류
-                    } catch (FeignException.Unauthorized e) {
-                        throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+                    // 만약 해당 유저 입금 주소가 존재하지 않을 때 (추측)
+                    if (upbitResult.isEmpty()) {
+                        throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND);
                     }
-                }
-                break;
+
+                    result = upbitResult.getFirst().deposit_address();
+                    break;
                 case BITHUMB:
-                    for (int idx = 0; idx < coinType.size(); idx++){
-                        try {
-                            token = jwtApiUtil
-                                    .createBithumbJwt(
-                                            phoneNumber,
-                                            "currency="+coinType.get(idx)+"&net_type="+netType.get(idx),
-                                            null
-                                    );
+                    token = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);
+                    List<BithumbResDTO.GetDepositAddress> bithumbResult = bithumbClient.getDepositAddresses(token);
 
-                            BithumbResDTO.GetDepositAddress bithumbResult = bithumbClient
-                                    .getDepositAddress(token, coinType.get(idx), netType.get(idx));
-
-                            // 그게 아닌 경우
-                            result.add(
-                                    ChargeConverter.toGetDepositAddress(
-                                            bithumbResult.currency(),
-                                            bithumbResult.deposit_address()
-                                    )
-                            );
-                        // JWT 토큰 제작 실패
-                        } catch (GeneralSecurityException e) {
-                            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-                        // 해당 코인의 입금주소가 없는 경우
-                        } catch (FeignException.NotFound e) {
-                            ObjectMapper objectMapper = new ObjectMapper();
-                            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
-
-                            if (!error.error().name().equals("coin_address_not_found")) {
-                                throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-                            }
-                        // 잘못된 파라미터, 거래소에서 지원하지 않는 코인
-                        } catch (FeignException.BadRequest e) {
-                            ObjectMapper objectMapper = new ObjectMapper();
-                            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
-
-                            // 잘못된 파라미터인 경우: DTO 코인 정보를 잘못 기입
-                            switch (error.error().name()) {
-
-                                // 잘못된 파라미터 입력
-                                case "validation_error":
-                                case "invalid_parameter":
-                                    throw new ChargeException(ChargeErrorCode.WRONG_COIN_TYPE);
-
-                                // 네트워크 미지원: 넘기기
-                                case "request_for_address_of_not_supported_currency":
-                                    bindError.put(coinType.get(idx), netType.get(idx));
-                                    break;
-
-                                // 거래소에서 지원하지 않는 코인
-                                case "currency does not have a valid value":
-                                    throw new ChargeException(ChargeErrorCode.NOT_SUPPORT_COIN);
-
-                                default:
-                                    throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-                            }
-                        // JWT 토큰 생성 오류
-                        } catch (FeignException.Unauthorized e) {
-                            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-                        }
+                    // 만약 해당 유저 입금 주소가 존재하지 않을 때 (추측)
+                    if (bithumbResult.isEmpty()) {
+                        throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND);
                     }
+
+                    result = bithumbResult.getFirst().deposit_address();
                     break;
                 default:
                     throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
+            }
+        // 거래소 JWT 토큰 오류
+        } catch (GeneralSecurityException e) {
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_API_KEY_NOT_FOUND);
+        // 거래소 JWT 토큰 인증 오류
+        } catch (FeignException.Unauthorized e) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            ClientErrorDTO.Errors error = objectMapper.readValue(e.contentUTF8(), ClientErrorDTO.Errors.class);
+
+            if (error.error().name().equals("out_of_scope")) {
+                throw new ChargeException(ChargeErrorCode.EXCHANGE_FORBIDDEN);
+            }
+            throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
+        // 거래소별 입금 주소가 없는 경우 (추측)
+        } catch (FeignException.NotFound e) {
+            throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND);
         }
 
-        // 만약 bindError에 값이 있으면
-        if (!bindError.isEmpty()){
-            throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND, bindError);
-        }
         return result;
     }
 
