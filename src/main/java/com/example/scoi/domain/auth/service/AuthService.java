@@ -57,6 +57,7 @@ public class AuthService {
     private static final String SMS_PREFIX = "sms:";
     private static final String VERIFICATION_PREFIX = "verification:";
     private static final String BLACKLIST_PREFIX = "blacklist:";
+    private static final String SMS_COOLDOWN_PREFIX = "sms:cooldown:";
 
     // 상수
     private static final int SMS_CODE_LENGTH = 6;
@@ -64,8 +65,15 @@ public class AuthService {
     private static final long VERIFICATION_EXPIRATION_MINUTES = 10;
     private static final long REFRESH_TOKEN_SLIDING_DAYS = 14;  // 비활성 기준 만료
     private static final long REFRESH_TOKEN_ABSOLUTE_DAYS = 30; // 최대 수명
+    private static final long SMS_COOLDOWN_SECONDS = 60;
 
     public AuthResDTO.SmsSendResponse sendSms(AuthReqDTO.SmsSendRequest request) {
+        // 0. 쿨다운 체크 (1분)
+        String cooldownKey = SMS_COOLDOWN_PREFIX + request.phoneNumber();
+        if (redisUtil.exists(cooldownKey)) {
+            throw new AuthException(AuthErrorCode.SMS_COOLDOWN);
+        }
+
         // 1. 인증번호 생성 (6자리)
         String verificationCode = String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
 
@@ -92,7 +100,10 @@ public class AuthService {
             log.warn("[DEV/QA MODE] SMS 발송 건너뛰기: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
         }
 
-        // 4. 응답
+        // 4. 쿨다운 설정 (1분)
+        redisUtil.set(cooldownKey, "1", SMS_COOLDOWN_SECONDS, TimeUnit.SECONDS);
+
+        // 5. 응답
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(SMS_EXPIRATION_MINUTES);
         String codeToExpose = exposeCode ? verificationCode : null;
         return new AuthResDTO.SmsSendResponse(expiredAt, codeToExpose);
