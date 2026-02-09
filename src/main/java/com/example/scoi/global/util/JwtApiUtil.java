@@ -114,12 +114,20 @@ public class JwtApiUtil {
 
         // query SHA512 암호화
         String queryHash = getQueryHash(query, body);
+        log.debug("빗썸 query_hash 생성 완료 - queryHash 길이: {}, isEmpty: {}", 
+                queryHash.length(), queryHash.isEmpty());
 
         byte[] secretKey = hashUtil.decryptAES(apiKey.getSecretKey());
 
         Key secret = Keys.hmacShaKeyFor(secretKey);
 
-        return "Bearer " + createBithumbJwt(queryHash, apiKey.getPublicKey(), secret);
+        String jwt = createBithumbJwt(queryHash, apiKey.getPublicKey(), secret);
+        String authorization = "Bearer " + jwt;
+        
+        log.debug("빗썸 JWT 생성 완료 - phoneNumber: {}, queryHash isEmpty: {}, authorization 길이: {}", 
+                phoneNumber, queryHash.isEmpty(), authorization.length());
+        
+        return authorization;
     }
 
     /**
@@ -151,8 +159,8 @@ public class JwtApiUtil {
         }
     }
 
-    // query SHA512 암호화
-    // 업비트 API 규격:
+    // query SHA512 암호화 (업비트/빗썸 공통)
+    // API 규격:
     // - GET /v1/accounts (query 없음) → query_hash 없음
     // - GET /v1/orders/chance?market=KRW-BTC (query 있음) → query_hash 필요
     // - POST /v1/orders (body 있음) → query_hash 필요
@@ -166,28 +174,28 @@ public class JwtApiUtil {
         // 1. GET 요청의 query 파라미터가 있는 경우
         if (query != null && !query.isEmpty()) {
             MessageDigest digest = MessageDigest.getInstance("SHA-512");
-            log.debug("업비트 query_hash 계산 - query 파라미터: {}", query);
+            log.debug("query_hash 계산 - query 파라미터: {}", query);
             digest.update(query.getBytes(StandardCharsets.UTF_8));
             queryHash = HexFormat.of().formatHex(digest.digest());
-            log.debug("업비트 query_hash 계산 - query hash: {}", queryHash);
+            log.debug("query_hash 계산 - query hash: {}", queryHash);
         }
         
         // 2. POST/PUT/DELETE 요청의 body가 있는 경우
-        // 🔥 중요: 업비트는 "실제로 보낸 요청 내용 그대로"를 해시해야 함
+        // 🔥 중요: "실제로 보낸 요청 내용 그대로"를 해시해야 함
         // query_hash = SHA512(실제 전송되는 JSON body를 query string으로 변환한 것)
         if (body != null) {
             MessageDigest digest = MessageDigest.getInstance("SHA-512");
             ObjectMapper objectMapper = new ObjectMapper();
-            // null 필드 제외 설정 (업비트 규격)
+            // null 필드 제외 설정
             objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
             
             try {
                 // 1. body를 JSON으로 직렬화 (Feign Client가 실제로 보내는 형식과 동일)
                 String jsonBody = objectMapper.writeValueAsString(body);
-                log.info("업비트 query_hash 계산 - 실제 전송되는 JSON body: {}", jsonBody);
+                log.info("query_hash 계산 - 실제 전송되는 JSON body: {}", jsonBody);
                 
                 // 2. JSON을 LinkedHashMap으로 파싱하여 순서 보장
-                // 업비트 API는 JSON 파싱 순서 그대로 query string을 생성
+                // API는 JSON 파싱 순서 그대로 query string을 생성
                 LinkedHashMap<String, Object> map = objectMapper.readValue(jsonBody, 
                         objectMapper.getTypeFactory().constructMapType(LinkedHashMap.class, String.class, Object.class));
 
@@ -209,7 +217,7 @@ public class JwtApiUtil {
                         }
                         result.append(key).append("=").append(valueStr).append("&");
                     } else {
-                        log.debug("업비트 query_hash 계산에서 제외된 필드 - key: {}, value: {}", key, value);
+                        log.debug("query_hash 계산에서 제외된 필드 - key: {}, value: {}", key, value);
                     }
                 }
                 
@@ -218,12 +226,12 @@ public class JwtApiUtil {
                 }
 
                 String queryString = result.toString();
-                log.info("업비트 query_hash 계산 - 생성된 query string: {}", queryString);
+                log.info("query_hash 계산 - 생성된 query string: {}", queryString);
                 
                 // 4. query string을 UTF-8 바이트로 변환하여 SHA-512 해시
                 digest.update(queryString.getBytes(StandardCharsets.UTF_8));
                 queryHash = HexFormat.of().formatHex(digest.digest());
-                log.info("업비트 query_hash 계산 - 최종 hash: {}", queryHash);
+                log.info("query_hash 계산 - 최종 hash: {}", queryHash);
             } catch (Exception e) {
                 log.error("Query Hash 생성 실패: {}", e.getMessage(), e);
                 throw new NoSuchAlgorithmException("Query Hash 생성 실패: " + e.getMessage(), e);
@@ -231,6 +239,7 @@ public class JwtApiUtil {
         }
         return queryHash;
     }
+
 
     private String createBithumbJwt(
             String queryHash,
