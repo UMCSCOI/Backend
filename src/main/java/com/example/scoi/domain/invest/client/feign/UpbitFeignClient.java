@@ -50,4 +50,8 @@ public interface UpbitFeignClient {
             @RequestHeader("Authorization") String authorization,
             @RequestParam("uuid") String uuid
     );
+
+    //현재가 조회 (PUBLIC API - 인증 불필요)
+    @GetMapping("/v1/ticker")
+    List<UpbitResDTO.Ticker> getTicker(@RequestParam("markets") String markets);
 }

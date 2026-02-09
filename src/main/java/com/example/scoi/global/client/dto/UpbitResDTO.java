@@ -319,4 +319,35 @@ public class UpbitResDTO {
             String exchange_name,
             String wallet_type
     ) {}
+
+    // 현재가 조회 (Ticker)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Ticker(
+            String market,
+            String trade_date,
+            String trade_time,
+            String trade_date_kst,
+            String trade_time_kst,
+            Long trade_timestamp,
+            Double opening_price,
+            Double high_price,
+            Double low_price,
+            Double trade_price,  // 현재가
+            Double prev_closing_price,
+            String change,
+            Double change_price,
+            Double change_rate,
+            Double signed_change_price,
+            Double signed_change_rate,
+            Double trade_volume,
+            Double acc_trade_volume,
+            Double acc_trade_volume_24h,
+            Double acc_trade_price,
+            Double acc_trade_price_24h,
+            Long highest_52_week_price,
+            String highest_52_week_date,
+            Long lowest_52_week_price,
+            String lowest_52_week_date,
+            Long timestamp
+    ) {}
 }
