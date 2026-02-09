@@ -74,7 +74,7 @@ public class TransferResDTO {
     public static class BalanceDTO {
         private ExchangeType exchangeType;
         private CoinType coinType; // 예: "USDT"
-        private String network;     // 예: "TRON"
+        private NetworkType network;     // 예: "TRON"
         private String networkFee; // 네트워크 수수료
         private String availableAmount; // 출금 가능 금액
         private String updatedAt;   // 날짜 형식 문자열
@@ -114,7 +114,7 @@ public class TransferResDTO {
         private String recipientKoName;
         private String recipientEnName;
         private String walletAddress;
-        private String exchangeType;
+        private ExchangeType exchangeType;
         private CoinType currency;
         private NetworkType netType;
     }

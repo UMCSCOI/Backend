@@ -199,7 +199,7 @@ public class TransferService {
         // 2. 출금 가능 금액 조회
         String token;
         String currency = String.valueOf(recipientInformation.coinType());
-        String netType = recipientInformation.netType();
+        String netType = String.valueOf(recipientInformation.netType());
 
         try{
             switch (recipientInformation.exchangeType()){
@@ -250,7 +250,7 @@ public class TransferService {
             }
 
         // 권한이 부족한 경우
-        } catch (FeignException.Unauthorized e) {
+        } catch (FeignException.Unauthorized | FeignException.Forbidden e) {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
@@ -261,6 +261,9 @@ public class TransferService {
             switch (errorName) {
                 // 권한이 부족한 경우
                 case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                // 인증되지 않은 ip에서 요청을 보낸 경우
+                case "no_authorization_ip" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
+                case "NotAllowIP" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
                 // 나머지 jwt 관련 오류
                 default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
@@ -395,7 +398,7 @@ public class TransferService {
                 default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
             // 권한이 부족한 경우
-        } catch (FeignException.Unauthorized e) {
+        } catch (FeignException.Unauthorized | FeignException.Forbidden e) {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
@@ -406,6 +409,9 @@ public class TransferService {
             switch (errorName){
                 // 권한이 부족한 경우
                 case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                // 인증되지 않은 ip에서 요청을 보낸 경우
+                case "no_authorization_ip" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
+                case "NotAllowIP" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
                 // 나머지 jwt 관련 오류
                 default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }
@@ -491,7 +497,7 @@ public class TransferService {
             throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
         }
         // 권한이 부족한 경우
-        catch (FeignException.Unauthorized e) {
+        catch (FeignException.Unauthorized | FeignException.Forbidden e) {
             String rawBody = e.contentUTF8(); // 원본 응답 저장
             log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
 
@@ -502,6 +508,9 @@ public class TransferService {
             switch (errorName){
                 // 권한이 부족한 경우
                 case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                // 인증되지 않은 ip에서 요청을 보낸 경우
+                case "no_authorization_ip" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
+                case "NotAllowIP" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
                 // 나머지 jwt 관련 오류
                 default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
             }

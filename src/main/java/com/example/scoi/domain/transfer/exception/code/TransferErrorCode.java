@@ -24,6 +24,7 @@ public enum TransferErrorCode implements BaseErrorCode {
 
     // 403
     EXCHANGE_FORBIDDEN(HttpStatus.FORBIDDEN, "TRANSFER403_1", "거래소의 API 키 권한이 부족합니다."),
+    NOT_ALLOW_IP(HttpStatus.UNAUTHORIZED, "TRANSFER403_2", "인증된 IP가 아닙니다."),
 
     // 404
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "TRANSFER404_1", "memberId에 해당하는 사용자를 찾을 수 없습니다."),

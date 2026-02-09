@@ -9,6 +9,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 
 public class TransferReqDTO {
@@ -21,10 +23,15 @@ public class TransferReqDTO {
 
             @Schema(description = "수취인 국문 이름", example = "김철수")
             @NotBlank(message = "수취인 이름은 필수입니다.")
+            @Pattern(regexp = "^[가-힣]+$", message = "한글만 입력 가능합니다.")
+            @Size(min = 2, max = 5, message = "한글 이름은 2~5자입니다.")
             String recipientKoName,
 
             @Schema(description = "수취인 영문 이름(빗썸 이체 시 필요)", example = "김철수")
+            @Pattern(regexp = "^[A-Z ]*$", message = "영문 대문자와 공백만 입력 가능합니다.")
+            @Size(max = 50, message = "영문 이름은 50자 이내입니다.")
             String recipientEnName,
+
 //            String recipientCorpKoName,
 //            String recipientCorpEnName,
 
@@ -36,12 +43,12 @@ public class TransferReqDTO {
             ExchangeType exchangeType,
 
             @Schema(description = "화폐 코드 (대문자)", example = "USDT")
-            @NotBlank(message = "화폐 코드는 필수입니다.")
+            @NotNull(message = "화폐 코드는 필수입니다.")
             CoinType coinType,
 
             @Schema(description = "네트워크 타입 (출금 체인)", example = "TRX")
             @NotNull(message = "네트워크 타입은 필수입니다.")
-            String netType
+            NetworkType netType
     ) { }
 
     // 견적 검증 시 필요한 값
@@ -77,6 +84,7 @@ public class TransferReqDTO {
 
             @Schema(description = "출금 수량 (소수점X)", example = "3")
             @NotBlank(message = "출금 수량은 필수입니다.")
+            @Pattern(regexp = "^[0-9]+$", message = "정수만 입력 가능합니다.")
             String amount,
 
             @Schema(description = "출금 대상 지갑 주소", example = "TQ6r2x3B9kzJHf8M4YpP1CwD7eRVaS5tKU")
