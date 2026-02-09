@@ -5,6 +5,8 @@ import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberApiKeyRepository;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.Nullable;
@@ -12,15 +14,14 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.nio.charset.StandardCharsets;
-import java.security.*;
+import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -50,7 +51,7 @@ public class JwtApiUtil {
         // API키 객체 찾기
         MemberApiKey apiKey = memberApiKeyRepository
                 .findByMember_PhoneNumberAndExchangeType(phoneNumber, ExchangeType.UPBIT)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new MemberException(MemberErrorCode.API_KEY_NOT_FOUND));
 
         // API Key 정보 로깅 (디버깅용)
         log.debug("업비트 API Key 조회 완료 - phoneNumber: {}, publicKey 길이: {}", 
@@ -110,7 +111,7 @@ public class JwtApiUtil {
         // API키 객체 찾기
         MemberApiKey apiKey = memberApiKeyRepository
                 .findByMember_PhoneNumberAndExchangeType(phoneNumber, ExchangeType.BITHUMB)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new MemberException(MemberErrorCode.API_KEY_NOT_FOUND));
 
         // query SHA512 암호화
         String queryHash = getQueryHash(query, body);
