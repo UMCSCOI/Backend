@@ -35,14 +35,14 @@ public class UpbitApiClient implements ExchangeApiClient {
     private final JwtApiUtil jwtApiUtil; 
     
     @Override
-    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice) {
+    public MaxOrderInfoDTO getMaxOrderInfo(String phoneNumber, ExchangeType exchangeType, String coinType, String unitPrice, String orderType, String side) {
         try {
             // coinType을 업비트 형식으로 정규화 (KRW-BTC 형식으로 통일)
             String normalizedCoinType = normalizeCoinType(coinType);
             
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
-            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), unitPrice: {}",
-                    phoneNumber, coinType, normalizedCoinType, unitPrice);
+            log.info("업비트 최대 주문 정보 조회 API 호출 시작 - phoneNumber: {}, coinType: {} (정규화: {}), unitPrice: {}, orderType: {}, side: {}",
+                    phoneNumber, coinType, normalizedCoinType, unitPrice, orderType, side);
             
             // Feign Client가 자동으로 List<Account>로 변환해줌 (ObjectMapper 불필요!)
             List<UpbitResDTO.Account> accounts = upbitFeignClient.getAccounts(authorization);
@@ -54,7 +54,7 @@ public class UpbitApiClient implements ExchangeApiClient {
                         account.currency(), account.balance(), account.locked(), account.available());
             }
             
-            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, unitPrice);
+            return parseMaxOrderInfoResponse(accounts, normalizedCoinType, unitPrice, orderType, side);
             
         } catch (MemberException e) {
             log.error("업비트 API 키를 찾을 수 없습니다 - phoneNumber: {}", phoneNumber, e);
@@ -148,21 +148,53 @@ public class UpbitApiClient implements ExchangeApiClient {
         }
     }
     
-    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String unitPrice) {
+    private MaxOrderInfoDTO parseMaxOrderInfoResponse(List<UpbitResDTO.Account> accounts, String coinType, String unitPrice, String orderType, String side) {
         try {
-            // coinType이 KRW-BTC 형식이면, 매수 시 KRW 잔액을 조회해야 함
             String currency;
-            if (coinType.contains("-")) {
-                String[] parts = coinType.split("-");
-                // KRW-BTC 형식이면 KRW 잔액 조회 (매수 가능 금액)
-                currency = parts[0]; // KRW
+            String targetCurrency; // 조회할 화폐 (KRW 또는 코인)
+            
+            // 시장가 주문인 경우
+            boolean isMarketOrder = "price".equals(orderType) || "market".equals(orderType);
+            
+            if (isMarketOrder) {
+                // side 파라미터를 기준으로 매수/매도 판단
+                if ("bid".equals(side)) {
+                    // 매수: KRW 잔액 조회
+                    targetCurrency = "KRW";
+                    currency = "KRW";
+                    log.info("업비트 시장가 매수 - {}를 매수하기 위해 KRW 잔액 조회", coinType);
+                } else if ("ask".equals(side)) {
+                    // 매도: 코인 잔액 조회
+                    if (coinType.contains("-")) {
+                        String[] parts = coinType.split("-");
+                        targetCurrency = parts[1]; // KRW-BTC -> BTC
+                        currency = parts[1];
+                    } else {
+                        targetCurrency = coinType;
+                        currency = coinType;
+                    }
+                    log.info("업비트 시장가 매도 - {} 잔액 조회", targetCurrency);
+                } else {
+                    // side가 없거나 잘못된 경우 기본값 (매수)
+                    targetCurrency = "KRW";
+                    currency = "KRW";
+                    log.warn("업비트 시장가 주문 - side 파라미터가 없거나 잘못됨 ({}), 기본값으로 매수 처리", side);
+                }
             } else {
-                currency = coinType; // BTC 등 단일 코인
+                // 지정가 주문
+                if (coinType.contains("-")) {
+                    String[] parts = coinType.split("-");
+                    currency = parts[0]; // KRW
+                    targetCurrency = parts[0];
+                } else {
+                    currency = coinType;
+                    targetCurrency = coinType;
+                }
             }
             
             String balance = "0";
             
-            // 먼저 해당 currency로 계좌 찾기
+            // 해당 currency로 계좌 찾기
             for (UpbitResDTO.Account account : accounts) {
                 if (currency.equals(account.currency())) {
                     // available이 있으면 available 사용 (매수 가능 금액)
@@ -189,28 +221,76 @@ public class UpbitApiClient implements ExchangeApiClient {
                 }
             }
             
-            // unitPrice가 있으면 최대 주문 수량 계산 (balance / unitPrice)
-            // 소수점 절사하여 정수로 반환 (0.8개 → 0개, 1.2개 → 1개)
             String maxQuantity = null;
-            if (unitPrice != null && !unitPrice.isEmpty()) {
-                try {
-                    BigDecimal balanceDecimal = new BigDecimal(balance);
-                    BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
-                    
-                    if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal quantity = balanceDecimal.divide(unitPriceDecimal, 8, RoundingMode.DOWN);
-                        // 소수점 절사하여 정수로 변환
-                        maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
-                        log.info("업비트 최대 주문 수량 계산 - balance: {}, unitPrice: {}, maxQuantity: {} (정수)", balance, unitPrice, maxQuantity);
-                    } else {
-                        log.warn("단위 가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
+            
+            // 시장가 주문 처리
+            if (isMarketOrder) {
+                if ("bid".equals(side)) {
+                    // 시장가 매수: 현재가 조회하여 대략적인 수량 계산
+                    try {
+                        List<UpbitResDTO.Ticker> tickers = upbitFeignClient.getTicker(coinType);
+                        
+                        if (tickers != null && !tickers.isEmpty()) {
+                            UpbitResDTO.Ticker ticker = tickers.get(0);
+                            if (ticker.trade_price() != null && ticker.trade_price() > 0) {
+                                BigDecimal balanceDecimal = new BigDecimal(balance);
+                                BigDecimal currentPrice = BigDecimal.valueOf(ticker.trade_price());
+                                BigDecimal quantity = balanceDecimal.divide(currentPrice, 8, RoundingMode.DOWN);
+                                // 소수점 절사하여 정수로 변환
+                                maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
+                                log.info("업비트 시장가 매수 - KRW 잔액: {}, 현재가: {}, 최대 매수 가능 수량: {} (정수)", 
+                                        balance, currentPrice, maxQuantity);
+                            } else {
+                                log.warn("업비트 현재가 조회 실패 또는 가격이 0 이하 - market: {}", coinType);
+                                maxQuantity = null;
+                            }
+                        } else {
+                            log.warn("업비트 현재가 조회 실패 - 응답이 비어있음: {}", coinType);
+                            maxQuantity = null;
+                        }
+                    } catch (Exception e) {
+                        log.warn("업비트 현재가 조회 실패 - 시장가 매수 수량 계산 불가: {}", e.getMessage());
+                        maxQuantity = null;
                     }
-                } catch (NumberFormatException e) {
-                    log.warn("단위 가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. unitPrice: {}", unitPrice);
+                } else if ("ask".equals(side)) {
+                    // 시장가 매도: 코인 잔액을 maxQuantity로 반환 (최대 매도 가능 수량)
+                    // 소수점 절사하여 정수로 변환
+                    try {
+                        BigDecimal balanceDecimal = new BigDecimal(balance);
+                        maxQuantity = balanceDecimal.setScale(0, RoundingMode.DOWN).toPlainString();
+                        log.info("업비트 시장가 매도 - 코인 잔액: {}, 최대 매도 가능 수량: {} (정수)", balance, maxQuantity);
+                    } catch (NumberFormatException e) {
+                        log.warn("업비트 시장가 매도 - 잔액 파싱 실패, 원본 값 사용: {}", balance);
+                        maxQuantity = balance;
+                    }
+                } else {
+                    log.warn("업비트 시장가 주문 - side 파라미터가 없거나 잘못됨 ({}), maxQuantity: null", side);
+                    maxQuantity = null;
+                }
+            } else {
+                // 지정가 주문
+                if (unitPrice != null && !unitPrice.isEmpty()) {
+                    try {
+                        BigDecimal balanceDecimal = new BigDecimal(balance);
+                        BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
+                        
+                        if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal quantity = balanceDecimal.divide(unitPriceDecimal, 8, RoundingMode.DOWN);
+                            // 소수점 절사하여 정수로 변환
+                            maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
+                            log.info("업비트 최대 주문 수량 계산 - balance: {}, unitPrice: {}, maxQuantity: {} (정수)", 
+                                    balance, unitPrice, maxQuantity);
+                        } else {
+                            log.warn("단위 가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
+                        }
+                    } catch (NumberFormatException e) {
+                        log.warn("단위 가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. unitPrice: {}", unitPrice);
+                    }
                 }
             }
             
-            log.info("업비트 최대 주문 정보 조회 완료 - coinType: {}, balance: {}, maxQuantity: {}", coinType, balance, maxQuantity);
+            log.info("업비트 최대 주문 정보 조회 완료 - coinType: {}, balance: {}, maxQuantity: {}, orderType: {}", 
+                    coinType, balance, maxQuantity, orderType);
             
             return new MaxOrderInfoDTO(balance, maxQuantity);
                     
