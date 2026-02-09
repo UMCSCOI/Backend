@@ -18,6 +18,12 @@ public enum MyWalletSuccessCode implements BaseSuccessCode {
     TRANSACTION_DETAIL_SUCCESS(HttpStatus.OK,
             "MYWALLET200_3",
             "거래 상세 내역을 성공적으로 조회했습니다."),
+    KRW_BALANCE_SUCCESS(HttpStatus.OK,
+            "MYWALLET200_4",
+            "원화 자산을 성공적으로 조회했습니다."),
+    WITHDRAW_KRW_SUCCESS(HttpStatus.OK,
+            "MYWALLET200_5",
+            "원화 출금을 성공적으로 요청했습니다."),
     ;
 
     private final HttpStatus status;

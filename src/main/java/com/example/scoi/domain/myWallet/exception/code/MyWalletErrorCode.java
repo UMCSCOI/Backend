@@ -30,6 +30,18 @@ public enum MyWalletErrorCode implements BaseErrorCode {
             "MYWALLET400_5",
             "uuid는 필수 파라미터입니다."),
 
+    INVALID_MFA_TYPE(HttpStatus.BAD_REQUEST,
+            "MYWALLET400_6",
+            "빗썸은 카카오(KAKAO) 인증만 지원합니다."),
+
+    WITHDRAW_AMOUNT_TOO_SMALL(HttpStatus.BAD_REQUEST,
+            "MYWALLET400_7",
+            "출금 금액이 최소 금액 미만입니다."),
+
+    TWO_FACTOR_AUTH_REQUIRED(HttpStatus.BAD_REQUEST,
+            "MYWALLET400_8",
+            "2차 인증이 필요합니다."),
+
     // 401 에러
     INSUFFICIENT_API_PERMISSION(HttpStatus.UNAUTHORIZED,
             "MYWALLET401_1",

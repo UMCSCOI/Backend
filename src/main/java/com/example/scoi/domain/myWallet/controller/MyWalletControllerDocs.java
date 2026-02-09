@@ -71,6 +71,18 @@ public interface MyWalletControllerDocs {
     );
 
     @Operation(
+            summary = "원화 자산 조회 API By 원종호",
+            description = "거래소의 원화(KRW) 자산 잔고를 조회합니다. " +
+                    "주문 가능 금액(balance)과 주문 중 묶인 금액(locked)을 반환합니다."
+    )
+    ApiResponse<MyWalletResDTO.KrwBalanceDTO> getKrwBalance(
+            @Parameter(description = "거래소 타입 (BITHUMB, UPBIT)", example = "BITHUMB")
+            @RequestParam(defaultValue = "BITHUMB") ExchangeType exchangeType,
+
+            @AuthenticationPrincipal CustomUserDetails user
+    );
+
+    @Operation(
             summary = "거래내역 상세 조회 API By 원종호",
             description = "입출금 또는 충전 거래의 상세 내역을 UUID로 조회합니다. " +
                     "category=REMIT이면 입금/출금 상세, category=TOPUP이면 주문 상세(체결 내역 포함)를 반환합니다. " +

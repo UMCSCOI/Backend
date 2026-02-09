@@ -5,6 +5,7 @@ import com.example.scoi.domain.myWallet.client.feign.MyWalletUpbitFeignClient;
 import com.example.scoi.domain.myWallet.converter.MyWalletConverter;
 import com.example.scoi.domain.myWallet.dto.MyWalletResDTO;
 import com.example.scoi.domain.myWallet.dto.TopupClientDTO;
+import com.example.scoi.domain.myWallet.dto.WithdrawClientDTO;
 import com.example.scoi.domain.myWallet.enums.OrderState;
 import com.example.scoi.domain.myWallet.enums.PeriodType;
 import com.example.scoi.domain.member.exception.MemberException;
@@ -284,6 +285,61 @@ public class MyWalletUpbitClient implements MyWalletExchangeClient {
 
         } catch (Exception e) {
             throw handleException("업비트 개별 주문 조회", phoneNumber, e);
+        }
+    }
+
+    @Override
+    public MyWalletResDTO.KrwBalanceDTO getKrwBalance(String phoneNumber) {
+        try {
+            log.info("업비트 원화 자산 조회 시작 - phoneNumber: {}", phoneNumber);
+
+            String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
+            var accounts = upbitFeignClient.getAccounts(authorization);
+
+            for (var account : accounts) {
+                if ("KRW".equals(account.currency())) {
+                    log.info("업비트 원화 자산 조회 완료 - balance: {}", account.balance());
+                    return MyWalletResDTO.KrwBalanceDTO.builder()
+                            .currency("KRW")
+                            .balance(account.balance() != null ? account.balance() : "0")
+                            .build();
+                }
+            }
+
+            // KRW 계좌가 없는 경우 0으로 반환
+            log.info("업비트 원화 계좌 없음 - 0 반환");
+            return MyWalletResDTO.KrwBalanceDTO.builder()
+                    .currency("KRW")
+                    .balance("0")
+                    .build();
+
+        } catch (Exception e) {
+            throw handleException("업비트 원화 자산 조회", phoneNumber, e);
+        }
+    }
+
+    @Override
+    public MyWalletResDTO.WithdrawKrwDTO withdrawKrw(String phoneNumber, Long amount, String mfaType) {
+        try {
+            log.info("업비트 원화 출금 요청 시작 - phoneNumber: {}, amount: {}", phoneNumber, amount);
+
+            WithdrawClientDTO.WithdrawKrwRequest requestBody = WithdrawClientDTO.WithdrawKrwRequest.builder()
+                    .amount(amount.toString())
+                    .two_factor_type(mfaType)
+                    .build();
+
+            String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, null, requestBody);
+            WithdrawClientDTO.WithdrawKrwResponse response = upbitFeignClient.withdrawKrw(authorization, requestBody);
+
+            log.info("업비트 원화 출금 요청 완료 - uuid: {}", response.uuid());
+            return MyWalletResDTO.WithdrawKrwDTO.builder()
+                    .currency("KRW")
+                    .uuid(response.uuid())
+                    .txid(response.txid())
+                    .build();
+
+        } catch (Exception e) {
+            throw handleException("업비트 원화 출금 요청", phoneNumber, e);
         }
     }
 

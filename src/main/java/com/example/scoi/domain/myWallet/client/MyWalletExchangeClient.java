@@ -76,4 +76,20 @@ public interface MyWalletExchangeClient {
      * @return 주문 상세 정보 (체결 내역 포함)
      */
     MyWalletResDTO.TopupDetailDTO getOrderDetail(String phoneNumber, String uuid);
+
+    /**
+     * 원화(KRW) 자산을 조회합니다.
+     * @param phoneNumber 사용자 휴대폰 번호
+     * @return KRW 잔고 정보 (balance, locked)
+     */
+    MyWalletResDTO.KrwBalanceDTO getKrwBalance(String phoneNumber);
+
+    /**
+     * 원화(KRW) 출금을 요청합니다.
+     * @param phoneNumber  사용자 휴대폰 번호
+     * @param amount       출금 금액
+     * @param mfaType      2차 인증 수단 (kakao, naver, hana)
+     * @return 출금 요청 결과 (currency, uuid, txid)
+     */
+    MyWalletResDTO.WithdrawKrwDTO withdrawKrw(String phoneNumber, Long amount, String mfaType);
 }

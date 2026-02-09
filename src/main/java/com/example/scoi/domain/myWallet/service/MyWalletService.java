@@ -8,7 +8,9 @@ import com.example.scoi.domain.myWallet.client.adapter.MyWalletBithumbClient;
 import com.example.scoi.domain.myWallet.client.adapter.MyWalletUpbitClient;
 import com.example.scoi.domain.myWallet.converter.MyWalletConverter;
 import com.example.scoi.domain.myWallet.dto.MyWalletResDTO;
+import com.example.scoi.domain.myWallet.dto.MyWalletReqDTO;
 import com.example.scoi.domain.myWallet.enums.DetailCategory;
+import com.example.scoi.domain.myWallet.enums.MFAType;
 import com.example.scoi.domain.myWallet.enums.OrderState;
 import com.example.scoi.domain.myWallet.enums.PeriodType;
 import com.example.scoi.domain.myWallet.enums.RemitType;
@@ -365,6 +367,62 @@ public class MyWalletService {
         } catch (NumberFormatException e) {
             log.warn("금액 파싱 실패 - amount: {}", amount);
             return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * 원화(KRW) 자산 조회
+     *
+     * @param phoneNumber  사용자 휴대폰 번호
+     * @param exchangeType 거래소 타입 (BITHUMB, UPBIT)
+     * @return KRW 잔고 정보
+     */
+    public MyWalletResDTO.KrwBalanceDTO getKrwBalance(String phoneNumber, ExchangeType exchangeType) {
+        // 1. 사용자 존재 여부 확인
+        memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MyWalletException(MyWalletErrorCode.MEMBER_NOT_FOUND));
+
+        // 2. 거래소 클라이언트 선택
+        MyWalletExchangeClient apiClient = getApiClient(exchangeType);
+
+        // 3. 원화 자산 조회
+        return apiClient.getKrwBalance(phoneNumber);
+    }
+
+    /**
+     * 원화(KRW) 출금 요청
+     *
+     * @param phoneNumber 사용자 휴대폰 번호
+     * @param dto         출금 요청 DTO (exchangeType, amount, MFA)
+     * @return 출금 요청 결과 (currency, uuid, txid)
+     */
+    public MyWalletResDTO.WithdrawKrwDTO withdrawKrw(String phoneNumber, MyWalletReqDTO.WithdrawKrwRequest dto) {
+        // 1. 사용자 존재 여부 확인
+        memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MyWalletException(MyWalletErrorCode.MEMBER_NOT_FOUND));
+
+        // 2. 빗썸은 카카오만 지원 검증
+        if (dto.exchangeType() == ExchangeType.BITHUMB && dto.MFA() != MFAType.KAKAO) {
+            throw new MyWalletException(MyWalletErrorCode.INVALID_MFA_TYPE);
+        }
+
+        // 3. 거래소 클라이언트 선택
+        MyWalletExchangeClient apiClient = getApiClient(dto.exchangeType());
+
+        // 4. 출금 요청
+        try {
+            String mfaType = dto.MFA().name().toLowerCase();
+            MyWalletResDTO.WithdrawKrwDTO result = apiClient.withdrawKrw(phoneNumber, dto.amount(), mfaType);
+
+            log.info("원화 출금 요청 완료 - exchangeType: {}, amount: {}, uuid: {}",
+                    dto.exchangeType(), dto.amount(), result.uuid());
+
+            return result;
+        } catch (MyWalletException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("원화 출금 요청 실패 - exchangeType: {}, phoneNumber: {}", dto.exchangeType(), phoneNumber, e);
+            throw new MyWalletException(MyWalletErrorCode.EXCHANGE_API_ERROR);
         }
     }
 
