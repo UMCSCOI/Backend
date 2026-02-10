@@ -374,9 +374,39 @@ public class BithumbApiClient implements ExchangeApiClient {
             
             log.info("빗썸 API 응답 수신 완료");
             
+            // 원본 JSON 응답 확인을 위해 ObjectMapper로 직렬화 (디버깅용)
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                String jsonResponse = objectMapper.writeValueAsString(orderChance);
+                log.info("빗썸 API 응답 원본 JSON: {}", jsonResponse);
+            } catch (Exception e) {
+                log.warn("빗썸 API 응답 JSON 직렬화 실패: {}", e.getMessage());
+            }
+            
+            // 전체 응답 구조 확인 (디버깅용)
+            log.info("빗썸 API 응답 전체 구조 - orderChance: {}", orderChance);
+            log.info("빗썸 API 응답 - bid_fee: {}, ask_fee: {}, market: {}, bid: {}, ask: {}, bid_account: {}, ask_account: {}", 
+                    orderChance.bid_fee(), orderChance.ask_fee(), orderChance.market(), 
+                    orderChance.bid(), orderChance.ask(), orderChance.bid_account(), orderChance.ask_account());
+            
             // API 응답에서 실제 마켓 형식 확인
             if (orderChance.market() != null && orderChance.market().id() != null) {
                 log.info("빗썸 API 응답 market.id: {} (요청한 market: {})", orderChance.market().id(), convertedMarket);
+            }
+            
+            // bid 객체 확인 (최소 주문 금액 검증용)
+            if (orderChance.bid() != null) {
+                log.info("빗썸 API 응답 bid 객체 존재 - currency: {}, min_total: {}", 
+                        orderChance.bid().currency(), orderChance.bid().min_total());
+            } else {
+                log.warn("빗썸 API 응답 bid 객체가 null입니다! - 최소 주문 금액 검증 불가");
+                // ask 객체도 확인
+                if (orderChance.ask() != null) {
+                    log.info("빗썸 API 응답 ask 객체 존재 - currency: {}, min_total: {}", 
+                            orderChance.ask().currency(), orderChance.ask().min_total());
+                } else {
+                    log.warn("빗썸 API 응답 ask 객체도 null입니다!");
+                }
             }
             
             if (orderChance.bid_account() != null || orderChance.ask_account() != null) {
@@ -498,6 +528,62 @@ public class BithumbApiClient implements ExchangeApiClient {
             
             requiredAmountStr = requiredAmount.toPlainString();
             
+            // 1단계: 최소 주문 금액 검증 (주문 금액이 최소 주문 금액을 넘는지 확인)
+            log.info("빗썸 최소 주문 금액 검증 시작 - 주문 금액: {}", requiredAmount);
+            
+            // 빗썸 API 문서에 따르면 market.bid.min_total 또는 market.ask.min_total에 최소 주문 금액이 있음
+            BithumbResDTO.Bid bid = null;
+            String minTotalStr = null;
+            
+            // 1순위: orderChance.bid() 확인
+            if (orderChance.bid() != null && orderChance.bid().min_total() != null && !orderChance.bid().min_total().isEmpty()) {
+                bid = orderChance.bid();
+                minTotalStr = bid.min_total();
+                log.info("빗썸 최소 주문 금액 검증 - orderChance.bid()에서 조회: {}", minTotalStr);
+            }
+            // 2순위: orderChance.market().bid() 확인
+            else if (orderChance.market() != null && orderChance.market().bid() != null 
+                    && orderChance.market().bid().min_total() != null 
+                    && !orderChance.market().bid().min_total().isEmpty()) {
+                bid = orderChance.market().bid();
+                minTotalStr = bid.min_total();
+                log.info("빗썸 최소 주문 금액 검증 - orderChance.market().bid()에서 조회: {}", minTotalStr);
+            }
+            
+            log.info("빗썸 최소 주문 금액 검증 - bid 객체: {}, min_total: {}", 
+                    bid != null ? "존재" : "null", 
+                    minTotalStr != null ? minTotalStr : "null");
+            
+            BigDecimal minTotal;
+            String minTotalSource;
+            
+            if (minTotalStr != null && !minTotalStr.isEmpty()) {
+                // API에서 제공하는 최소 주문 금액 사용
+                minTotal = new BigDecimal(minTotalStr);
+                minTotalSource = "API 응답";
+                log.info("빗썸 최소 주문 금액 검증 - API 응답에서 최소 주문 금액 조회: {}", minTotal);
+            } else {
+                // 빗썸 API가 최소 주문 금액을 제공하지 않으므로 기본값 사용 (5000원)
+                minTotal = new BigDecimal("5000");
+                minTotalSource = "기본값";
+                log.warn("빗썸 API 응답에 최소 주문 금액 정보가 없어 기본값(5000원) 사용 - bid: {}, min_total: {}", 
+                        bid != null ? "존재" : "null", 
+                        minTotalStr != null ? minTotalStr : "null 또는 빈 문자열");
+            }
+            
+            log.info("빗썸 최소 주문 금액 검증 - 주문 금액: {}, 최소 주문 금액: {} ({})", requiredAmount, minTotal, minTotalSource);
+            if (requiredAmount.compareTo(minTotal) < 0) {
+                // 주문 금액이 최소 주문 금액보다 낮으면 에러 발생
+                log.warn("주문 금액이 최소 주문 금액보다 낮음 - 주문 금액: {}, 최소 주문 금액: {}", requiredAmount, minTotal);
+                Map<String, String> errorDetails = Map.of(
+                    "requiredAmount", requiredAmountStr,
+                    "minTotal", minTotal.toPlainString()
+                );
+                throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT, errorDetails);
+            }
+            log.info("빗썸 최소 주문 금액 검증 통과 - 주문 금액: {} >= 최소 주문 금액: {}", requiredAmount, minTotal);
+            
+            // 2단계: 잔고 검증 (최소 주문 금액을 넘는다면, 잔고로 살 수 있는지 확인)
             if (balanceDecimal.compareTo(requiredAmount) < 0) {
                 // 잔고 부족 시 400 에러 반환
                 BigDecimal shortage = requiredAmount.subtract(balanceDecimal);
@@ -517,19 +603,74 @@ public class BithumbApiClient implements ExchangeApiClient {
             }
             
             // 매도 주문 타입 검증
+            BigDecimal volumeDecimal = new BigDecimal(volume);
+            BigDecimal orderAmount = null; // 주문 금액 (최소 주문 금액 검증용)
+            
             if ("limit".equals(orderType)) {
                 // 지정가 매도: volume과 price 필요
                 if (price == null || price.isEmpty()) {
                     throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
                 }
+                BigDecimal priceDecimal = new BigDecimal(price);
+                orderAmount = priceDecimal.multiply(volumeDecimal);
             } else if ("market".equals(orderType)) {
                 // 시장가 매도: volume만 필요 (price 불필요)
+                // 시장가 매도는 실제 체결 금액을 알 수 없으므로 최소 주문 금액 검증은 생략
             } else {
                 throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
             }
-            
-            BigDecimal volumeDecimal = new BigDecimal(volume);
+
             requiredAmountStr = volume; // 매도 시 필요한 수량
+            
+            // 지정가 매도: 최소 주문 금액 검증
+            if ("limit".equals(orderType) && orderAmount != null) {
+                // 빗썸 API 문서에 따르면 market.ask.min_total에 최소 주문 금액이 있음
+                BithumbResDTO.Ask ask = null;
+                String minTotalStr = null;
+                
+                // 1순위: orderChance.ask() 확인
+                if (orderChance.ask() != null && orderChance.ask().min_total() != null && !orderChance.ask().min_total().isEmpty()) {
+                    ask = orderChance.ask();
+                    minTotalStr = ask.min_total();
+                    log.info("빗썸 매도 최소 주문 금액 검증 - orderChance.ask()에서 조회: {}", minTotalStr);
+                }
+                // 2순위: orderChance.market().ask() 확인
+                else if (orderChance.market() != null && orderChance.market().ask() != null 
+                        && orderChance.market().ask().min_total() != null 
+                        && !orderChance.market().ask().min_total().isEmpty()) {
+                    ask = orderChance.market().ask();
+                    minTotalStr = ask.min_total();
+                    log.info("빗썸 매도 최소 주문 금액 검증 - orderChance.market().ask()에서 조회: {}", minTotalStr);
+                }
+                
+                BigDecimal minTotal;
+                String minTotalSource;
+                
+                if (minTotalStr != null && !minTotalStr.isEmpty()) {
+                    // API에서 제공하는 최소 주문 금액 사용
+                    minTotal = new BigDecimal(minTotalStr);
+                    minTotalSource = "API 응답";
+                    log.info("빗썸 매도 최소 주문 금액 검증 - API 응답에서 최소 주문 금액 조회: {}", minTotal);
+                } else {
+                    // 빗썸 API가 최소 주문 금액을 제공하지 않으므로 기본값 사용 (5000원)
+                    minTotal = new BigDecimal("5000");
+                    minTotalSource = "기본값";
+                    log.warn("빗썸 API 응답에 최소 주문 금액 정보가 없어 기본값(5000원) 사용 - ask: {}, min_total: {}", 
+                            ask != null ? "존재" : "null", 
+                            minTotalStr != null ? minTotalStr : "null 또는 빈 문자열");
+                }
+                
+                log.info("빗썸 매도 최소 주문 금액 검증 - 주문 금액: {}, 최소 주문 금액: {} ({})", orderAmount, minTotal, minTotalSource);
+                if (orderAmount.compareTo(minTotal) < 0) {
+                    log.warn("주문 금액이 최소 주문 금액보다 낮음 - 주문 금액: {}, 최소 주문 금액: {}", orderAmount, minTotal);
+                    Map<String, String> errorDetails = Map.of(
+                        "orderAmount", orderAmount.toPlainString(),
+                        "minTotal", minTotal.toPlainString()
+                    );
+                    throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT, errorDetails);
+                }
+                log.info("빗썸 매도 최소 주문 금액 검증 통과 - 주문 금액: {} >= 최소 주문 금액: {}", orderAmount, minTotal);
+            }
             
             if (balanceDecimal.compareTo(volumeDecimal) < 0) {
                 // 보유 수량 초과 시 400 에러 반환 
