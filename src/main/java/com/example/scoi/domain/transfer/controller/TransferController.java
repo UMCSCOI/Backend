@@ -3,6 +3,7 @@ package com.example.scoi.domain.transfer.controller;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
+import com.example.scoi.domain.transfer.enums.CoinType;
 import com.example.scoi.domain.transfer.exception.code.TransferSuccessCode;
 import com.example.scoi.domain.transfer.service.TransferService;
 import com.example.scoi.global.apiPayload.ApiResponse;
@@ -73,10 +74,11 @@ public class TransferController implements TransferControllerDocs{
     @GetMapping("/recipients")
     public ApiResponse<List<TransferResDTO.WithdrawRecipients>> getRecipients(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestParam(name = "exchangeType")ExchangeType exchangeType
+            @RequestParam(name = "exchangeType")ExchangeType exchangeType,
+            @RequestParam(name = "coinType")CoinType coinType
             ) {
         return ApiResponse.onSuccess(TransferSuccessCode.TRANSFER200_1,
-                transferService.getRecipients(user.getUsername(), exchangeType));
+                transferService.getRecipients(user.getUsername(), exchangeType, coinType));
     }
 
     @PostMapping("/recipients/validate")

@@ -3,6 +3,7 @@ package com.example.scoi.domain.transfer.controller;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
+import com.example.scoi.domain.transfer.enums.CoinType;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -82,6 +83,7 @@ public interface TransferControllerDocs {
             description = "사용자가 사전에 거래소에 등록한 수취인 목록을 조회합니다.")
     ApiResponse<List<TransferResDTO.WithdrawRecipients>> getRecipients(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestParam(name = "exchangeType")ExchangeType exchangeType
+            @RequestParam(name = "exchangeType")ExchangeType exchangeType,
+            @RequestParam(name = "coinType") CoinType coinType
     );
 }

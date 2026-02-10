@@ -12,6 +12,7 @@ import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferResDTO;
 import com.example.scoi.domain.transfer.entity.Recipient;
 import com.example.scoi.domain.transfer.entity.TradeHistory;
+import com.example.scoi.domain.transfer.enums.CoinType;
 import com.example.scoi.domain.transfer.exception.TransferException;
 import com.example.scoi.domain.transfer.exception.code.TransferErrorCode;
 import com.example.scoi.domain.transfer.repository.RecipientRepository;
@@ -518,7 +519,7 @@ public class TransferService {
         }
     }
 
-    public List<TransferResDTO.WithdrawRecipients> getRecipients(String phoneNumber, ExchangeType exchangeType) {
+    public List<TransferResDTO.WithdrawRecipients> getRecipients(String phoneNumber, ExchangeType exchangeType, CoinType coinType) {
         String token;
         List<TransferResDTO.WithdrawRecipients> result;
         try{
@@ -527,13 +528,13 @@ public class TransferService {
                     token = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
 
                     List<UpbitResDTO.WithdrawalAddressResponse> upbitResult = upbitClient.getRecipients(token);
-                    result = TransferConverter.toWithdrawRecipientsUpbit(upbitResult);
+                    result = TransferConverter.toWithdrawRecipientsUpbit(upbitResult, coinType);
                     break;
                 case BITHUMB:
                     token = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);
 
                     List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult = bithumbClient.getRecipients(token);
-                    result = TransferConverter.toWithdrawRecipientsBithumb(bithumbResult);
+                    result = TransferConverter.toWithdrawRecipientsBithumb(bithumbResult, coinType);
                     break;
                 default:
                     throw new TransferException(TransferErrorCode.UNSUPPORTED_EXCHANGE);

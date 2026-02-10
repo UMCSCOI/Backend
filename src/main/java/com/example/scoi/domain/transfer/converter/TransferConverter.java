@@ -264,13 +264,14 @@ public class TransferConverter {
         }
     }
 
-    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsUpbit(List<UpbitResDTO.WithdrawalAddressResponse> upbitResult) {
+    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsUpbit(List<UpbitResDTO.WithdrawalAddressResponse> upbitResult, CoinType coinType) {
         // 수취인이 없는 경우 빈 리스트 반환
         if (upbitResult == null) {
             return Collections.emptyList();
         }
 
         return upbitResult.stream()
+                .filter(item -> item.currency().equals(String.valueOf(coinType)))
                 .map(item -> TransferResDTO.WithdrawRecipients.builder()
                         .memberType(MemberType.from(item.beneficiary_type()))
                         .recipientKoName(item.beneficiary_name())
@@ -281,13 +282,14 @@ public class TransferConverter {
                         .netType(NetworkType.valueOf(item.net_type()))
                         .build()).toList();
     }
-    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsBithumb(List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult) {
+    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsBithumb(List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult, CoinType coinType) {
         // 수취인이 없는 경우 빈 리스트 반환
         if (bithumbResult == null) {
             return Collections.emptyList();
         }
 
         return bithumbResult.stream()
+                .filter(item -> item.currency().equals(String.valueOf(coinType)))
                 .map(item -> TransferResDTO.WithdrawRecipients.builder()
                         .memberType(MemberType.from(item.owner_type()))
                         .recipientKoName(item.owner_ko_name())
