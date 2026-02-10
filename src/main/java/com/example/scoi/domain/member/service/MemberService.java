@@ -126,7 +126,7 @@ public class MemberService {
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 인증된 전화번호인지 확인
-        if (!redisUtil.exists(VERIFICATION_PREFIX+dto.phoneNumber())){
+        if (!redisUtil.exists(VERIFICATION_PREFIX+dto.verificationCode())){
             throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
         }
 

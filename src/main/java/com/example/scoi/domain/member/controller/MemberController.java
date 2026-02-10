@@ -11,7 +11,6 @@ import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -53,7 +52,7 @@ public class MemberController implements MemberControllerDocs{
     // 간편 비밀번호 재설정
     @PostMapping("/members/me/password/reset")
     public ApiResponse<Void> resetPassword(
-            @Validated @RequestBody MemberReqDTO.ResetPassword dto,
+            @RequestBody MemberReqDTO.ResetPassword dto,
             @AuthenticationPrincipal CustomUserDetails user
     ){
         BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;

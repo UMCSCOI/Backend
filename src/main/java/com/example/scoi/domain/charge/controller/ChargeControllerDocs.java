@@ -40,13 +40,11 @@ public interface ChargeControllerDocs {
 
     @Operation(
             summary = "입금 주소 확인하기 API By 김주헌",
-            description = "코인의 입금 주소를 확인합니다. 리스트로 보내실때 꼭! 인덱스 맞춰서 보내주세요. 입금 주소가 없는 경우, 해당 코인은 제외하고 응답이 옵니다."
+            description = "코인의 입금 주소를 확인합니다. 해당 유저의 입금 주소 전체를 조회하고 최상단에 잇는 입금 주소를 반환합니다."
     )
-    ApiResponse<List<ChargeResDTO.GetDepositAddress>> getDepositAddress(
+    ApiResponse<String> getDepositAddress(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestParam ExchangeType exchangeType,
-            @RequestParam(defaultValue = "") List<String> coinType,
-            @RequestParam(defaultValue = "") List<String> netType
+            @RequestParam ExchangeType exchangeType
     );
 
     @Operation(
