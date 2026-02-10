@@ -276,7 +276,7 @@ public class TransferConverter {
                         .recipientKoName(item.beneficiary_name())
                         .recipientEnName(null)
                         .walletAddress(item.withdraw_address())
-                        .exchangeType(ExchangeType.valueOf(item.net_type()))
+                        .exchangeType(ExchangeType.valueOf(item.exchange_name().toUpperCase()))
                         .currency(CoinType.valueOf(item.currency()))
                         .netType(NetworkType.valueOf(item.net_type()))
                         .build()).toList();
@@ -293,7 +293,7 @@ public class TransferConverter {
                         .recipientKoName(item.owner_ko_name())
                         .recipientEnName(item.owner_en_name())
                         .walletAddress(item.withdraw_address())
-                        .exchangeType(ExchangeType.valueOf(item.net_type()))
+                        .exchangeType(ExchangeType.valueOf(item.exchange_name().toUpperCase()))
                         .currency(CoinType.valueOf(item.currency()))
                         .netType(NetworkType.valueOf(item.net_type()))
                         .build()).toList();
