@@ -1,7 +1,6 @@
 package com.example.scoi.global.client.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -302,17 +301,17 @@ public class BithumbResDTO {
 
     // 출금 허용 주소 리스트 조회 (수취인 조회)
     public record WithdrawalAddressResponse(
-            @JsonProperty("currency") String currency,
-            @JsonProperty("net_type") String net_type,
-            @JsonProperty("network_name") String network_name,
-            @JsonProperty("withdraw_address") String withdraw_address,
-            @JsonProperty("secondary_address") String secondary_address,
-            @JsonProperty("exchange_name") String exchange_name,
-            @JsonProperty("owner_type") String owner_type,
-            @JsonProperty("owner_ko_name") String owner_ko_name,
-            @JsonProperty("owner_en_name") String owner_en_name,
-            @JsonProperty("owner_corp_ko_name") String owner_corp_ko_name,
-            @JsonProperty("owner_corp_en_name") String owner_corp_en_name
+            String currency,
+            String net_type,
+            String network_name,
+            String withdraw_address,
+            String secondary_address,
+            String exchange_name,
+            String owner_type,
+            String owner_ko_name,
+            String owner_en_name,
+            String owner_corp_ko_name,
+            String owner_corp_en_name
     ) {}
 
     // 현재가 조회 (Ticker)
