@@ -55,10 +55,12 @@ public class TransferReqDTO {
     public record Quote(
             @Schema(description = "출금 가능 금액", example = "10")
             @NotBlank(message = "출금 가능 금액은 필수입니다.")
+            @Pattern(regexp = "^[0-9]+$", message = "정수만 입력 가능합니다.")
             String available,
 
             @Schema(description = "출금할 금액", example = "5")
             @NotBlank(message = "출금할 금액은 필수입니다.")
+            @Pattern(regexp = "^[0-9]+$", message = "정수만 입력 가능합니다.")
             String amount,
 
             @Schema(description = "화폐 코드 (대문자)", example = "USDT")
@@ -69,6 +71,7 @@ public class TransferReqDTO {
 
             @Schema(description = "네트워크 수수료", example = "1")
             @NotBlank(message = "네트워크 수수료는 필수입니다.")
+            @Pattern(regexp = "^[0-9]+$", message = "정수만 입력 가능합니다.")
             String networkFee
     ) {}
 
