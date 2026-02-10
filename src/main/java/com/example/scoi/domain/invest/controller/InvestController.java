@@ -49,7 +49,7 @@ public class InvestController implements InvestControllerDocs {
     @PostMapping("/orders/test")
     @Override
     public ApiResponse<Void> checkOrderAvailability(
-            @RequestBody InvestReqDTO.OrderDTO request,
+            @RequestBody InvestReqDTO.TestOrderDTO request,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         System.out.println("========================================");
