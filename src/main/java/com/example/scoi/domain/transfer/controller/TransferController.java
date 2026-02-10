@@ -10,6 +10,7 @@ import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/transfers")
 @RequiredArgsConstructor
+@Slf4j
 public class TransferController implements TransferControllerDocs{
 
     private final TransferService transferService;
