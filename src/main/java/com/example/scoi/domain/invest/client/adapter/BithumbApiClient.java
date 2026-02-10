@@ -615,15 +615,50 @@ public class BithumbApiClient implements ExchangeApiClient {
                 orderAmount = priceDecimal.multiply(volumeDecimal);
             } else if ("market".equals(orderType)) {
                 // 시장가 매도: volume만 필요 (price 불필요)
-                // 시장가 매도는 실제 체결 금액을 알 수 없으므로 최소 주문 금액 검증은 생략
+                // 현재가 조회 후 (현재가 × 수량)으로 주문 금액 계산하여 최소 주문 금액과 비교
+                try {
+                    String convertedMarket = convertMarketForBithumb(market);
+                    log.info("빗썸 시장가 매도 주문 금액 계산을 위한 현재가 조회 시작 - market: {}", convertedMarket);
+                    String tickerResponse = bithumbFeignClient.getTicker(convertedMarket);
+
+                    if (tickerResponse != null && !tickerResponse.isEmpty()) {
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        BithumbResDTO.Ticker ticker = null;
+
+                        try {
+                            BithumbResDTO.Ticker[] tickers = objectMapper.readValue(tickerResponse, BithumbResDTO.Ticker[].class);
+                            if (tickers != null && tickers.length > 0) {
+                                ticker = tickers[0];
+                            }
+                        } catch (Exception arrayException) {
+                            try {
+                                ticker = objectMapper.readValue(tickerResponse, BithumbResDTO.Ticker.class);
+                            } catch (Exception singleException) {
+                                log.warn("빗썸 시장가 매도 현재가 조회 JSON 파싱 실패 - 최소 주문 금액 검증을 생략합니다: {}", singleException.getMessage());
+                            }
+                        }
+
+                        if (ticker != null && ticker.trade_price() != null && ticker.trade_price() > 0) {
+                            BigDecimal currentPrice = BigDecimal.valueOf(ticker.trade_price());
+                            orderAmount = currentPrice.multiply(volumeDecimal);
+                            log.info("빗썸 시장가 매도 주문 금액 계산 - 현재가: {}, 수량: {}, 주문 금액: {}", currentPrice, volumeDecimal, orderAmount);
+                        } else {
+                            log.warn("빗썸 시장가 매도 현재가 조회 실패 또는 가격이 0 이하 - 최소 주문 금액 검증을 생략합니다. market: {}", convertedMarket);
+                        }
+                    } else {
+                        log.warn("빗썸 시장가 매도 현재가 조회 실패 - 응답이 비어있음, 최소 주문 금액 검증을 생략합니다. market: {}", convertedMarket);
+                    }
+                } catch (Exception e) {
+                    log.warn("빗썸 시장가 매도 주문 금액 계산 실패 - 최소 주문 금액 검증을 생략합니다: {}", e.getMessage());
+                }
             } else {
                 throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
             }
 
             requiredAmountStr = volume; // 매도 시 필요한 수량
             
-            // 지정가 매도: 최소 주문 금액 검증
-            if ("limit".equals(orderType) && orderAmount != null) {
+            // 지정가/시장가 매도: 최소 주문 금액 검증 (orderAmount가 계산된 경우에만)
+            if (orderAmount != null) {
                 // 빗썸 API 문서에 따르면 market.ask.min_total에 최소 주문 금액이 있음
                 BithumbResDTO.Ask ask = null;
                 String minTotalStr = null;
