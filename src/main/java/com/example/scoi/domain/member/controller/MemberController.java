@@ -10,7 +10,6 @@ import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

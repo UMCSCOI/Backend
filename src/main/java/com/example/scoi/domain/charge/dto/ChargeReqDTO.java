@@ -5,7 +5,6 @@ import com.example.scoi.domain.charge.enums.MFAType;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import org.checkerframework.checker.units.qual.N;
 
 import java.util.List;
 
