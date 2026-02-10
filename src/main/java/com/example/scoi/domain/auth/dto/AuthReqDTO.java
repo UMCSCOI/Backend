@@ -57,10 +57,9 @@ public class AuthReqDTO {
             @Schema(description = "AES 암호화된 6자리 간편비밀번호 (Base64)", example = "ItfrsoB1J0hl3O60mahB1A==")
             String simplePassword,
 
-            @Schema(description = "회원 타입 (INDIVIDUAL: 개인, CORPORATION: 법인)",
+            @Schema(description = "회원 타입 (미입력 시 INDIVIDUAL 기본값)",
                     example = "INDIVIDUAL",
                     allowableValues = {"INDIVIDUAL", "CORPORATION"})
-            @NotNull(message = "회원 타입은 필수입니다.")
             MemberType memberType,
 
             @Schema(description = "바이오 인증 등록 여부 (true: 등록, false: 나중에)", example = "false")
