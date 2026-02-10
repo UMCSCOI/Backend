@@ -6,6 +6,7 @@ import com.example.scoi.domain.auth.exception.AuthException;
 import com.example.scoi.domain.auth.exception.code.AuthErrorCode;
 import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.entity.Member;
+import com.example.scoi.domain.member.enums.MemberType;
 import com.example.scoi.domain.member.entity.MemberToken;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.domain.member.repository.MemberTokenRepository;
@@ -200,7 +201,7 @@ public class AuthService {
             .koreanName(request.koreanName())
             .residentNumber(request.residentNumber())
             .simplePassword(hashedPassword)
-            .memberType(request.memberType())
+            .memberType(request.memberType() != null ? request.memberType() : MemberType.INDIVIDUAL)
             .isBioRegistered(request.isBioRegistered() != null ? request.isBioRegistered() : false)
             .build();
 
