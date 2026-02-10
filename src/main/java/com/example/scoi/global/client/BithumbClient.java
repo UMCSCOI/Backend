@@ -1,10 +1,8 @@
 package com.example.scoi.global.client;
 
-import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.transfer.dto.TransferReqDTO;
 import com.example.scoi.global.client.dto.BithumbReqDTO;
 import com.example.scoi.global.client.dto.BithumbResDTO;
-import com.example.scoi.global.client.dto.UpbitResDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -73,6 +71,12 @@ public interface BithumbClient {
             @RequestHeader("Authorization") String token,
             @RequestParam("currency") String currency,
             @RequestParam("net_type") String netType
+    );
+
+    // 전체 입금 주소 조회
+    @GetMapping("/v1/deposits/coin_addresses")
+    List<BithumbResDTO.GetDepositAddress> getDepositAddresses(
+            @RequestHeader("Authorization") String token
     );
 
     // 이체 출금 가능 정보
