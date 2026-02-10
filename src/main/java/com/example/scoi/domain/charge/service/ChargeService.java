@@ -10,8 +10,6 @@ import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.exception.MemberException;
-import com.example.scoi.domain.member.repository.MemberApiKeyRepository;
-import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.global.client.BithumbClient;
 import com.example.scoi.global.client.UpbitClient;
 import com.example.scoi.global.client.converter.BithumbConverter;
@@ -38,8 +36,6 @@ public class ChargeService {
     private final JwtApiUtil jwtApiUtil;
     private final BithumbClient bithumbClient;
     private final UpbitClient upbitClient;
-    private final MemberRepository memberRepository;
-    private final MemberApiKeyRepository memberApiKeyRepository;
 
     // 원화 충전 요청하기
     public ChargeResDTO.ChargeKrw chargeKrw(
@@ -312,23 +308,24 @@ public class ChargeService {
                     token = jwtApiUtil.createUpBitJwt(phoneNumber, null, null);
                     List<UpbitResDTO.GetDepositAddress> upbitResult = upbitClient.getDepositAddresses(token);
 
-                    // 만약 해당 유저 입금 주소가 존재하지 않을 때: 업비트는 빈 리스트 반환
-                    if (upbitResult.isEmpty()) {
-                        throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND);
-                    }
+                    // USDT, USDC 중 가장 먼저 찾은 입금 주소를 result로
+                    result = upbitResult.stream().filter(depositAddress ->
+                            depositAddress.currency().equals("USDT") || depositAddress.currency().equals("USDC"))
+                            .findFirst()
+                            .orElseThrow(() -> new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND))
+                            .deposit_address();
 
-                    result = upbitResult.getFirst().deposit_address();
                     break;
                 case BITHUMB:
                     token = jwtApiUtil.createBithumbJwt(phoneNumber, null, null);
                     List<BithumbResDTO.GetDepositAddress> bithumbResult = bithumbClient.getDepositAddresses(token);
 
-                    // 만약 해당 유저 입금 주소가 존재하지 않을 때 (추측)
-                    if (bithumbResult.isEmpty()) {
-                        throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND);
-                    }
-
-                    result = bithumbResult.getFirst().deposit_address();
+                    // USDT, USDC 중 가장 먼저 찾은 입금 주소를 result로
+                    result = bithumbResult.stream().filter(depositAddress ->
+                                    depositAddress.currency().equals("USDT") || depositAddress.currency().equals("USDC"))
+                            .findFirst()
+                            .orElseThrow(() -> new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND))
+                            .deposit_address();
                     break;
                 default:
                     throw new ChargeException(ChargeErrorCode.WRONG_EXCHANGE_TYPE);
@@ -345,9 +342,6 @@ public class ChargeService {
                 throw new ChargeException(ChargeErrorCode.EXCHANGE_FORBIDDEN);
             }
             throw new ChargeException(ChargeErrorCode.EXCHANGE_BAD_REQUEST);
-        // 거래소별 입금 주소가 없는 경우 (추측)
-        } catch (FeignException.NotFound e) {
-            throw new ChargeException(ChargeErrorCode.ADDRESS_NOT_FOUND);
         }
 
         return result;
@@ -379,7 +373,7 @@ public class ChargeService {
                         UpbitResDTO.CreateDepositAddress upbitResult = upbitClient
                                 .createDepositAddress(token, upbitDto);
 
-                        result.add(coin);
+                        result.add(upbitResult.currency());
                     }
                     break;
                 case BITHUMB:
@@ -397,7 +391,7 @@ public class ChargeService {
                         BithumbResDTO.CreateDepositAddress bithumbResult = bithumbClient
                                 .createDepositAddress(token, bithumbDto);
 
-                        result.add(coin);
+                        result.add(bithumbResult.currency());
                     }
                     break;
                 default:
