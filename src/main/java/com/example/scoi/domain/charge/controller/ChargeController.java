@@ -9,6 +9,7 @@ import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,7 +29,7 @@ public class ChargeController implements ChargeControllerDocs{
     @PostMapping("/deposits/krw")
     public ApiResponse<ChargeResDTO.ChargeKrw> chargeKrw(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody ChargeReqDTO.ChargeKrw dto
+            @Valid @RequestBody ChargeReqDTO.ChargeKrw dto
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
         return ApiResponse.onSuccess(code, chargeService.chargeKrw(user.getUsername(),dto));
@@ -38,7 +39,7 @@ public class ChargeController implements ChargeControllerDocs{
     @PostMapping("/deposits")
     public ApiResponse<String> getOrders(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody ChargeReqDTO.GetOrder dto
+            @Valid @RequestBody ChargeReqDTO.GetOrder dto
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
         return ApiResponse.onSuccess(code, chargeService.getOrders(user.getUsername(), dto));
@@ -78,7 +79,7 @@ public class ChargeController implements ChargeControllerDocs{
     @PostMapping("/deposits/address")
     public ApiResponse<List<String>> createDepositAddress(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody ChargeReqDTO.CreateDepositAddress dto
+            @Valid @RequestBody ChargeReqDTO.CreateDepositAddress dto
     ){
         BaseSuccessCode code = ChargeSuccessCode.OK;
         return ApiResponse.onSuccess(code, chargeService.createDepositAddress(user.getUsername(), dto));

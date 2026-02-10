@@ -9,6 +9,8 @@ import com.example.scoi.global.apiPayload.code.BaseErrorCode;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
 import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +38,7 @@ public class MemberController implements MemberControllerDocs{
     // 간편 비밀번호 변경
     @PatchMapping("/members/me/password")
     public ApiResponse<Map<String, String>> changePassword(
-            @RequestBody MemberReqDTO.ChangePassword dto,
+            @Valid @RequestBody MemberReqDTO.ChangePassword dto,
             @AuthenticationPrincipal CustomUserDetails user
     ){
         Optional<Map<String, String>> result = memberService.changePassword(dto, user.getUsername());
@@ -52,7 +54,7 @@ public class MemberController implements MemberControllerDocs{
     // 간편 비밀번호 재설정
     @PostMapping("/members/me/password/reset")
     public ApiResponse<Void> resetPassword(
-            @RequestBody MemberReqDTO.ResetPassword dto,
+            @Valid @RequestBody MemberReqDTO.ResetPassword dto,
             @AuthenticationPrincipal CustomUserDetails user
     ){
         BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;
@@ -85,7 +87,7 @@ public class MemberController implements MemberControllerDocs{
     @PostMapping("/members/me/api-keys")
     public ApiResponse<List<String>> postPatchApiKey(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody List<MemberReqDTO.PostPatchApiKey> dto
+            @Valid @RequestBody List<MemberReqDTO.PostPatchApiKey> dto
     ){
         BaseSuccessCode code = MemberSuccessCode.POST_PATCH_API_KEY;
         List<String> result = memberService.postPatchApiKey(user.getUsername(), dto);
@@ -99,7 +101,7 @@ public class MemberController implements MemberControllerDocs{
     @DeleteMapping("/members/me/api-keys")
     public ApiResponse<Void> deleteApiKey(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody MemberReqDTO.DeleteApiKey dto
+            @Valid @RequestBody MemberReqDTO.DeleteApiKey dto
     ){
         BaseSuccessCode code = MemberSuccessCode.DELETE_API_KEY;
         return ApiResponse.onSuccess(code, memberService.deleteApiKey(user.getUsername(), dto));
@@ -109,7 +111,7 @@ public class MemberController implements MemberControllerDocs{
     @PostMapping("/members/me/fcm")
     public ApiResponse<Void> postFcmToken(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody MemberReqDTO.PostFcmToken dto
+            @Valid @RequestBody MemberReqDTO.PostFcmToken dto
     ){
         BaseSuccessCode code = MemberSuccessCode.POST_PATCH_FCM_TOKEN;
         return ApiResponse.onSuccess(code, memberService.postFcmToken(user.getUsername(), dto));

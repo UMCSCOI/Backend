@@ -6,6 +6,8 @@ import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -26,13 +28,13 @@ public interface MemberControllerDocs {
             summary = "간편 비밀번호 변경 API By 김주헌",
             description = "간편 비밀번호를 변경합니다."
     )
-    ApiResponse<Map<String, String>> changePassword(@RequestBody MemberReqDTO.ChangePassword dto, @AuthenticationPrincipal CustomUserDetails user) throws GeneralSecurityException;
+    ApiResponse<Map<String, String>> changePassword(@Valid @RequestBody MemberReqDTO.ChangePassword dto, @AuthenticationPrincipal CustomUserDetails user) throws GeneralSecurityException;
 
     @Operation(
             summary = "간편 비밀번호 재설정 API By 김주헌",
             description = "비밀번호 분실 또는 5회 실패 시 재설정을 합니다."
     )
-    ApiResponse<Void> resetPassword(@RequestBody MemberReqDTO.ResetPassword dto, @AuthenticationPrincipal CustomUserDetails user);
+    ApiResponse<Void> resetPassword(@Valid @RequestBody MemberReqDTO.ResetPassword dto, @AuthenticationPrincipal CustomUserDetails user);
 
     @Operation(
             summary = "거래소 목록 조회 API By 김주헌",
@@ -48,19 +50,20 @@ public interface MemberControllerDocs {
 
     @Operation(
             summary = "API키 등록 및 수정 API By 김주헌",
-            description = "연동된 거래소의 API키를 등록 및 수정을 합니다."
+            description = "연동된 거래소의 API키를 등록 및 수정을 합니다. 등록, 수정 적용이 되었을 경우 해당 거래소 타입을 result에 담아 보냅니다."
     )
-    ApiResponse<List<String>> postPatchApiKey(@AuthenticationPrincipal CustomUserDetails user, @RequestBody List<MemberReqDTO.PostPatchApiKey> dto);
+    ApiResponse<List<String>> postPatchApiKey(@AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody List<MemberReqDTO.PostPatchApiKey> dto);
 
     @Operation(
             summary = "API키 삭제 API By 김주헌",
             description = "연동된 거래소의 API키를 삭제합니다."
     )
-    ApiResponse<Void> deleteApiKey(@AuthenticationPrincipal CustomUserDetails user, @RequestBody MemberReqDTO.DeleteApiKey dto);
+    ApiResponse<Void> deleteApiKey(@AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody MemberReqDTO.DeleteApiKey dto);
+
 
     @Operation(
             summary = "FCM 토큰 등록 API By 김주헌",
             description = "FCM 토큰을 등록합니다."
     )
-    ApiResponse<Void> postFcmToken(@AuthenticationPrincipal CustomUserDetails user, @RequestBody MemberReqDTO.PostFcmToken dto);
+    ApiResponse<Void> postFcmToken(@AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody MemberReqDTO.PostFcmToken dto);
 }

@@ -8,6 +8,7 @@ import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,13 +22,13 @@ public interface ChargeControllerDocs {
             summary = "원화 충전 요청하기 API By 김주헌",
             description = "코인을 구매하기 위한 원화 충전을 요청합니다. 반드시 인증서 발급을 한 뒤 호출해주세요."
     )
-    ApiResponse<ChargeResDTO.ChargeKrw> chargeKrw(@AuthenticationPrincipal CustomUserDetails user, @RequestBody ChargeReqDTO.ChargeKrw dto);
+    ApiResponse<ChargeResDTO.ChargeKrw> chargeKrw(@AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody ChargeReqDTO.ChargeKrw dto);
 
     @Operation(
             summary = "특정 주문 확인하기 API By 김주헌",
             description = "특정 주문을 UUID로 스냅샷 형태로 확인합니다. 주문 체결 알림은 웹소켓 이용해서 실시간 추적, 체결 되면 FCM 토큰으로 알림이 갑니다."
     )
-    ApiResponse<String> getOrders(@AuthenticationPrincipal CustomUserDetails user, @RequestBody ChargeReqDTO.GetOrder dto);
+    ApiResponse<String> getOrders(@AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody ChargeReqDTO.GetOrder dto);
 
     @Operation(
             summary = "보유 자산 조회 API By 강서현",
@@ -52,10 +53,18 @@ public interface ChargeControllerDocs {
             description = """
                     코인의 입금 주소를 생성합니다.
                     각 거래소에 생성 요청을 보내기때문에 입금 주소가 즉시 안 올 수 있습니다. (비동기)
-                    따라서 주소가 필요하면 생성 → 조회 순으로 요청을 보내주세요"""
+                    따라서 주소가 필요하면 생성 → 조회 순으로 요청을 보내주세요
+                    
+                    ** 거래소 별 가능한 코인 심볼 - 네트워크 타입
+                    업비트 USDT: [ETH, TRX, APT, KAIA]
+                    업비트 USDC: [ETH, SOL]
+                    빗썸 USDT: [ETH, TRX, APT, KAIA]
+                    빗썸 USDC: [ETH]
+                    **
+                    """
     )
     ApiResponse<List<String>> createDepositAddress(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody ChargeReqDTO.CreateDepositAddress dto
+            @Valid @RequestBody ChargeReqDTO.CreateDepositAddress dto
     );
 }
