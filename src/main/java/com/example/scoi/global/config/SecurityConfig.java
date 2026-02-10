@@ -49,7 +49,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http){
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -75,8 +75,8 @@ public class SecurityConfig {
         // 프로덕션 환경: 실제 도메인으로 제한
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "http://localhost:8080"
-                // "https://scoi.~~~"  // 배포 시 추가
+                "http://localhost:8080",
+                "https://scoi.shop"
         ));
         
         configuration.setAllowedMethods(Arrays.asList(
