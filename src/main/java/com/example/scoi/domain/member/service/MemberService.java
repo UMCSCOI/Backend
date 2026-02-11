@@ -125,10 +125,13 @@ public class MemberService {
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        // 인증된 전화번호인지 확인
-        if (!redisUtil.exists(VERIFICATION_PREFIX+dto.phoneNumber())){
+        // 인증된 전화번호인지 확인 (verification:{verificationToken} 키로 조회)
+        String tokenKey = VERIFICATION_PREFIX + dto.verificationToken();
+        String verifiedPhoneNumber = redisUtil.get(tokenKey);
+        if (verifiedPhoneNumber == null || !verifiedPhoneNumber.equals(dto.phoneNumber())) {
             throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
         }
+        redisUtil.delete(tokenKey);
 
         // 새 간편 비밀번호 검증
         String newPassword;

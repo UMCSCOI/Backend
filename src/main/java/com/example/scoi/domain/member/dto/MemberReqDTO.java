@@ -15,6 +15,7 @@ public class MemberReqDTO {
     public record ResetPassword(
             @Pattern(regexp = "^\\d{11}$")
             String phoneNumber,
+            String verificationToken,
             String newPassword
     ){}
 
