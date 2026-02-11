@@ -77,7 +77,7 @@ public class TransferConverter {
         return Recipient.builder()
                 .walletAddress(recipient.walletAddress())
                 .recipientKoName(recipient.recipientKoName())
-                .recipientType(recipient.memberType())
+                .recipientType(MemberType.from(recipient.memberType()))
 //                .recipientCorpKoName(recipient.corpKoreanName())
 //                .recipientCorpEnName(recipient.corpEnglishName())
                 .isFavorite(true)
@@ -123,7 +123,7 @@ public class TransferConverter {
     // 공통 수취인 정보 변환 로직 (중복 제거)
     private static TransferResDTO.RecipientDetailDTO toRecipientDetailDTO(TransferReqDTO.RecipientInformation info) {
         return TransferResDTO.RecipientDetailDTO.builder()
-                .recipientType(info.memberType())
+                .recipientType(MemberType.from(info.memberType()))
                 .recipientKoName(info.recipientKoName())
                 .recipientEnName(info.recipientEnName())
 //                .corpKoreanName(info.corpKoreanName())
@@ -162,7 +162,7 @@ public class TransferConverter {
                 .amount(Double.valueOf(dto.amount()))
                 .address(dto.address())
                 .exchangeName(String.valueOf(dto.exchangeName()))
-                .receiverType(MemberType.valueOf(mappedReceiverType))
+                .receiverType(mappedReceiverType)
                 .receiverKoName(dto.receiverKoName())
                 .receiverEnName(dto.receiverEnName())
 //                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
@@ -215,7 +215,7 @@ public class TransferConverter {
                 .walletAddress(request.address())
                 .recipientEnName(request.receiverEnName())
                 .recipientKoName(request.receiverKoName())
-                .recipientType(request.receiverType())
+                .recipientType(MemberType.from(request.receiverType()))
                 .member(member)
                 .build();
     }
