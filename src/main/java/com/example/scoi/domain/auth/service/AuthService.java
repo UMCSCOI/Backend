@@ -8,9 +8,12 @@ import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.enums.MemberType;
 import com.example.scoi.domain.member.entity.MemberToken;
+import com.example.scoi.domain.member.exception.MemberException;
+import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberRepository;
 import com.example.scoi.domain.member.repository.MemberTokenRepository;
 import com.example.scoi.domain.member.service.MemberService;
+import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.client.CoolSmsClient;
 import com.example.scoi.global.client.dto.CoolSmsDTO;
 import com.example.scoi.global.redis.RedisUtil;
@@ -26,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -69,6 +73,7 @@ public class AuthService {
     private static final long REFRESH_TOKEN_SLIDING_DAYS = 14;  // 비활성 기준 만료
     private static final long REFRESH_TOKEN_ABSOLUTE_DAYS = 30; // 최대 수명
     private static final long SMS_COOLDOWN_SECONDS = 60;
+    private static final String SIMPLE_PASSWORD_REGEX = "^[0-9]{6}$";
 
     public AuthResDTO.SmsSendResponse sendSms(AuthReqDTO.SmsSendRequest request) {
         // 0. 쿨다운 체크 (1분)
@@ -165,6 +170,49 @@ public class AuthService {
         redisUtil.delete(tokenKey);
         log.debug("Verification Token 검증 성공 및 삭제: phoneNumber={}", phoneNumber);
         return verifiedPhoneNumber;
+    }
+
+    // 간편 비밀번호 재설정
+    @jakarta.transaction.Transactional
+    public Void resetPassword(
+            MemberReqDTO.ResetPassword dto
+    ) {
+
+        // 인증된 전화번호인지 확인
+        if (!redisUtil.exists(VERIFICATION_PREFIX+dto.verificationCode())){
+            throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
+        }
+
+        // 새 간편 비밀번호 검증
+        String newPassword;
+        try {
+            newPassword = new String(hashUtil.decryptAES(dto.newPassword()));
+
+            // 6자리 숫자가 아닌 경우
+            if (!newPassword.matches(SIMPLE_PASSWORD_REGEX)) {
+                throw new IllegalArgumentException();
+            }
+        } catch (GeneralSecurityException e ) {
+            Map<String, String> binding = new HashMap<>();
+            binding.put("password", "간편 비밀번호 복호화에 실패했습니다.");
+            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> binding = new HashMap<>();
+            binding.put("password", "6자리 숫자만 입력 가능합니다.");
+            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
+        }
+
+        // 사용자 가져오기
+        String phoneNumber = jwtUtil.getPhoneNumberFromToken(dto.verificationCode());
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        // 간편 비밀번호 변경
+        member.updateSimplePassword(passwordEncoder.encode(newPassword));
+
+        // 로그인 횟수 -> 0
+        member.resetLoginFailCount();
+        return null;
     }
 
     @Transactional
