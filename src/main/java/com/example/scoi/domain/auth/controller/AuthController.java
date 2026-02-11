@@ -4,6 +4,8 @@ import com.example.scoi.domain.auth.code.AuthSuccessCode;
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.service.AuthService;
+import com.example.scoi.domain.member.dto.MemberReqDTO;
+import com.example.scoi.domain.member.exception.code.MemberSuccessCode;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
 import com.example.scoi.global.apiPayload.code.GeneralSuccessCode;
@@ -31,6 +33,19 @@ public class AuthController {
     ){
         BaseSuccessCode code = GeneralSuccessCode.OK;
         return ApiResponse.onSuccess(code, authService.generateSmsToken(phoneNumber));
+    }
+
+    // 간편 비밀번호 재설정
+    @Operation(
+            summary = "간편 비밀번호 재설정 API By 김주헌",
+            description = "비밀번호 분실 또는 5회 실패 시 재설정을 합니다."
+    )
+    @PostMapping("/password/reset")
+    public ApiResponse<Void> resetPassword(
+            @RequestBody MemberReqDTO.ResetPassword dto
+    ){
+        BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;
+        return ApiResponse.onSuccess(code, authService.resetPassword(dto));
     }
 
     @Operation(summary = "SMS 발송 By 장명준", description = "휴대폰 번호로 인증번호를 발송합니다.")
