@@ -1,6 +1,7 @@
 package com.example.scoi.domain.member.dto;
 
 import com.example.scoi.domain.member.enums.ExchangeType;
+import jakarta.validation.constraints.Pattern;
 
 public class MemberReqDTO {
 
