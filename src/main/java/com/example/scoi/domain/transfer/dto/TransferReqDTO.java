@@ -18,8 +18,8 @@ public class TransferReqDTO {
     // 출금 시 필요한 수취인 값
     public record RecipientInformation(
             @Schema(description = "수취인 유형 (개인/법인)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
-            @NotNull(message = "수취인 유형은 필수입니다.")
-            MemberType memberType,
+            @NotBlank(message = "수취인 유형은 필수입니다.")
+            String memberType,
 
             @Schema(description = "수취인 국문 이름", example = "김철수")
             @NotBlank(message = "수취인 이름은 필수입니다.")
@@ -102,7 +102,7 @@ public class TransferReqDTO {
             ExchangeType exchangeType,
 
             @Schema(description = "수취인 유형 (빗썸 전용, 상대방 거래소)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
-            MemberType receiverType,
+            String receiverType,
 
             @Schema(description = "수취인 성명 (국문, 빗썸 전용)", example = "김철수")
             String receiverKoName,
@@ -148,7 +148,7 @@ public class TransferReqDTO {
             @JsonProperty("exchange_name")
             String exchangeName, // 상대방 출금 거래소
             @JsonProperty("receiver_type")
-            MemberType receiverType, // personal 또는 corporation
+            String receiverType, // personal 또는 corporation
 
             // 수취인(대표자) 정보
             @JsonProperty("receiver_ko_name")
