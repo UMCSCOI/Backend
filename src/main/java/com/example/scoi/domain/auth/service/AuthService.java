@@ -386,8 +386,8 @@ public class AuthService {
         String newAccessToken = jwtUtil.createAccessToken(phoneNumber);
         String newRefreshToken = jwtUtil.createRefreshToken(phoneNumber);
 
-        // 7. RT 업데이트 (Rotation, issuedAt 갱신하여 최대 수명도 연장)
-        memberToken.updateTokenWithIssuedAt(newRefreshToken, now.plusDays(REFRESH_TOKEN_SLIDING_DAYS), now);
+        // 7. RT 업데이트 (Rotation, issuedAt 유지하여 최대 수명 30일 보장)
+        memberToken.updateToken(newRefreshToken, now.plusDays(REFRESH_TOKEN_SLIDING_DAYS));
 
         // 8. lastLoginAt 갱신 (사용자 활동 추적)
         Member member = memberToken.getMember();
