@@ -131,7 +131,6 @@ public class MemberService {
         if (verifiedPhoneNumber == null || !verifiedPhoneNumber.equals(dto.phoneNumber())) {
             throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
         }
-        redisUtil.delete(tokenKey);
 
         // 새 간편 비밀번호 검증
         String newPassword;

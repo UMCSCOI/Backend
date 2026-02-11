@@ -93,15 +93,6 @@ public class AuthController {
         return ApiResponse.onSuccess(AuthSuccessCode.TOKEN_REISSUED, response);
     }
 
-    @Operation(summary = "비인증 간편비밀번호 재설정 By 장명준", description = "계정 잠금 후 SMS 재인증으로 간편비밀번호를 재설정합니다.")
-    @PostMapping("/password/reset")
-    public ApiResponse<Void> resetPassword(
-            @Valid @RequestBody AuthReqDTO.PasswordResetRequest request
-    ) {
-        authService.resetPassword(request);
-        return ApiResponse.onSuccess(AuthSuccessCode.PASSWORD_RESET_SUCCESS);
-    }
-
     @Operation(summary = "로그아웃 By 장명준", description = "로그아웃 처리 (Refresh Token 삭제, Access Token 블랙리스트 등록)")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
