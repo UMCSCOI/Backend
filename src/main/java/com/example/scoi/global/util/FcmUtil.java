@@ -1,18 +1,23 @@
 package com.example.scoi.global.util;
 
-import com.example.scoi.domain.member.entity.Member;
-import com.example.scoi.domain.member.entity.MemberFcm;
-import com.example.scoi.domain.member.exception.MemberException;
-import com.example.scoi.domain.member.exception.code.MemberErrorCode;
 import com.example.scoi.domain.member.repository.MemberFcmRepository;
+import com.google.firebase.FirebaseException;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class FcmUtil {
@@ -20,22 +25,24 @@ public class FcmUtil {
     private final MemberFcmRepository memberFcmRepository;
     private final FirebaseMessaging firebaseMessaging;
 
+    private static final String DEPEGGING_TOPIC = "Depegging-all";
+
     /**
-     * 특정 유저에게 알림을 전송합니다.
+     * 디페깅 발생시 유저에게 알림을 전송합니다.
      * @param title 보낼 알림의 제목
      * @param body 보낼 알림의 내용
-     * @param member 특정 유저
-     * @return null
      * @throws FirebaseMessagingException 실패시 발생
      */
-    public Void sendNotification(
-            @NotNull String  title,
-            @NotNull String body,
-            @NotNull Member member
+    @Retryable(
+            recover = "sendRecover"
+    )
+    @Async
+    public void sendNotificationForDepegging(
+            @NotNull String title,
+            @NotNull String body
     ) throws FirebaseMessagingException {
-        // 유저 FCM 토큰 찾기
-        MemberFcm memberFcm = memberFcmRepository.findByMember(member)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.FCM_TOKEN_NOT_FOUND));
+
+        log.info("[ FcmUtil ]: 디페깅 상황 발생, 알림 전송...");
 
         // 안드로이드 설정
         AndroidConfig androidConfig = AndroidConfig.builder()
@@ -49,12 +56,69 @@ public class FcmUtil {
                 .putData("body", body)
                 // 우선순위는 high
                 .setAndroidConfig(androidConfig)
-                .setToken(memberFcm.getFcmToken())
+                .setTopic(DEPEGGING_TOPIC)
                 .build();
 
-        // 알림 전송: 실패시
+        // 알림 전송
         firebaseMessaging.send(message);
+    }
 
-        return null;
+    /**
+     * 디페깅 알림을 위해 구독합니다.
+     * @param fcmTokenList 알림을 구독할 FCM 토큰
+     */
+    @Retryable(
+            recover = "subscriberRecover"
+    )
+    @Async
+    public void subscribeNotificationForDepegging(
+            @NotNull List<String> fcmTokenList
+    ) throws FirebaseMessagingException {
+
+        log.info("[ FcmUtil ]: 디페깅 알고리즘 구독 중...");
+        firebaseMessaging.subscribeToTopic(fcmTokenList, DEPEGGING_TOPIC);
+    }
+
+    /**
+     * 디페깅 알고리즘 구독을 취소합니다. (로그아웃)
+     * @param fcmTokenList 구독 취소할 FCM 토큰
+     */
+    @Retryable(
+            recover = "unsubscriberRecover"
+    )
+    @Async
+    public void unsubscribeNotificationForDepegging(
+            @NotNull List<String> fcmTokenList
+    ) throws FirebaseMessagingException {
+
+        log.info("[ FcmUtil ]: 디페깅 알고리즘 구독 해제 중...");
+        firebaseMessaging.unsubscribeFromTopic(fcmTokenList, DEPEGGING_TOPIC);
+
+    }
+
+    @Recover
+    public void sendRecover(
+            FirebaseMessagingException e
+    ) throws FirebaseException {
+        log.warn("[ FcmUtil ]: 디페깅 알고리즘 알림 전송 실패, {}", LocalDateTime.now());
+        throw new FirebaseException(e.getErrorCode(), e.getMessage(), e.getCause());
+    }
+
+    @Recover
+    public void subscriberRecover(
+            FirebaseMessagingException e
+    ) throws FirebaseException {
+
+        log.warn("[ FcmUtil ]: 디페깅 알고리즘 구독 실패, {}", LocalDateTime.now());
+        throw new FirebaseException(e.getErrorCode(), e.getMessage(), e.getCause());
+    }
+
+    @Recover
+    public void unsubscriberRecover(
+            FirebaseMessagingException e
+    ) throws FirebaseException {
+
+        log.warn("[ FcmUtil ]: 디페깅 알고리즘 구독 해제 실패, {}", LocalDateTime.now());
+        throw new FirebaseException(e.getErrorCode(), e.getMessage(), e.getCause());
     }
 }
