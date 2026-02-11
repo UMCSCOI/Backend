@@ -50,7 +50,7 @@ public class AuthReqDTO {
             String koreanName,
 
             @NotBlank(message = "주민등록번호는 필수입니다.")
-            @Pattern(regexp = "^\\d{6}-\\d{7}$", message = "올바른 주민등록번호 형식이 아닙니다.")
+            @Pattern(regexp = "^\\d{6}-\\d{1}$", message = "올바른 주민등록번호 형식이 아닙니다.")
             String residentNumber,
 
             @NotBlank(message = "간편비밀번호는 필수입니다.")
@@ -96,6 +96,20 @@ public class AuthReqDTO {
 
             @Schema(description = "SMS 재인증 토큰 (계정 잠금/RT 만료 시 필수, 일반 로그인 시 생략)", nullable = true)
             String verificationToken
+    ) {}
+
+    // 비인증 간편비밀번호 재설정 요청 (계정 잠금 후 SMS 재인증 flow)
+    public record PasswordResetRequest(
+            @NotBlank(message = "휴대폰 번호는 필수입니다.")
+            @Pattern(regexp = "^01[0-9]{8,9}$", message = "올바른 휴대폰 번호 형식이 아닙니다.")
+            String phoneNumber,
+
+            @NotBlank(message = "인증 토큰은 필수입니다.")
+            String verificationToken,
+
+            @NotBlank(message = "새 간편비밀번호는 필수입니다.")
+            @Schema(description = "AES 암호화된 새 6자리 간편비밀번호 (Base64)", example = "ItfrsoB1J0hl3O60mahB1A==")
+            String newPassword
     ) {}
 
     // 토큰 재발급 요청
