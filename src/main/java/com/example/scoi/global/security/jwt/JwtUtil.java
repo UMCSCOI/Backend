@@ -82,6 +82,15 @@ public class JwtUtil {
         }
     }
 
+    public String getTokenType(String token) {
+        Claims claims = parseClaims(token);
+        return claims.get(TOKEN_TYPE_CLAIM, String.class);
+    }
+
+    public boolean validateAccessToken(String token) {
+        return validateToken(token) && ACCESS_TOKEN_TYPE.equals(getTokenType(token));
+    }
+
     public boolean isTokenExpired(String token) {
         try {
             Claims claims = parseClaims(token);

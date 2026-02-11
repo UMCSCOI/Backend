@@ -32,12 +32,12 @@ public class SecurityConfig {
 
     // 인증 없이 접근 가능한 경로
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/auth/sms/**",          // SMS 발송/검증
-            "/auth/signup",          // 회원가입
-            "/auth/login",           // 로그인
-            "/auth/reissue",         // 토큰 재발급
-            "/auth/password/reset",  // 간편 비밀번호 재설정
-            "/auth/sms-token",       // 임시
+            "/auth/sms/**",           // SMS 발송/검증
+            "/auth/signup",           // 회원가입
+            "/auth/login",            // 로그인
+            "/auth/reissue",          // 토큰 재발급
+            "/auth/password/reset",   // 비인증 비밀번호 재설정
+            "/auth/sms-token",        // 임시
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-resources/**",
