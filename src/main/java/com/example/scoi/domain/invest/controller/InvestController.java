@@ -11,6 +11,7 @@ import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -47,10 +49,20 @@ public class InvestController implements InvestControllerDocs {
     @PostMapping("/orders/test")
     @Override
     public ApiResponse<Void> checkOrderAvailability(
-            @RequestBody InvestReqDTO.OrderDTO request,
+            @RequestBody InvestReqDTO.TestOrderDTO request,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
+        System.out.println("========================================");
+        System.out.println("주문 가능 여부 확인 API 호출 시작!!!");
+        System.out.println("========================================");
+        
+        log.info("=== 주문 가능 여부 확인 API 호출 시작 ===");
+        log.info("요청 정보 - exchangeType: {}, market: {}, side: {}, orderType: {}, price: {}, volume: {}", 
+                request.exchangeType(), request.market(), request.side(), request.orderType(), request.price(), request.volume());
+        
         String phoneNumber = user.getUsername();
+        log.info("사용자 phoneNumber: {}", phoneNumber);
+        
         // 주문 가능 여부 확인
         investService.checkOrderAvailability(
                 phoneNumber,
@@ -62,6 +74,7 @@ public class InvestController implements InvestControllerDocs {
                 request.volume()
         );
 
+        log.info("=== 주문 가능 여부 확인 완료 - 주문 가능 ===");
         // 주문 가능한 경우 200 응답 반환 (result는 null)
         return ApiResponse.onSuccess(InvestSuccessCode.ORDER_AVAILABLE);
     }

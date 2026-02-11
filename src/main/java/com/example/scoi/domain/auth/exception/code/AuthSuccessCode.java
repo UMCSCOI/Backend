@@ -27,6 +27,9 @@ public enum AuthSuccessCode implements BaseSuccessCode {
     LOGOUT_SUCCESS(HttpStatus.OK,
             "AUTH200_5",
             "로그아웃되었습니다."),
+    PASSWORD_RESET_SUCCESS(HttpStatus.OK,
+            "AUTH200_6",
+            "비밀번호가 재설정되었습니다."),
     ;
 
     private final HttpStatus status;

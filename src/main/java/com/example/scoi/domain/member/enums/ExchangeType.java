@@ -4,13 +4,16 @@ import com.example.scoi.domain.charge.exception.ChargeException;
 import com.example.scoi.domain.charge.exception.code.ChargeErrorCode;
 
 public enum ExchangeType {
-    BITHUMB("Bithumb"),
-    UPBIT("Upbit");
+    BITHUMB("Bithumb", "빗썸"),
+    UPBIT("Upbit", "업비트");
 
     private final String displayName;
+    private final String koreanName;
 
-    ExchangeType(String displayName) {
+    ExchangeType(String displayName, String koreanName) {
+
         this.displayName = displayName;
+        this.koreanName = koreanName;
     }
 
     public String getDisplayName() {
@@ -22,7 +25,7 @@ public enum ExchangeType {
 
     public static ExchangeType fromString(String value) {
         for (ExchangeType type : values()) {
-            if (type.displayName.equalsIgnoreCase(value)) {
+            if (type.displayName.equalsIgnoreCase(value) || type.koreanName.equals(value)) {
                 return type;
             }
         }

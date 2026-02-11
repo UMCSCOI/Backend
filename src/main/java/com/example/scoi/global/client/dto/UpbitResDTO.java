@@ -177,7 +177,10 @@ public class UpbitResDTO {
             List<String> order_types,  // deprecated
             List<String> order_sides,
             List<String> bid_types,
-            List<String> ask_types
+            List<String> ask_types,
+            Bid bid,  // market.bid.min_total에 최소 매수 금액
+            Ask ask,  // market.ask.min_total에 최소 매도 금액
+            String max_total  // market.max_total에 최대 주문 금액
     ){}
 
     // 주문 가능 정보 조회 - Bid
