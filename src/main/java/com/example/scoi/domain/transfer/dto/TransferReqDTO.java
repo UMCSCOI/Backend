@@ -18,8 +18,8 @@ public class TransferReqDTO {
     // 출금 시 필요한 수취인 값
     public record RecipientInformation(
             @Schema(description = "수취인 유형 (개인/법인)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
-            @NotNull(message = "수취인 유형은 필수입니다.")
-            MemberType memberType,
+            @NotBlank(message = "수취인 유형은 필수입니다.")
+            String memberType,
 
             @Schema(description = "수취인 국문 이름", example = "김철수")
             @NotBlank(message = "수취인 이름은 필수입니다.")
@@ -55,10 +55,12 @@ public class TransferReqDTO {
     public record Quote(
             @Schema(description = "출금 가능 금액", example = "10")
             @NotBlank(message = "출금 가능 금액은 필수입니다.")
+            @Pattern(regexp = "^[0-9]+$", message = "정수만 입력 가능합니다.")
             String available,
 
             @Schema(description = "출금할 금액", example = "5")
             @NotBlank(message = "출금할 금액은 필수입니다.")
+            @Pattern(regexp = "^[0-9]+$", message = "정수만 입력 가능합니다.")
             String amount,
 
             @Schema(description = "화폐 코드 (대문자)", example = "USDT")
@@ -69,6 +71,7 @@ public class TransferReqDTO {
 
             @Schema(description = "네트워크 수수료", example = "1")
             @NotBlank(message = "네트워크 수수료는 필수입니다.")
+            @Pattern(regexp = "^[0-9]+$", message = "정수만 입력 가능합니다.")
             String networkFee
     ) {}
 
@@ -99,7 +102,7 @@ public class TransferReqDTO {
             ExchangeType exchangeType,
 
             @Schema(description = "수취인 유형 (빗썸 전용, 상대방 거래소)", example = "INDIVIDUAL", allowableValues = {"INDIVIDUAL", "CORPORATION"})
-            MemberType receiverType,
+            String receiverType,
 
             @Schema(description = "수취인 성명 (국문, 빗썸 전용)", example = "김철수")
             String receiverKoName,
@@ -145,7 +148,7 @@ public class TransferReqDTO {
             @JsonProperty("exchange_name")
             String exchangeName, // 상대방 출금 거래소
             @JsonProperty("receiver_type")
-            MemberType receiverType, // personal 또는 corporation
+            String receiverType, // personal 또는 corporation
 
             // 수취인(대표자) 정보
             @JsonProperty("receiver_ko_name")
