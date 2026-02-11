@@ -389,8 +389,39 @@ public class UpbitApiClient implements ExchangeApiClient {
             String query = "market=" + market;
             String authorization = jwtApiUtil.createUpBitJwt(phoneNumber, query, null);
             
+            log.info("업비트 API 호출 시작 - market: {}", market);
             // Feign Client가 DTO로 변환
-            return upbitFeignClient.getOrderChance(authorization, market);
+            UpbitResDTO.OrderChance orderChance = upbitFeignClient.getOrderChance(authorization, market);
+            
+            log.info("업비트 API 응답 수신 완료");
+            
+            // 전체 응답 구조 확인 (디버깅용)
+            log.info("업비트 API 응답 전체 구조 - orderChance: {}", orderChance);
+            log.info("업비트 API 응답 - bid_fee: {}, ask_fee: {}, market: {}, bid: {}, ask: {}, bid_account: {}, ask_account: {}", 
+                    orderChance.bid_fee(), orderChance.ask_fee(), orderChance.market(), 
+                    orderChance.bid(), orderChance.ask(), orderChance.bid_account(), orderChance.ask_account());
+            
+            // API 응답에서 실제 마켓 형식 확인
+            if (orderChance.market() != null && orderChance.market().id() != null) {
+                log.info("업비트 API 응답 market.id: {} (요청한 market: {})", orderChance.market().id(), market);
+            }
+            
+            // bid 객체 확인 (최소 주문 금액 검증용)
+            if (orderChance.bid() != null) {
+                log.info("업비트 API 응답 bid 객체 존재 - currency: {}, min_total: {}", 
+                        orderChance.bid().currency(), orderChance.bid().min_total());
+            } else {
+                log.warn("업비트 API 응답 bid 객체가 null입니다! - 최소 주문 금액 검증 불가");
+                // ask 객체도 확인
+                if (orderChance.ask() != null) {
+                    log.info("업비트 API 응답 ask 객체 존재 - currency: {}, min_total: {}", 
+                            orderChance.ask().currency(), orderChance.ask().min_total());
+                } else {
+                    log.warn("업비트 API 응답 ask 객체도 null입니다!");
+                }
+            }
+            
+            return orderChance;
             
         } catch (MemberException e) {
             log.error("업비트 API 키를 찾을 수 없습니다 - phoneNumber: {}", phoneNumber, e);
@@ -529,6 +560,64 @@ public class UpbitApiClient implements ExchangeApiClient {
             
             requiredAmountStr = requiredAmount.toPlainString();
             
+            // 1단계: 최소 주문 금액 검증 (주문 금액이 최소 주문 금액을 넘는지 확인)
+            log.info("업비트 최소 주문 금액 검증 시작 - 주문 금액: {}", requiredAmount);
+            
+            // 업비트 API 문서에 따르면 market.bid.min_total 또는 market.ask.min_total에 최소 주문 금액이 있음
+            // 참고: https://docs.upbit.com/kr/reference/available-order-information
+            UpbitResDTO.Bid bid = null;
+            String minTotalStr = null;
+            
+            // 1순위: orderChance.bid() 확인
+            if (orderChance.bid() != null && orderChance.bid().min_total() != null && !orderChance.bid().min_total().isEmpty()) {
+                bid = orderChance.bid();
+                minTotalStr = bid.min_total();
+                log.info("업비트 최소 주문 금액 검증 - orderChance.bid()에서 조회: {}", minTotalStr);
+            }
+            // 2순위: orderChance.market().bid() 확인
+            else if (orderChance.market() != null && orderChance.market().bid() != null 
+                    && orderChance.market().bid().min_total() != null 
+                    && !orderChance.market().bid().min_total().isEmpty()) {
+                bid = orderChance.market().bid();
+                minTotalStr = bid.min_total();
+                log.info("업비트 최소 주문 금액 검증 - orderChance.market().bid()에서 조회: {}", minTotalStr);
+            }
+            
+            log.info("업비트 최소 주문 금액 검증 - bid 객체: {}, min_total: {}", 
+                    bid != null ? "존재" : "null", 
+                    minTotalStr != null ? minTotalStr : "null");
+            
+            BigDecimal minTotal;
+            String minTotalSource;
+            
+            if (minTotalStr != null && !minTotalStr.isEmpty()) {
+                // API에서 제공하는 최소 주문 금액 사용
+                minTotal = new BigDecimal(minTotalStr);
+                minTotalSource = "API 응답";
+                log.info("업비트 최소 주문 금액 검증 - API 응답에서 최소 주문 금액 조회: {}", minTotal);
+            } else {
+                // 업비트 API가 최소 주문 금액을 제공하지 않으므로 마켓 타입에 따라 기본값 사용
+                minTotal = getUpbitMinimumOrderAmount(market);
+                minTotalSource = "마켓별 기본값";
+                log.warn("업비트 API 응답에 최소 주문 금액 정보가 없어 마켓별 기본값 사용 - market: {}, minTotal: {}, bid: {}, min_total: {}", 
+                        market, minTotal, 
+                        bid != null ? "존재" : "null", 
+                        minTotalStr != null ? minTotalStr : "null 또는 빈 문자열");
+            }
+            
+            log.info("업비트 최소 주문 금액 검증 - 주문 금액: {}, 최소 주문 금액: {} ({})", requiredAmount, minTotal, minTotalSource);
+            if (requiredAmount.compareTo(minTotal) < 0) {
+                // 주문 금액이 최소 주문 금액보다 낮으면 에러 발생
+                log.warn("주문 금액이 최소 주문 금액보다 낮음 - 주문 금액: {}, 최소 주문 금액: {}", requiredAmount, minTotal);
+                Map<String, String> errorDetails = Map.of(
+                    "requiredAmount", requiredAmountStr,
+                    "minTotal", minTotal.toPlainString()
+                );
+                throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT, errorDetails);
+            }
+            log.info("업비트 최소 주문 금액 검증 통과 - 주문 금액: {} >= 최소 주문 금액: {}", requiredAmount, minTotal);
+            
+            // 2단계: 잔고 검증 (최소 주문 금액을 넘는다면, 잔고로 살 수 있는지 확인)
             if (balanceDecimal.compareTo(requiredAmount) < 0) {
                 // 잔고 부족 시 400 에러 반환
                 BigDecimal shortage = requiredAmount.subtract(balanceDecimal);
@@ -548,19 +637,94 @@ public class UpbitApiClient implements ExchangeApiClient {
             }
 
             // 매도 주문 타입 검증
+            BigDecimal volumeDecimal = new BigDecimal(volume);
+            BigDecimal orderAmount = null; // 주문 금액 (최소 주문 금액 검증용)
+            
             if ("limit".equals(orderType)) {
                 // 지정가 매도: volume과 price 필요
                 if (price == null || price.isEmpty()) {
                     throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
                 }
+                BigDecimal priceDecimal = new BigDecimal(price);
+                orderAmount = priceDecimal.multiply(volumeDecimal);
             } else if ("market".equals(orderType)) {
                 // 시장가 매도: volume만 필요 (price 불필요)
+                // 현재가 조회 후 (현재가 × 수량)으로 주문 금액 계산하여 최소 주문 금액과 비교
+                try {
+                    log.info("업비트 시장가 매도 주문 금액 계산을 위한 현재가 조회 시작 - market: {}", market);
+                    List<UpbitResDTO.Ticker> tickers = upbitFeignClient.getTicker(market);
+                    if (tickers != null && !tickers.isEmpty()) {
+                        UpbitResDTO.Ticker ticker = tickers.get(0);
+                        if (ticker.trade_price() != null && ticker.trade_price() > 0) {
+                            BigDecimal currentPrice = BigDecimal.valueOf(ticker.trade_price());
+                            orderAmount = currentPrice.multiply(volumeDecimal);
+                            log.info("업비트 시장가 매도 주문 금액 계산 - 현재가: {}, 수량: {}, 주문 금액: {}", currentPrice, volumeDecimal, orderAmount);
+                        } else {
+                            log.warn("업비트 시장가 매도 현재가 조회 실패 또는 가격이 0 이하 - 최소 주문 금액 검증을 생략합니다. market: {}", market);
+                        }
+                    } else {
+                        log.warn("업비트 시장가 매도 현재가 조회 실패 - 응답이 비어있음, 최소 주문 금액 검증을 생략합니다. market: {}", market);
+                    }
+                } catch (Exception e) {
+                    log.warn("업비트 시장가 매도 주문 금액 계산 실패 - 최소 주문 금액 검증을 생략합니다: {}", e.getMessage());
+                }
             } else {
                 throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
             }
 
-            BigDecimal volumeDecimal = new BigDecimal(volume);
             requiredAmountStr = volume; // 매도 시 필요한 수량
+            
+            // 지정가/시장가 매도: 최소 주문 금액 검증 (orderAmount가 계산된 경우에만)
+            if (orderAmount != null) {
+                // 업비트 API 문서에 따르면 market.ask.min_total에 최소 주문 금액이 있음
+                // 참고: https://docs.upbit.com/kr/reference/available-order-information
+                UpbitResDTO.Ask ask = null;
+                String minTotalStr = null;
+                
+                // 1순위: orderChance.ask() 확인
+                if (orderChance.ask() != null && orderChance.ask().min_total() != null && !orderChance.ask().min_total().isEmpty()) {
+                    ask = orderChance.ask();
+                    minTotalStr = ask.min_total();
+                    log.info("업비트 매도 최소 주문 금액 검증 - orderChance.ask()에서 조회: {}", minTotalStr);
+                }
+                // 2순위: orderChance.market().ask() 확인
+                else if (orderChance.market() != null && orderChance.market().ask() != null 
+                        && orderChance.market().ask().min_total() != null 
+                        && !orderChance.market().ask().min_total().isEmpty()) {
+                    ask = orderChance.market().ask();
+                    minTotalStr = ask.min_total();
+                    log.info("업비트 매도 최소 주문 금액 검증 - orderChance.market().ask()에서 조회: {}", minTotalStr);
+                }
+                
+                BigDecimal minTotal;
+                String minTotalSource;
+                
+                if (minTotalStr != null && !minTotalStr.isEmpty()) {
+                    // API에서 제공하는 최소 주문 금액 사용
+                    minTotal = new BigDecimal(minTotalStr);
+                    minTotalSource = "API 응답";
+                    log.info("업비트 매도 최소 주문 금액 검증 - API 응답에서 최소 주문 금액 조회: {}", minTotal);
+                } else {
+                    // 업비트 API가 최소 주문 금액을 제공하지 않으므로 마켓 타입에 따라 기본값 사용
+                    minTotal = getUpbitMinimumOrderAmount(market);
+                    minTotalSource = "마켓별 기본값";
+                    log.warn("업비트 API 응답에 최소 주문 금액 정보가 없어 마켓별 기본값 사용 - market: {}, minTotal: {}, ask: {}, min_total: {}", 
+                            market, minTotal,
+                            ask != null ? "존재" : "null", 
+                            minTotalStr != null ? minTotalStr : "null 또는 빈 문자열");
+                }
+                
+                log.info("업비트 매도 최소 주문 금액 검증 - 주문 금액: {}, 최소 주문 금액: {} ({})", orderAmount, minTotal, minTotalSource);
+                if (orderAmount.compareTo(minTotal) < 0) {
+                    log.warn("주문 금액이 최소 주문 금액보다 낮음 - 주문 금액: {}, 최소 주문 금액: {}", orderAmount, minTotal);
+                    Map<String, String> errorDetails = Map.of(
+                        "orderAmount", orderAmount.toPlainString(),
+                        "minTotal", minTotal.toPlainString()
+                    );
+                    throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT, errorDetails);
+                }
+                log.info("업비트 매도 최소 주문 금액 검증 통과 - 주문 금액: {} >= 최소 주문 금액: {}", orderAmount, minTotal);
+            }
             
             if (balanceDecimal.compareTo(volumeDecimal) < 0) {
                 // 보유 수량 초과 시 400 에러 반환
@@ -974,6 +1138,41 @@ public class UpbitApiClient implements ExchangeApiClient {
         } catch (Exception e) {
             log.warn("created_at 파싱 실패: {}, 현재 시간 사용", createdAt);
             return LocalDateTime.now();
+        }
+    }
+    
+    /**
+     * 업비트 마켓별 최소 주문 금액 조회
+     * 참고:
+     * - 원화(KRW) 마켓: https://docs.upbit.com/kr/docs/krw-market-info - 5,000 KRW
+     * - BTC 마켓: https://docs.upbit.com/kr/docs/btc-market-info - 0.00005 BTC
+     * - USDT 마켓: https://docs.upbit.com/kr/docs/usdt-market-info - 0.5 USDT
+     */
+    private BigDecimal getUpbitMinimumOrderAmount(String market) {
+        if (market == null || market.isEmpty()) {
+            log.warn("market이 null이거나 비어있어 원화 마켓 기본값(5000) 사용");
+            return new BigDecimal("5000");
+        }
+        
+        String upperMarket = market.toUpperCase();
+        
+        if (upperMarket.startsWith("KRW-")) {
+            // 원화 마켓: 5,000 KRW
+            log.info("업비트 원화 마켓 최소 주문 금액: 5000 KRW");
+            return new BigDecimal("5000");
+        } else if (upperMarket.startsWith("BTC-")) {
+            // BTC 마켓: 0.00005 BTC
+            log.info("업비트 BTC 마켓 최소 주문 금액: 0.00005 BTC");
+            return new BigDecimal("0.00005");
+        } else if (upperMarket.startsWith("USDT-")) {
+            // USDT 마켓: 0.5 USDT
+            // 참고: https://docs.upbit.com/kr/docs/usdt-market-info
+            log.info("업비트 USDT 마켓 최소 주문 금액: 0.5 USDT");
+            return new BigDecimal("0.5");
+        } else {
+            // 알 수 없는 마켓 타입: 원화 마켓 기본값 사용
+            log.warn("알 수 없는 업비트 마켓 타입: {}, 원화 마켓 기본값(5000) 사용", market);
+            return new BigDecimal("5000");
         }
     }
 }

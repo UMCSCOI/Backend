@@ -30,10 +30,10 @@ public interface InvestControllerDocs {
 
     @Operation(
             summary = "주문 가능 여부 확인 By 강서현",
-            description = "주문 직전 해당 주문이 가능한지 여부를 확인합니다."
+            description = "주문 직전 해당 주문이 가능한지 여부를 확인합니다. password는 필요하지 않습니다."
     )
     ApiResponse<Void> checkOrderAvailability(
-            @RequestBody InvestReqDTO.OrderDTO request,
+            @RequestBody InvestReqDTO.TestOrderDTO request,
             @AuthenticationPrincipal CustomUserDetails user
     );
 
