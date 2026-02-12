@@ -37,7 +37,6 @@ public class SecurityConfig {
             "/auth/login",            // 로그인
             "/auth/reissue",          // 토큰 재발급
             "/auth/password/reset",   // 비인증 비밀번호 재설정
-            "/test",                  // 임시
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-resources/**",
