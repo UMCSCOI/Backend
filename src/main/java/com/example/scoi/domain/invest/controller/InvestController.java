@@ -79,29 +79,6 @@ public class InvestController implements InvestControllerDocs {
         return ApiResponse.onSuccess(InvestSuccessCode.ORDER_AVAILABLE);
     }
 
-    @PostMapping("/orders/test-create")
-    @Override
-    @SecurityRequirement(name = "JWT TOKEN")
-    public ApiResponse<InvestResDTO.OrderDTO> testCreateOrder(
-            @RequestBody InvestReqDTO.TestOrderDTO request,
-            @AuthenticationPrincipal CustomUserDetails user
-    ) {
-        String phoneNumber = user.getUsername();
-
-        // 주문 생성 테스트 (password 불필요)
-        InvestResDTO.OrderDTO result = investService.testCreateOrder(
-                phoneNumber,
-                request.exchangeType(),
-                request.market(),
-                request.side(),
-                request.orderType(),
-                request.price(),
-                request.volume()
-        );
-
-        return ApiResponse.onSuccess(InvestSuccessCode.ORDER_SUCCESS, result);
-    }
-
     @PostMapping("/orders")
     @Override
     @SecurityRequirement(name = "JWT TOKEN")
