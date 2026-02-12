@@ -253,24 +253,22 @@ public class AuthService {
 
         memberRepository.save(member);
 
-        // 5. API 키 등록 (있는 경우에만)
-        if (request.apiKeys() != null && !request.apiKeys().isEmpty()) {
-            List<MemberReqDTO.PostPatchApiKey> apiKeyRequests = new ArrayList<>();
-            for (AuthReqDTO.ApiKeyRequest apiKey : request.apiKeys()) {
-                apiKeyRequests.add(new MemberReqDTO.PostPatchApiKey(
-                        apiKey.exchangeType(),
-                        apiKey.publicKey(),
-                        apiKey.secretKey()
-                ));
-            }
+        // 5. API 키 등록
+        List<MemberReqDTO.PostPatchApiKey> apiKeyRequests = new ArrayList<>();
+        for (AuthReqDTO.ApiKeyRequest apiKey : request.apiKeys()) {
+            apiKeyRequests.add(new MemberReqDTO.PostPatchApiKey(
+                    apiKey.exchangeType(),
+                    apiKey.publicKey(),
+                    apiKey.secretKey()
+            ));
+        }
 
-            try {
-                List<String> registeredExchanges = memberService.postPatchApiKey(request.phoneNumber(), apiKeyRequests);
-                log.info("회원가입 시 API 키 등록 성공: memberId={}, exchanges={}", member.getId(), registeredExchanges);
-            } catch (Exception e) {
-                log.warn("회원가입 시 API 키 등록 실패 (회원가입은 성공): memberId={}, error={}", member.getId(), e.getMessage());
-                // API 키 등록 실패해도 회원가입은 성공으로 처리
-            }
+        try {
+            List<String> registeredExchanges = memberService.postPatchApiKey(request.phoneNumber(), apiKeyRequests);
+            log.info("회원가입 시 API 키 등록 성공: memberId={}, exchanges={}", member.getId(), registeredExchanges);
+        } catch (Exception e) {
+            log.warn("회원가입 시 API 키 등록 실패 (회원가입은 성공): memberId={}, error={}", member.getId(), e.getMessage());
+            // API 키 등록 실패해도 회원가입은 성공으로 처리
         }
 
         log.info("회원가입 성공: memberId={}, phoneNumber={}", member.getId(), member.getPhoneNumber());

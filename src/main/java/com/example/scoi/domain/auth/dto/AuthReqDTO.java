@@ -3,6 +3,7 @@ package com.example.scoi.domain.auth.dto;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.enums.MemberType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -73,7 +74,10 @@ public class AuthReqDTO {
             @Schema(description = "바이오 인증 등록 여부 (true: 등록, false: 나중에)", example = "false")
             Boolean isBioRegistered,
 
-            @Schema(description = "거래소 API 키 목록 (선택사항)")
+            @Valid
+            @NotNull(message = "거래소 API 키 목록은 필수입니다.")
+            @Size(min = 1, message = "거래소 API 키는 최소 1개 이상이어야 합니다.")
+            @Schema(description = "거래소 API 키 목록")
             List<ApiKeyRequest> apiKeys
     ) {}
 
