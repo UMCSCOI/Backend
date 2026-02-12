@@ -170,8 +170,7 @@ public class AuthService {
             throw new AuthException(AuthErrorCode.INVALID_TOKEN);
         }
 
-        redisUtil.delete(tokenKey);
-        log.debug("Verification Token 검증 성공 및 삭제: phoneNumber={}", phoneNumber);
+        log.debug("Verification Token 검증 성공: phoneNumber={}", phoneNumber);
         return verifiedPhoneNumber;
     }
 
@@ -181,10 +180,12 @@ public class AuthService {
             MemberReqDTO.ResetPassword dto
     ) {
 
-        // 인증된 전화번호인지 확인
-        if (!redisUtil.exists(VERIFICATION_PREFIX+dto.verificationCode())){
-            throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
-        }
+        // Verification Token 검증 및 소멸 (SMS 인증 완료 확인)
+        String phoneNumber = validateVerificationToken(dto.verificationToken(), dto.phoneNumber());
+
+        // 사용자 가져오기
+        Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 새 간편 비밀번호 검증
         String newPassword;
@@ -204,11 +205,6 @@ public class AuthService {
             binding.put("password", "6자리 숫자만 입력 가능합니다.");
             throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
         }
-
-        // 사용자 가져오기
-        String phoneNumber = jwtUtil.getPhoneNumberFromToken(dto.verificationCode());
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         // 간편 비밀번호 변경
         member.updateSimplePassword(passwordEncoder.encode(newPassword));
@@ -450,36 +446,6 @@ public class AuthService {
                 newRefreshToken,
                 jwtUtil.getAccessTokenExpirationInSeconds()
         );
-    }
-
-    @Transactional
-    public void resetPassword(AuthReqDTO.PasswordResetRequest request) {
-        // 1. Verification Token 검증 및 소멸 (SMS 인증 완료 확인)
-        validateVerificationToken(request.verificationToken(), request.phoneNumber());
-
-        // 2. 회원 조회
-        Member member = memberRepository.findByPhoneNumber(request.phoneNumber())
-            .orElseThrow(() -> new AuthException(AuthErrorCode.MEMBER_NOT_FOUND));
-
-        // 3. 새 비밀번호 AES 복호화 후 검증
-        String rawPassword;
-        try {
-            rawPassword = new String(hashUtil.decryptAES(request.newPassword()));
-        } catch (GeneralSecurityException e) {
-            log.error("AES 복호화 실패: phoneNumber={}", request.phoneNumber(), e);
-            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
-        }
-
-        if (!rawPassword.matches("^\\d{6}$")) {
-            log.warn("간편비밀번호 형식 오류: phoneNumber={}", request.phoneNumber());
-            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
-        }
-
-        // 4. 비밀번호 업데이트 및 잠금 해제
-        member.updateSimplePassword(passwordEncoder.encode(rawPassword));
-        member.resetLoginFailCount();
-
-        log.info("비밀번호 재설정 성공: phoneNumber={}", request.phoneNumber());
     }
 
     @Transactional
