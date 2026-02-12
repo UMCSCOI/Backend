@@ -26,15 +26,6 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // SMS 인증 토큰 발급용: 최종 제출때는 삭제해야 함
-    @GetMapping("/sms-token")
-    public ApiResponse<String> generateSmsToken(
-            @RequestParam String phoneNumber
-    ){
-        BaseSuccessCode code = GeneralSuccessCode.OK;
-        return ApiResponse.onSuccess(code, authService.generateSmsToken(phoneNumber));
-    }
-
     // 간편 비밀번호 재설정
     @Operation(
             summary = "간편 비밀번호 재설정 API By 김주헌",
@@ -42,7 +33,7 @@ public class AuthController {
     )
     @PostMapping("/password/reset")
     public ApiResponse<Void> resetPassword(
-            @RequestBody MemberReqDTO.ResetPassword dto
+            @Valid @RequestBody AuthReqDTO.ResetPassword dto
     ){
         BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;
         return ApiResponse.onSuccess(code, authService.resetPassword(dto));
