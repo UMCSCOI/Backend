@@ -5,7 +5,11 @@
 스코이는 스테이블코인을 일상적인 결제 수단으로 사용할 수 있도록 설계된 금융 플랫폼입니다.
 결제부터 투자까지, 누구나 쉽게 사용할 수 있는 편리한 스테이블 코인 금융 환경을 제공하는 것을 목표로 합니다.
 
+<img height="512" alt="image" src="https://github.com/user-attachments/assets/4e162831-0a8c-4223-afef-4e001737f43e" />
 <img height="512" alt="image" src="https://github.com/user-attachments/assets/531acd4d-1c28-4912-b1a9-90adac60df05" />
+<img height="512" alt="image" src="https://github.com/user-attachments/assets/766b5edd-cadf-4ab2-b840-09ea9e390c6c" />
+<img height="512" alt="image" src="https://github.com/user-attachments/assets/71e5cb81-b3da-42e0-aaf8-91e9b52af392" />
+
 
 ## 🎯 주요 기능
 
