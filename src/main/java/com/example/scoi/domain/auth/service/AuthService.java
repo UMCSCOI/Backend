@@ -180,7 +180,7 @@ public class AuthService {
             AuthReqDTO.ResetPassword dto
     ) {
         // Verification Token 검증 및 소멸 (SMS 인증 완료 확인)
-        String phoneNumber = validateVerificationToken(dto.verificationCode(), dto.phoneNumber());
+        String phoneNumber = validateVerificationToken(dto.verificationToken(), dto.phoneNumber());
 
         // 사용자 가져오기
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
@@ -283,7 +283,7 @@ public class AuthService {
         Member member = memberRepository.findByPhoneNumber(request.phoneNumber())
             .orElseThrow(() -> new AuthException(AuthErrorCode.MEMBER_NOT_FOUND));
 
-        // 2. verificationToken 사전 검증 및 소멸 (일회성 보장)
+        // 2. verificationToken 사전 검증
         boolean smsVerified = false;
         if (request.verificationToken() != null) {
             validateVerificationToken(request.verificationToken(), request.phoneNumber());
