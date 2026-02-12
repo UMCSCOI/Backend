@@ -63,9 +63,15 @@ public class InvestService {
             String price,
             String volume
     ) {
+        System.out.println("InvestService.checkOrderAvailability 호출됨!");
+        log.info("=== InvestService.checkOrderAvailability 시작 ===");
+        log.info("파라미터 - phoneNumber: {}, exchangeType: {}, market: {}, side: {}, orderType: {}, price: {}, volume: {}", 
+                phoneNumber, exchangeType, market, side, orderType, price, volume);
+        
         // 사용자 존재 여부 확인
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
+        log.info("사용자 조회 완료 - memberId: {}", member.getId());
 
         // 시크릿 키 복호화하기
         // 쿼리 파라미터에 따라 빗썸 or 업비트 API 조회하기

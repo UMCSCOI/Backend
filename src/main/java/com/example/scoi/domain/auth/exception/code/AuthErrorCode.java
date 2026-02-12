@@ -45,7 +45,7 @@ public enum AuthErrorCode implements BaseErrorCode {
 
     // 토큰 관련
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED,
-            "AUTH401_1",
+            "AUTH401_0",
             "인증이 필요합니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED,
             "AUTH401_2",

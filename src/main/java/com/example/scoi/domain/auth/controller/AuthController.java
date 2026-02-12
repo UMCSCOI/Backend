@@ -4,9 +4,9 @@ import com.example.scoi.domain.auth.code.AuthSuccessCode;
 import com.example.scoi.domain.auth.dto.AuthReqDTO;
 import com.example.scoi.domain.auth.dto.AuthResDTO;
 import com.example.scoi.domain.auth.service.AuthService;
+import com.example.scoi.domain.member.exception.code.MemberSuccessCode;
 import com.example.scoi.global.apiPayload.ApiResponse;
 import com.example.scoi.global.apiPayload.code.BaseSuccessCode;
-import com.example.scoi.global.apiPayload.code.GeneralSuccessCode;
 import com.example.scoi.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,13 +24,17 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // SMS 인증 토큰 발급용: 최종 제출때는 삭제해야 함
-    @GetMapping("/sms-token")
-    public ApiResponse<String> generateSmsToken(
-            @RequestParam String phoneNumber
+    // 간편 비밀번호 재설정
+    @Operation(
+            summary = "간편 비밀번호 재설정 API By 김주헌",
+            description = "비밀번호 분실 또는 5회 실패 시 재설정을 합니다."
+    )
+    @PostMapping("/password/reset")
+    public ApiResponse<Void> resetPassword(
+            @Valid @RequestBody AuthReqDTO.ResetPassword dto
     ){
-        BaseSuccessCode code = GeneralSuccessCode.OK;
-        return ApiResponse.onSuccess(code, authService.generateSmsToken(phoneNumber));
+        BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;
+        return ApiResponse.onSuccess(code, authService.resetPassword(dto));
     }
 
     @Operation(summary = "SMS 발송 By 장명준", description = "휴대폰 번호로 인증번호를 발송합니다.")

@@ -43,6 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/auth/signup",
             "/auth/login",
             "/auth/reissue",
+            "/auth/password/reset",
             "/swagger-ui/",
             "/v3/api-docs/",
             "/swagger-resources/",
@@ -72,7 +73,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         // 토큰 검증 (validateToken이 만료도 함께 체크하므로 먼저 호출)
-        if (!jwtUtil.validateToken(token)) {
+        if (!jwtUtil.validateAccessToken(token)) {
             log.warn("유효하지 않은 JWT 토큰: {}", requestURI);
             handleAuthenticationError(request, response, AuthErrorCode.INVALID_TOKEN);
             return;
