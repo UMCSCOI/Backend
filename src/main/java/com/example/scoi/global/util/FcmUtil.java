@@ -67,6 +67,39 @@ public class FcmUtil {
         }
     }
 
+    public void sendNotification(
+            String title,
+            String body,
+            List<String> fcmTokenList
+    ){
+        log.info("[ FcmUtil ]: 디페깅 상황 발생, 알림 전송...");
+
+        // 안드로이드 설정
+        AndroidConfig androidConfig = AndroidConfig.builder()
+                .setPriority(AndroidConfig.Priority.HIGH)
+                .build();
+
+        for (String fcmToken : fcmTokenList) {
+            // 보낼 알림 구성
+            Message message = Message.builder()
+                    // payLoad는 Data만
+                    .putData("title", title)
+                    .putData("body", body)
+                    // 우선순위는 high
+                    .setAndroidConfig(androidConfig)
+                    .setToken(fcmToken)
+                    .build();
+
+            // 알림 전송
+            try{
+                firebaseMessaging.send(message);
+                log.info("[ FcmUtil ]: 알림 전송 성공, 토큰: {}", fcmToken);
+            } catch (FirebaseMessagingException e){
+                log.warn("[ FcmUtil ]: 알림 전송 실패, {}", e.getMessage());
+            }
+        }
+    }
+
     /**
      * 디페깅 알림을 위해 구독합니다.
      * @param fcmTokenList 알림을 구독할 FCM 토큰
