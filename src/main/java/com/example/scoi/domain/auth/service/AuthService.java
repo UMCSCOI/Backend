@@ -177,9 +177,8 @@ public class AuthService {
     // 간편 비밀번호 재설정
     @jakarta.transaction.Transactional
     public Void resetPassword(
-            MemberReqDTO.ResetPassword dto
+            AuthReqDTO.ResetPassword dto
     ) {
-
         // Verification Token 검증 및 소멸 (SMS 인증 완료 확인)
         String phoneNumber = validateVerificationToken(dto.verificationToken(), dto.phoneNumber());
 
@@ -254,24 +253,22 @@ public class AuthService {
 
         memberRepository.save(member);
 
-        // 5. API 키 등록 (있는 경우에만)
-        if (request.apiKeys() != null && !request.apiKeys().isEmpty()) {
-            List<MemberReqDTO.PostPatchApiKey> apiKeyRequests = new ArrayList<>();
-            for (AuthReqDTO.ApiKeyRequest apiKey : request.apiKeys()) {
-                apiKeyRequests.add(new MemberReqDTO.PostPatchApiKey(
-                        apiKey.exchangeType(),
-                        apiKey.publicKey(),
-                        apiKey.secretKey()
-                ));
-            }
+        // 5. API 키 등록
+        List<MemberReqDTO.PostPatchApiKey> apiKeyRequests = new ArrayList<>();
+        for (AuthReqDTO.ApiKeyRequest apiKey : request.apiKeys()) {
+            apiKeyRequests.add(new MemberReqDTO.PostPatchApiKey(
+                    apiKey.exchangeType(),
+                    apiKey.publicKey(),
+                    apiKey.secretKey()
+            ));
+        }
 
-            try {
-                List<String> registeredExchanges = memberService.postPatchApiKey(request.phoneNumber(), apiKeyRequests);
-                log.info("회원가입 시 API 키 등록 성공: memberId={}, exchanges={}", member.getId(), registeredExchanges);
-            } catch (Exception e) {
-                log.warn("회원가입 시 API 키 등록 실패 (회원가입은 성공): memberId={}, error={}", member.getId(), e.getMessage());
-                // API 키 등록 실패해도 회원가입은 성공으로 처리
-            }
+        try {
+            List<String> registeredExchanges = memberService.postPatchApiKey(request.phoneNumber(), apiKeyRequests);
+            log.info("회원가입 시 API 키 등록 성공: memberId={}, exchanges={}", member.getId(), registeredExchanges);
+        } catch (Exception e) {
+            log.warn("회원가입 시 API 키 등록 실패 (회원가입은 성공): memberId={}, error={}", member.getId(), e.getMessage());
+            // API 키 등록 실패해도 회원가입은 성공으로 처리
         }
 
         log.info("회원가입 성공: memberId={}, phoneNumber={}", member.getId(), member.getPhoneNumber());
@@ -284,7 +281,7 @@ public class AuthService {
         Member member = memberRepository.findByPhoneNumber(request.phoneNumber())
             .orElseThrow(() -> new AuthException(AuthErrorCode.MEMBER_NOT_FOUND));
 
-        // 2. verificationToken 사전 검증 및 소멸 (일회성 보장)
+        // 2. verificationToken 사전 검증
         boolean smsVerified = false;
         if (request.verificationToken() != null) {
             validateVerificationToken(request.verificationToken(), request.phoneNumber());
