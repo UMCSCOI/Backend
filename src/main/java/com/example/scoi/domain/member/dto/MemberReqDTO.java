@@ -1,8 +1,6 @@
 package com.example.scoi.domain.member.dto;
 
 import com.example.scoi.domain.member.enums.ExchangeType;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
