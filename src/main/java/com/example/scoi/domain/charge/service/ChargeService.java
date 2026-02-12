@@ -47,6 +47,7 @@ public class ChargeService {
         if (dto.exchangeType().equals(ExchangeType.BITHUMB) && !dto.MFA().equals(MFAType.KAKAO)){
             throw new ChargeException(ChargeErrorCode.INVALIDED_TWO_FACTOR_AUTH);
         }
+
         // 거래소별 분기
         String token;
         String uuid, txid;
