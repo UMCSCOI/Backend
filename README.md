@@ -5,7 +5,7 @@
 스코이는 스테이블코인을 일상적인 결제 수단으로 사용할 수 있도록 설계된 금융 플랫폼입니다.
 결제부터 투자까지, 누구나 쉽게 사용할 수 있는 편리한 스테이블 코인 금융 환경을 제공하는 것을 목표로 합니다.
 
-<img width="450" height="1020" alt="스코이 송금 메인화면"" src="https://github.com/user-attachments/assets/58b64a72-ac62-47d0-a013-dd7a85fec7b8" />
+<img width="450" height="1020" alt="스코이 송금 메인화면"" src="https://github.com/user-attachments/assets/531acd4d-1c28-4912-b1a9-90adac60df05" />
 
 ## 🎯 주요 기능
 
@@ -31,9 +31,9 @@
   
 ## 👥 Contributors
 
-| **마크/김주헌** | **호/원종호** | **띵/장명준** | **드로코드/김민규** | **희동/서희정** |
-| :---: | :---: | :---: | :---: | :---: |
-| [<img src="https://avatars.githubusercontent.com/u/102126457?v=4" width="150"><br/>rlawngjs0313](https://github.com/rlawngjs0313) | [<img src="https://avatars.githubusercontent.com/u/130227391?v=4" width="150"><br/>yee2know](https://github.com/yee2know) | [<img src="https://avatars.githubusercontent.com/u/103755402?v=4" width="150"><br/>komascode](https://github.com/komascode) | [<img src="https://avatars.githubusercontent.com/u/203520708?v=4" width="150"><br/>kingmingyu](https://github.com/kingmingyu) | [<img src="https://avatars.githubusercontent.com/u/203520708?v=4" width="150"><br/>seohyunk09](https://github.com/seohyunk09) |
+|                                                           **마크/김주헌**                                                            |                                                         **호/원종호**                                                         | **띵/장명준** | **드로코드/김민규** | **희동/서희정** |
+|:-------------------------------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------:| :---: | :---: | :---: |
+| [<img src="https://avatars.githubusercontent.com/u/75869755?v=4" width="60"><br/>rlawngjs0313](https://github.com/rlawngjs0313) | [<img src="https://avatars.githubusercontent.com/u/133846600?v=4" width="100"><br/>yee2know](https://github.com/yee2know) | [<img src="https://avatars.githubusercontent.com/u/103755402?v=4" width="150"><br/>komascode](https://github.com/komascode) | [<img src="https://avatars.githubusercontent.com/u/90828383?v=4" width="150"><br/>kingmingyu](https://github.com/kingmingyu) | [<img src="https://avatars.githubusercontent.com/u/180945392?v=4" width="150"><br/>seohyunk09](https://github.com/seohyunk09) |
 
 ### ⚙️ 기술 스택
 - Java 21
