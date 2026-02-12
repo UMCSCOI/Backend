@@ -103,50 +103,6 @@ public class InvestService {
         }
     }
 
-
-    // 주문 생성 테스트
-    public InvestResDTO.OrderDTO testCreateOrder(
-            String phoneNumber,
-            ExchangeType exchangeType,
-            String market,
-            String side,
-            String orderType,
-            String price,
-            String volume
-    ) {
-        // 사용자 존재 여부 확인
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new InvestException(InvestErrorCode.API_KEY_NOT_FOUND));
-
-        // 거래소별 분기
-        ExchangeApiClient apiClient = getApiClient(exchangeType);
-
-        try {
-            // 주문 생성 테스트
-            return apiClient.testCreateOrder(
-                    phoneNumber,
-                    exchangeType,
-                    market,
-                    side,
-                    orderType,
-                    price,
-                    volume
-            );
-        } catch (InvestException e) {
-            throw e;
-        } catch (FeignException e) {
-            // FeignException은 FeignErrorDecoder에서 이미 로깅되었으므로, 여기서는 추가 정보만 로깅
-            String errorBody = e.contentUTF8();
-            log.error("거래소 주문 생성 테스트 실패 (FeignException) - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, status: {}, responseBody: {}",
-                    exchangeType, phoneNumber, market, side, e.status(), errorBody);
-            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
-        } catch (Exception e) {
-            log.error("거래소 주문 생성 테스트 실패 - exchangeType: {}, phoneNumber: {}, market: {}, side: {}, error: {}",
-                    exchangeType, phoneNumber, market, side, e.getMessage(), e);
-            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
-        }
-    }
-
     // 주문 생성
     @Transactional
     public InvestResDTO.OrderDTO createOrder(
