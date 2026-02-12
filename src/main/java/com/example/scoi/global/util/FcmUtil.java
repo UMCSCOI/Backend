@@ -31,7 +31,6 @@ public class FcmUtil {
      * 디페깅 발생시 유저에게 알림을 전송합니다.
      * @param title 보낼 알림의 제목
      * @param body 보낼 알림의 내용
-     * @throws FirebaseMessagingException 실패시 발생
      */
     @Retryable(
             recover = "sendRecover"
@@ -40,7 +39,7 @@ public class FcmUtil {
     public void sendNotificationForDepegging(
             @NotNull String title,
             @NotNull String body
-    ) throws FirebaseMessagingException {
+    ){
 
         log.info("[ FcmUtil ]: 디페깅 상황 발생, 알림 전송...");
 
@@ -60,7 +59,12 @@ public class FcmUtil {
                 .build();
 
         // 알림 전송
-        firebaseMessaging.send(message);
+        try{
+            firebaseMessaging.send(message);
+            log.info("[ FcmUtil ]: 알림 전송 성공, 전송 토픽: {}", DEPEGGING_TOPIC);
+        } catch (FirebaseMessagingException e){
+            log.warn("[ FcmUtil ]: 알림 전송 실패");
+        }
     }
 
     /**

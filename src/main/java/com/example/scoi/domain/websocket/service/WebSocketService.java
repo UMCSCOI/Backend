@@ -4,7 +4,6 @@ import com.example.scoi.domain.websocket.dto.UpbitResDTO;
 import com.example.scoi.domain.websocket.enums.RiseOrFall;
 import com.example.scoi.global.redis.RedisUtil;
 import com.example.scoi.global.util.FcmUtil;
-import com.google.firebase.messaging.FirebaseMessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -85,14 +84,10 @@ public class WebSocketService {
                 RiseOrFall riseOrFall = (percent.compareTo("0.00") >= 0)? RiseOrFall.RISE : RiseOrFall.FALL;
 
                 // 전체 사용자에게 알림 보내기
-                try {
-                    fcmUtil.sendNotificationForDepegging(
-                            code+" 가격 변동 알림",
-                            "평소보다 "+code+" 가격이 "+dto.tp()+"원으로 약 "+percent+"% "+riseOrFall.name()
-                    );
-                } catch (FirebaseMessagingException e){
-                    log.error("[ FcmUtil ]: 알림 전송 실패, 에러 코드: {}, 스택 트레이스: {}", e.getMessagingErrorCode(), e.getStackTrace());
-                }
+                fcmUtil.sendNotificationForDepegging(
+                        code+" 가격 변동 알림",
+                        "평소보다 "+code+" 가격이 "+dto.tp()+"원으로 약 "+percent+"% "+riseOrFall.name()
+                );
 
                 // 쿨타임 저장: TTL 쿨타임 저장 시간 (1시간)
                 redisUtil.set(
