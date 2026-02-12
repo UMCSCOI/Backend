@@ -107,22 +107,6 @@ public class AuthReqDTO {
             String verificationToken
     ) {}
 
-    // 비인증 간편비밀번호 재설정 요청 (계정 잠금 후 SMS 재인증 flow)
-    public record PasswordResetRequest(
-            @NotBlank(message = "휴대폰 번호는 필수입니다.")
-            @Pattern(regexp = "^01[0-9]{8,9}$", message = "올바른 휴대폰 번호 형식이 아닙니다.")
-            @Schema(description = "휴대폰 번호", example = "01012345678")
-            String phoneNumber,
-
-            @NotBlank(message = "인증 토큰은 필수입니다.")
-            @Schema(description = "SMS 인증 완료 후 발급된 verificationToken")
-            String verificationToken,
-
-            @NotBlank(message = "새 간편비밀번호는 필수입니다.")
-            @Schema(description = "AES 암호화된 새 6자리 간편비밀번호 (Base64)", example = "6v4RsQ+gOGi1NtheSTiA1w==")
-            String newPassword
-    ) {}
-
     // 토큰 재발급 요청
     public record ReissueRequest(
             @NotBlank(message = "Refresh Token은 필수입니다.")
@@ -134,9 +118,12 @@ public class AuthReqDTO {
             @NotNull(message = "SMS 인증 토큰은 필수입니다.")
             @NotBlank(message = "SMS 인증 토큰은 빈칸일 수 없습니다.")
             String verificationCode,
+
             @NotNull(message = "휴대전화 번호는 필수입니다.")
             @NotBlank(message = "휴대전화 번호는 빈칸일 수 없습니다.")
+            @Pattern(regexp = "^01[0-9]{8,9}$", message = "올바른 휴대폰 번호 형식이 아닙니다.")
             String phoneNumber,
+
             @NotNull(message = "신규 간편 비밀번호는 필수입니다.")
             @NotBlank(message = "신규 간편 비밀번호는 빈칸일 수 없습니다.")
             @Schema(description = "AES 암호화된 새 6자리 간편비밀번호 (Base64)", example = "6v4RsQ+gOGi1NtheSTiA1w==")
