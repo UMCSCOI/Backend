@@ -177,11 +177,10 @@ public class AuthService {
     // 간편 비밀번호 재설정
     @jakarta.transaction.Transactional
     public Void resetPassword(
-            MemberReqDTO.ResetPassword dto
+            AuthReqDTO.ResetPassword dto
     ) {
-
         // Verification Token 검증 및 소멸 (SMS 인증 완료 확인)
-        String phoneNumber = validateVerificationToken(dto.verificationToken(), dto.phoneNumber());
+        String phoneNumber = validateVerificationToken(dto.verificationCode(), dto.phoneNumber());
 
         // 사용자 가져오기
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
