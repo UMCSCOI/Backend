@@ -31,4 +31,9 @@ public class MemberFcm {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
+
+    // 업데이트
+    public void updateFcmToken(String fcmToken){
+        this.fcmToken = fcmToken;
+    }
 }

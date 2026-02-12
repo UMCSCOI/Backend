@@ -955,13 +955,46 @@ public class UpbitApiClient implements ExchangeApiClient {
                     ObjectMapper objectMapper = new ObjectMapper();
                     ClientErrorDTO.Errors error = objectMapper.readValue(errorBody, ClientErrorDTO.Errors.class);
                     if (error != null && error.error() != null) {
+                        String errorName = error.error().name();
+                        String errorMessage = error.error().message();
+                        
                         log.error("=== 업비트 주문 생성 테스트 실패 (400) ===");
-                        log.error("에러 이름: {}", error.error().name());
-                        log.error("에러 메시지: {}", error.error().message());
+                        log.error("에러 이름: {}", errorName);
+                        log.error("에러 메시지: {}", errorMessage);
                         log.error("전체 응답: {}", errorBody);
+                        
+                        // 업비트 API 에러 이름에 따라 구체적인 에러 코드로 변환
+                        if ("insufficient_funds".equals(errorName) || 
+                            (errorMessage != null && errorMessage.contains("잔고"))) {
+                            // 매수 시 잔고 부족
+                            if ("bid".equals(side)) {
+                                throw new InvestException(InvestErrorCode.INSUFFICIENT_BALANCE);
+                            }
+                            // 매도 시 보유 수량 부족
+                            else if ("ask".equals(side)) {
+                                throw new InvestException(InvestErrorCode.INSUFFICIENT_COIN_AMOUNT);
+                            }
+                        } else if ("invalid_min_total".equals(errorName) || 
+                                   "under_min_total".equals(errorName) ||
+                                   (errorMessage != null && (errorMessage.contains("최소") || errorMessage.contains("minimum")))) {
+                            // 최소 주문 금액 미만
+                            throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT);
+                        } else if ("over_price_limit_bid".equals(errorName) || 
+                                   "over_price_limit_ask".equals(errorName) ||
+                                   (errorMessage != null && errorMessage.contains("현재가"))) {
+                            // 호가 제한 초과 (현재가의 300% 이내에서만 주문 가능)
+                            Map<String, String> errorDetails = Map.of(
+                                "errorName", errorName,
+                                "errorMessage", errorMessage != null ? errorMessage : ""
+                            );
+                            throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR, errorDetails);
+                        }
                     } else {
                         log.error("업비트 주문 생성 테스트 실패 (400) - responseBody: {}", errorBody);
                     }
+                } catch (InvestException investEx) {
+                    // 구체적인 InvestException은 그대로 전파
+                    throw investEx;
                 } catch (Exception parseException) {
                     log.error("업비트 주문 생성 테스트 실패 (400) - JSON 파싱 실패: {}, responseBody: {}",
                             parseException.getMessage(), errorBody);

@@ -38,17 +38,6 @@ public interface InvestControllerDocs {
     );
 
     @Operation(
-            summary = "주문 생성 테스트 By 강서현",
-            description = "실제 주문을 생성하지 않고 주문 요청 형식과 주문 가능 여부를 검증합니다. " +
-                         "업비트 API의 주문 생성 테스트 엔드포인트(/v1/orders/test)를 사용하여 거래 수수료 없이 검증할 수 있습니다. " +
-                         "password는 필요하지 않습니다."
-    )
-    ApiResponse<InvestResDTO.OrderDTO> testCreateOrder(
-            @RequestBody InvestReqDTO.TestOrderDTO request,
-            @AuthenticationPrincipal CustomUserDetails user
-    );
-
-    @Operation(
             summary = "코인 주문하기  By 강서현",
             description = "코인 주문을 생성합니다."
     )
