@@ -117,7 +117,7 @@ public class AuthReqDTO {
     public record ResetPassword(
             @NotNull(message = "SMS 인증 토큰은 필수입니다.")
             @NotBlank(message = "SMS 인증 토큰은 빈칸일 수 없습니다.")
-            String verificationCode,
+            String verificationToken,
 
             @NotNull(message = "휴대전화 번호는 필수입니다.")
             @NotBlank(message = "휴대전화 번호는 빈칸일 수 없습니다.")
