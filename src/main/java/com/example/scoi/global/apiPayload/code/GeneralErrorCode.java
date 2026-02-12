@@ -46,6 +46,14 @@ public enum GeneralErrorCode implements BaseErrorCode{
     NOT_SUPPORT_CONTENT_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
             "VALID415_1",
             "지원하지 않는 Content-Type입니다."),
+
+    // FCM 토큰 관련
+    UNSUBSCRIBE_FAILED(HttpStatus.BAD_GATEWAY,
+            "FCM502_1",
+            "FCM 서버에 의해 해당 디바이스 알림 구독 해제에 실패했습니다. 다시 시도해주세요."),
+    SUBSCRIBE_FAILED(HttpStatus.BAD_GATEWAY,
+            "FCM502_2",
+            "FCM 서버에 의해 해당 디바이스 알림 구독에 실패했습니다. FCM 토큰을 재확인하거나 다시 시도해주세요.")
     ;
 
     private final HttpStatus status;
