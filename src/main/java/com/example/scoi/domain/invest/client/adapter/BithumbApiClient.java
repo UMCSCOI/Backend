@@ -57,6 +57,9 @@ public class BithumbApiClient implements ExchangeApiClient {
             
             return parseMaxOrderInfoResponse(accountList, targetCoin, coinType, unitPrice, orderType, side);
             
+        } catch (InvestException e) {
+            // InvestException은 그대로 전파 (INSUFFICIENT_COIN_AMOUNT, MINIMUM_ORDER_AMOUNT 등)
+            throw e;
         } catch (GeneralSecurityException e) {
             log.error("빗썸 JWT 생성 실패", e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
@@ -197,9 +200,62 @@ public class BithumbApiClient implements ExchangeApiClient {
                     }
                 } else if ("ask".equals(side)) {
                     // 시장가 매도: 코인 잔액을 maxQuantity로 반환 (최대 매도 가능 수량)
-                    // 소수점 절사하여 정수로 변환
+                    // 현재가 조회하여 최소 주문 금액 검증
                     try {
                         BigDecimal balanceDecimal = new BigDecimal(balance);
+                        
+                        // 현재가 조회하여 최소 주문 금액 검증
+                        try {
+                            String market = convertMarketForBithumb(coinType);
+                            log.info("빗썸 시장가 매도 최소 주문 금액 검증을 위한 현재가 조회 시작 - market: {}", market);
+                            String tickerResponse = bithumbFeignClient.getTicker(market);
+                            
+                            if (tickerResponse != null && !tickerResponse.isEmpty()) {
+                                ObjectMapper objectMapper = new ObjectMapper();
+                                BithumbResDTO.Ticker ticker = null;
+                                
+                                // 빗썸 API는 배열을 반환할 수 있으므로 배열로 파싱 시도
+                                try {
+                                    BithumbResDTO.Ticker[] tickers = objectMapper.readValue(tickerResponse, BithumbResDTO.Ticker[].class);
+                                    if (tickers != null && tickers.length > 0) {
+                                        ticker = tickers[0];
+                                    }
+                                } catch (Exception arrayException) {
+                                    // 배열 파싱 실패 시 단일 객체로 파싱 시도
+                                    try {
+                                        ticker = objectMapper.readValue(tickerResponse, BithumbResDTO.Ticker.class);
+                                    } catch (Exception singleException) {
+                                        log.warn("빗썸 시장가 매도 현재가 조회 JSON 파싱 실패: {}", singleException.getMessage());
+                                    }
+                                }
+                                
+                                if (ticker != null && ticker.trade_price() != null && ticker.trade_price() > 0) {
+                                    BigDecimal currentPrice = BigDecimal.valueOf(ticker.trade_price());
+                                    BigDecimal orderAmount = currentPrice.multiply(balanceDecimal);
+                                    BigDecimal minOrderAmount = new BigDecimal("5000"); // 빗썸 기본 최소 주문 금액
+                                    
+                                    if (orderAmount.compareTo(minOrderAmount) < 0) {
+                                        log.warn("빗썸 시장가 매도 - 최소 주문 금액 미만 - 주문 금액: {}, 최소 주문 금액: {}", 
+                                                orderAmount, minOrderAmount);
+                                        Map<String, String> errorDetails = Map.of(
+                                            "orderAmount", orderAmount.toPlainString(),
+                                            "minTotal", minOrderAmount.toPlainString()
+                                        );
+                                        throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT, errorDetails);
+                                    }
+                                    
+                                    log.info("빗썸 시장가 매도 - 최소 주문 금액 검증 통과 - balance: {}, 현재가: {}, 주문 금액: {}, 최소 주문 금액: {}", 
+                                            balance, currentPrice, orderAmount, minOrderAmount);
+                                }
+                            }
+                        } catch (InvestException e) {
+                            // MINIMUM_ORDER_AMOUNT 예외는 그대로 전파
+                            throw e;
+                        } catch (Exception e) {
+                            log.warn("빗썸 시장가 매도 현재가 조회 실패 - 최소 주문 금액 검증을 생략합니다: {}", e.getMessage());
+                        }
+                        
+                        // 소수점 절사하여 정수로 변환
                         maxQuantity = balanceDecimal.setScale(0, RoundingMode.DOWN).toPlainString();
                         log.info("빗썸 시장가 매도 - 코인 잔액: {}, 최대 매도 가능 수량: {} (정수)", balance, maxQuantity);
                     } catch (NumberFormatException e) {
@@ -212,23 +268,93 @@ public class BithumbApiClient implements ExchangeApiClient {
                 }
             } else {
                 // 지정가 주문
-                if (unitPrice != null && !unitPrice.isEmpty()) {
-                    try {
-                        BigDecimal balanceDecimal = new BigDecimal(balance);
-                        BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
-                        
-                        if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
-                            BigDecimal quantity = balanceDecimal.divide(unitPriceDecimal, 8, RoundingMode.DOWN);
-                            // 소수점 절사하여 정수로 변환
-                            maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
-                            log.info("빗썸 최대 주문 수량 계산 - balance: {}, unitPrice: {}, maxQuantity: {} (정수)", 
-                                    balance, unitPrice, maxQuantity);
-                        } else {
-                            log.warn("단위 가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
+                if ("bid".equals(side)) {
+                    // 지정가 매수: KRW 잔액 / 단가 = 매수 가능 수량
+                    if (unitPrice != null && !unitPrice.isEmpty()) {
+                        try {
+                            BigDecimal balanceDecimal = new BigDecimal(balance);
+                            BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
+                            
+                            if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                                // 단가가 잔고보다 크면 잔고 부족 에러
+                                if (unitPriceDecimal.compareTo(balanceDecimal) > 0) {
+                                    log.warn("빗썸 지정가 매수 - 잔고 부족 - 잔고: {}, 단가: {}", balance, unitPrice);
+                                    Map<String, String> errorDetails = Map.of(
+                                        "balance", balance,
+                                        "requiredAmount", unitPrice,
+                                        "shortage", unitPriceDecimal.subtract(balanceDecimal).toPlainString()
+                                    );
+                                    throw new InvestException(InvestErrorCode.INSUFFICIENT_BALANCE, errorDetails);
+                                }
+                                
+                                BigDecimal quantity = balanceDecimal.divide(unitPriceDecimal, 8, RoundingMode.DOWN);
+                                // 소수점 절사하여 정수로 변환
+                                maxQuantity = quantity.setScale(0, RoundingMode.DOWN).toPlainString();
+                                log.info("빗썸 지정가 매수 - KRW 잔액: {}, 단가: {}, 최대 매수 가능 수량: {} (정수)", 
+                                        balance, unitPrice, maxQuantity);
+                            } else {
+                                log.warn("단위 가격이 0 이하입니다. 최대 주문 수량을 계산할 수 없습니다.");
+                            }
+                        } catch (InvestException e) {
+                            // INSUFFICIENT_BALANCE 예외는 그대로 전파
+                            throw e;
+                        } catch (NumberFormatException e) {
+                            log.warn("단위 가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. unitPrice: {}", unitPrice);
                         }
-                    } catch (NumberFormatException e) {
-                        log.warn("단위 가격 형식이 올바르지 않습니다. 최대 주문 수량을 계산할 수 없습니다. unitPrice: {}", unitPrice);
                     }
+                } else if ("ask".equals(side)) {
+                    // 지정가 매도: 코인 보유 여부 확인
+                    BigDecimal balanceDecimal;
+                    try {
+                        balanceDecimal = new BigDecimal(balance);
+                    } catch (NumberFormatException e) {
+                        balanceDecimal = BigDecimal.ZERO;
+                    }
+                    
+                    // 코인이 없으면 maxQuantity를 0으로 설정 (시장가 매도와 동일하게 처리)
+                    if (balanceDecimal.compareTo(BigDecimal.ZERO) <= 0) {
+                        log.warn("빗썸 지정가 매도 - 보유 수량 없음 - coinType: {}, balance: {}", targetCoin, balance);
+                        maxQuantity = "0";
+                    } else {
+                        // 매도는 보유 수량이 maxQuantity
+                        maxQuantity = balanceDecimal.setScale(0, RoundingMode.DOWN).toPlainString();
+                        
+                        // unitPrice가 있으면 최소 주문 금액 검증
+                        if (unitPrice != null && !unitPrice.isEmpty()) {
+                            try {
+                                BigDecimal unitPriceDecimal = new BigDecimal(unitPrice);
+                                
+                                if (unitPriceDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                                    // 최소 주문 금액 검증: unitPrice * balance >= 5000원
+                                    BigDecimal maxOrderAmount = unitPriceDecimal.multiply(balanceDecimal);
+                                    BigDecimal minOrderAmount = new BigDecimal("5000"); // 빗썸 기본 최소 주문 금액
+                                    
+                                    if (maxOrderAmount.compareTo(minOrderAmount) < 0) {
+                                        log.warn("빗썸 지정가 매도 - 최소 주문 금액 미만 - 주문 금액: {}, 최소 주문 금액: {}", 
+                                                maxOrderAmount, minOrderAmount);
+                                        Map<String, String> errorDetails = Map.of(
+                                            "orderAmount", maxOrderAmount.toPlainString(),
+                                            "minTotal", minOrderAmount.toPlainString()
+                                        );
+                                        throw new InvestException(InvestErrorCode.MINIMUM_ORDER_AMOUNT, errorDetails);
+                                    }
+                                    
+                                    log.info("빗썸 지정가 매도 - 최소 주문 금액 검증 통과 - balance: {}, unitPrice: {}, maxQuantity: {}, 주문 금액: {}, 최소 주문 금액: {}", 
+                                            balance, unitPrice, maxQuantity, maxOrderAmount, minOrderAmount);
+                                } else {
+                                    log.warn("단위 가격이 0 이하입니다. 최소 주문 금액 검증을 할 수 없습니다.");
+                                }
+                            } catch (InvestException e) {
+                                // MINIMUM_ORDER_AMOUNT, INSUFFICIENT_COIN_AMOUNT 예외는 그대로 전파
+                                throw e;
+                            } catch (NumberFormatException e) {
+                                log.warn("단위 가격 형식이 올바르지 않습니다. 최소 주문 금액 검증을 할 수 없습니다. unitPrice: {}", unitPrice);
+                            }
+                        }
+                    }
+                } else {
+                    log.warn("빗썸 지정가 주문 - side 파라미터가 없거나 잘못됨 ({}), maxQuantity: null", side);
+                    maxQuantity = null;
                 }
             }
             
@@ -237,6 +363,9 @@ public class BithumbApiClient implements ExchangeApiClient {
             
             return new MaxOrderInfoDTO(balance, maxQuantity);
             
+        } catch (InvestException e) {
+            // InvestException은 그대로 전파 (INSUFFICIENT_COIN_AMOUNT, MINIMUM_ORDER_AMOUNT 등)
+            throw e;
         } catch (Exception e) {
             log.error("빗썸 최대 주문 정보 조회 API 응답 파싱 실패", e);
             throw new InvestException(InvestErrorCode.EXCHANGE_API_ERROR);
