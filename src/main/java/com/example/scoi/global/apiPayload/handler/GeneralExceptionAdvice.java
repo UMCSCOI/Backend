@@ -161,7 +161,7 @@ public class GeneralExceptionAdvice {
             );
             return ResponseEntity.status(GeneralErrorCode.JSON_PARSE_FAIL.getStatus()).body(errorResponse);
         } else if (ex.getMessage().contains("JSON parse error:")){
-            log.warn("[  ]: Request Body 파싱에 실패했습니다.");
+            log.warn("[ HttpMessageNotReadableException ]: Request Body 파싱에 실패했습니다.");
 
             ApiResponse<Void> errorResponse = ApiResponse.onFailure(
                     GeneralErrorCode.JSON_PARSE_FAIL,

@@ -756,12 +756,31 @@ public class BithumbApiClient implements ExchangeApiClient {
             String convertedMarket = convertMarketForBithumb(market);
 
             // 주문 생성 요청 DTO 생성
+            // @JsonInclude(NON_NULL) 어노테이션으로 null 필드는 JSON에서 자동 제외됨
+            String finalPrice = (price != null && !price.isEmpty()) ? price : null;
+            String finalVolume = (volume != null && !volume.isEmpty()) ? volume : null;
+            
+            // 시장가 매수(order_type: "price")일 때는 volume을 null로 설정하여 JSON에서 제외
+            // order_type: "price"는 항상 매수이므로 side 체크 불필요
+            if ("price".equals(orderType)) {
+                // 시장가 매수: volume을 null로 설정하여 JSON에서 제외
+                finalVolume = null;
+                log.info("빗썸 시장가 매수 (order_type: price) - volume을 null로 설정하여 JSON에서 제외합니다.");
+            } 
+            // 시장가 매도(order_type: "market")일 때는 price를 null로 설정하여 JSON에서 제외
+            // order_type: "market"는 항상 매도이므로 side 체크 불필요
+            else if ("market".equals(orderType)) {
+                // 시장가 매도: price를 null로 설정하여 JSON에서 제외
+                finalPrice = null;
+                log.info("빗썸 시장가 매도 (order_type: market) - price를 null로 설정하여 JSON에서 제외합니다.");
+            }
+            
             BithumbReqDTO.CreateOrder request = BithumbReqDTO.CreateOrder.builder()
                     .market(convertedMarket)
                     .side(side)
                     .order_type(orderType)
-                    .price(price)
-                    .volume(volume)
+                    .price(finalPrice)    // ← 조건에 따라 null로 설정
+                    .volume(finalVolume)  // ← 조건에 따라 null로 설정
                     .build();
 
             // JWT 생성 (POST 요청이므로 body 사용)
