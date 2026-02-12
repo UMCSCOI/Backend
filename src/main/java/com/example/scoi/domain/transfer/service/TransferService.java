@@ -1,5 +1,6 @@
 package com.example.scoi.domain.transfer.service;
 
+import com.example.scoi.domain.auth.service.LoginFailCountManager;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.exception.MemberException;
@@ -63,6 +64,7 @@ public class TransferService {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final RedisTemplate<String, String> redisTemplate;
+    private final LoginFailCountManager loginFailCountManager;
 
     // 최근 수취인 조회 메서드
     public TransferResDTO.RecipientListDTO findRecentRecipients(String phoneNumber, String cursor, int limit) {
@@ -318,164 +320,174 @@ public class TransferService {
         }
         boolean isSuccess = false;
 
-        // 1. 간편 비밀번호 검증
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        String rawPassword;
         try {
-            rawPassword = new String(hashUtil.decryptAES(request.simplePassword()));
-        } catch (GeneralSecurityException e) {
-            log.error("AES 복호화 실패: phoneNumber={}", phoneNumber, e);
-            member.increaseLoginFailCount();
-            int failCount = member.getLoginFailCount();
-            int remainingAttempts = Math.max(5 - failCount, 0);
-            throw new AuthException(
-                    AuthErrorCode.INVALID_PASSWORD,
-                    Map.of(
-                            "loginFailCount", String.valueOf(failCount),
-                            "remainingAttempts", String.valueOf(remainingAttempts)
-                    )
-            );
-        }
-        if (!rawPassword.matches("^\\d{6}$")) {
-            log.warn("간편비밀번호 형식 오류: phoneNumber={}", phoneNumber);
-            member.increaseLoginFailCount();
-            int failCount = member.getLoginFailCount();
-            int remainingAttempts = Math.max(5 - failCount, 0);
-            throw new AuthException(
-                    AuthErrorCode.INVALID_PASSWORD,
-                    Map.of(
-                            "loginFailCount", String.valueOf(failCount),
-                            "remainingAttempts", String.valueOf(remainingAttempts)
-                    )
-            );
-        }
+            // 1. 간편 비밀번호 검증
+            Member member = memberRepository.findByPhoneNumber(phoneNumber)
+                    .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        if (!passwordEncoder.matches(rawPassword, member.getSimplePassword())) {
-            member.increaseLoginFailCount();
-            int failCount = member.getLoginFailCount();
-            int remainingAttempts = Math.max(5 - failCount, 0);
-            log.warn("비밀번호 인증 실패: phoneNumber={}, failCount={}, remainingAttempts={}",
-                    phoneNumber, failCount, remainingAttempts);
-            throw new AuthException(
-                    AuthErrorCode.INVALID_PASSWORD,
-                    Map.of(
-                            "loginFailCount", String.valueOf(failCount),
-                            "remainingAttempts", String.valueOf(remainingAttempts)
-                    )
-            );
-        }
-        // 비밀번호 일치 시 실패 횟수 초기화
-        member.resetLoginFailCount();
-
-        // 2. 이체하기
-        String token;
-        TransferResDTO.WithdrawResult result;
-
-        try {
-            switch (request.exchangeType()) {
-                case UPBIT:
-                    TransferReqDTO.UpbitWithdrawRequest upbitDTO = TransferConverter.toUpbitWithdrawRequest(request);
-                    token = jwtApiUtil.createUpBitJwt(phoneNumber, null, upbitDTO);
-
-                    UpbitResDTO.WithdrawResDTO upbitRes = upbitClient.withdrawCoin(token, upbitDTO);
-                    result = TransferConverter.toWithdrawResult(upbitRes);
-                    log.info("UP DTO: {}", upbitRes);
-                    break;
-
-                case BITHUMB:
-                    TransferReqDTO.BithumbWithdrawRequest bithumbDTO = TransferConverter.toBithumbWithdrawRequest(request);
-                    token = jwtApiUtil.createBithumbJwt(phoneNumber, null, bithumbDTO);
-
-                    BithumbResDTO.WithdrawResDTO bithumRes = bithumbClient.withdrawCoin(token, bithumbDTO);
-                    result = TransferConverter.toWithdrawResult(bithumRes);
-                    log.info("BIT DTO: {}", bithumRes);
-                    break;
-
-                default:
-                    throw new TransferException(TransferErrorCode.UNSUPPORTED_EXCHANGE);
+            // 비밀번호 5회 이상 틀린 경우
+            if (member.getLoginFailCount() >= 5) {
+                throw new AuthException(
+                        AuthErrorCode.ACCOUNT_LOCKED,
+                        Map.of("smsRequired", "true")
+                );
             }
-            // 성공한 경우
-            isSuccess = true;
 
-            // 수취인 저장
-            Recipient recipient = TransferConverter.toRecipient(request, member);
-            recipientRepository.save(recipient);
+            String rawPassword;
+            try {
+                rawPassword = new String(hashUtil.decryptAES(request.simplePassword()));
+            } catch (GeneralSecurityException e) {
+                log.error("AES 복호화 실패: phoneNumber={}", phoneNumber, e);
+                member.increaseLoginFailCount();
+                int failCount = loginFailCountManager.increaseFailCount(member.getId());
+                int remainingAttempts = Math.max(5 - failCount, 0);
+                throw new AuthException(
+                        AuthErrorCode.INVALID_PASSWORD,
+                        Map.of(
+                                "loginFailCount", String.valueOf(failCount),
+                                "remainingAttempts", String.valueOf(remainingAttempts)
+                        )
+                );
+            }
+            if (!rawPassword.matches("^\\d{6}$")) {
+                log.warn("간편비밀번호 형식 오류: phoneNumber={}", phoneNumber);
+                member.increaseLoginFailCount();
+                int failCount = loginFailCountManager.increaseFailCount(member.getId());
+                int remainingAttempts = Math.max(5 - failCount, 0);
+                throw new AuthException(
+                        AuthErrorCode.INVALID_PASSWORD,
+                        Map.of(
+                                "loginFailCount", String.valueOf(failCount),
+                                "remainingAttempts", String.valueOf(remainingAttempts)
+                        )
+                );
+            }
 
-            // 이체내역 저장
-            TradeHistory tradeHistory = TransferConverter.toTradeHistory(request, result, recipient, member);
-            tradeHistoryRepository.save(tradeHistory);
+            if (!passwordEncoder.matches(rawPassword, member.getSimplePassword())) {
+                member.increaseLoginFailCount();
+                int failCount = loginFailCountManager.increaseFailCount(member.getId());
+                int remainingAttempts = Math.max(5 - failCount, 0);
+                log.warn("비밀번호 인증 실패: phoneNumber={}, failCount={}, remainingAttempts={}",
+                        phoneNumber, failCount, remainingAttempts);
+                throw new AuthException(
+                        AuthErrorCode.INVALID_PASSWORD,
+                        Map.of(
+                                "loginFailCount", String.valueOf(failCount),
+                                "remainingAttempts", String.valueOf(remainingAttempts)
+                        )
+                );
+            }
+            // 비밀번호 일치 시 실패 횟수 초기화
+            member.resetLoginFailCount();
 
-            // 결과 반환
-            return result;
+            // 2. 이체하기
+            String token;
+            TransferResDTO.WithdrawResult result;
 
-        } catch (GeneralSecurityException e) {
-            throw new RuntimeException(e);
-        }
-        catch (FeignException.BadRequest | FeignException.NotFound e) {
-            String rawBody = e.contentUTF8(); // 원본 응답 저장
-            log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
-            if (rawBody == null || rawBody.isBlank()) {
+            try {
+                switch (request.exchangeType()) {
+                    case UPBIT:
+                        TransferReqDTO.UpbitWithdrawRequest upbitDTO = TransferConverter.toUpbitWithdrawRequest(request);
+                        token = jwtApiUtil.createUpBitJwt(phoneNumber, null, upbitDTO);
 
-                // 상태 코드에 따른 예외
-                if (e.status() == 401) {
-                    // 인증 실패 (JWT 서명 오류, 만료 등)
-                    throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
-                } else {
-                    // 권한 없음 (IP 차단 등)
-                    throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                        UpbitResDTO.WithdrawResDTO upbitRes = upbitClient.withdrawCoin(token, upbitDTO);
+                        result = TransferConverter.toWithdrawResult(upbitRes);
+                        log.info("UP DTO: {}", upbitRes);
+                        break;
+
+                    case BITHUMB:
+                        TransferReqDTO.BithumbWithdrawRequest bithumbDTO = TransferConverter.toBithumbWithdrawRequest(request);
+                        token = jwtApiUtil.createBithumbJwt(phoneNumber, null, bithumbDTO);
+
+                        BithumbResDTO.WithdrawResDTO bithumRes = bithumbClient.withdrawCoin(token, bithumbDTO);
+                        result = TransferConverter.toWithdrawResult(bithumRes);
+                        log.info("BIT DTO: {}", bithumRes);
+                        break;
+
+                    default:
+                        throw new TransferException(TransferErrorCode.UNSUPPORTED_EXCHANGE);
                 }
-            }
+                // 성공한 경우
+                isSuccess = true;
 
-            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
-            String errorName = error.error().name();
-            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
+                // 수취인 저장
+                Recipient recipient = TransferConverter.toRecipient(request, member);
+                recipientRepository.save(recipient);
 
-            switch (errorName) {
-                // 파라미터가 잘못된 경우
-                case "validation_error" -> throw new TransferException(TransferErrorCode.INVALID_INPUT);
-                // 네트워크가 잘못된 경우
-                case "invalid_network_type" -> throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
-                // 지갑 주소가 올바르지 않은 경우
-                case "invalid_withdraw_address" -> throw new TransferException(TransferErrorCode.INVALID_WALLET_ADDRESS);
-                // 거래소에서 요청을 처리하지 못한 경우
-                case "request_fail" -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
-                //등록된 출금주소가 아닌 경우
-                case "withdraw_address_not_registered" -> throw new TransferException(TransferErrorCode.UNREGISTERED_WALLET_ADDRESS);
-                // 출금 시스템이 점검 중인 경우
-                case "withdraw_maintain" -> throw new TransferException(TransferErrorCode.TRANSFER_CHECK);
-                // 나머지 400 에러
-                default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
-            }
-            // 권한이 부족한 경우
-        } catch (FeignException.Unauthorized | FeignException.Forbidden e) {
-            String rawBody = e.contentUTF8(); // 원본 응답 저장
-            log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
-            if (rawBody == null || rawBody.isBlank()) {
+                // 이체내역 저장
+                TradeHistory tradeHistory = TransferConverter.toTradeHistory(request, result, recipient, member);
+                tradeHistoryRepository.save(tradeHistory);
 
-                // 상태 코드에 따른 예외
-                if (e.status() == 401) {
-                    // 인증 실패 (JWT 서명 오류, 만료 등)
-                    throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
-                } else {
-                    // 권한 없음 (IP 차단 등)
-                    throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                // 결과 반환
+                return result;
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            } catch (FeignException.BadRequest | FeignException.NotFound e) {
+                String rawBody = e.contentUTF8(); // 원본 응답 저장
+                log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
+                if (rawBody == null || rawBody.isBlank()) {
+
+                    // 상태 코드에 따른 예외
+                    if (e.status() == 401) {
+                        // 인증 실패 (JWT 서명 오류, 만료 등)
+                        throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                    } else {
+                        // 권한 없음 (IP 차단 등)
+                        throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                    }
                 }
-            }
 
-            ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
-            String errorName = error.error().name();
-            log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
+                ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+                String errorName = error.error().name();
+                log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
 
-            switch (errorName){
+                switch (errorName) {
+                    // 파라미터가 잘못된 경우
+                    case "validation_error" -> throw new TransferException(TransferErrorCode.INVALID_INPUT);
+                    // 네트워크가 잘못된 경우
+                    case "invalid_network_type" -> throw new TransferException(TransferErrorCode.INVALID_NETWORK_TYPE);
+                    // 지갑 주소가 올바르지 않은 경우
+                    case "invalid_withdraw_address" ->
+                            throw new TransferException(TransferErrorCode.INVALID_WALLET_ADDRESS);
+                    // 거래소에서 요청을 처리하지 못한 경우
+                    case "request_fail" -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                    //등록된 출금주소가 아닌 경우
+                    case "withdraw_address_not_registered" ->
+                            throw new TransferException(TransferErrorCode.UNREGISTERED_WALLET_ADDRESS);
+                    // 출금 시스템이 점검 중인 경우
+                    case "withdraw_maintain" -> throw new TransferException(TransferErrorCode.TRANSFER_CHECK);
+                    // 나머지 400 에러
+                    default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                }
                 // 권한이 부족한 경우
-                case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
-                // 인증되지 않은 ip에서 요청을 보낸 경우
-                case "no_authorization_ip" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
-                case "NotAllowIP" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
-                // 나머지 jwt 관련 오류
-                default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+            } catch (FeignException.Unauthorized | FeignException.Forbidden e) {
+                String rawBody = e.contentUTF8(); // 원본 응답 저장
+                log.error(">>>> 거래소 응답 원본: {}", rawBody); // 에러 로그 원본
+                if (rawBody == null || rawBody.isBlank()) {
+
+                    // 상태 코드에 따른 예외
+                    if (e.status() == 401) {
+                        // 인증 실패 (JWT 서명 오류, 만료 등)
+                        throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                    } else {
+                        // 권한 없음 (IP 차단 등)
+                        throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                    }
+                }
+
+                ClientErrorDTO.Errors error = objectMapper.readValue(rawBody, ClientErrorDTO.Errors.class);
+                String errorName = error.error().name();
+                log.error(">>>> 거래소 에러 코드명: {}", errorName); // 파싱된 거래소 에러 코드명 확인
+
+                switch (errorName) {
+                    // 권한이 부족한 경우
+                    case "out_of_scope" -> throw new TransferException(TransferErrorCode.EXCHANGE_FORBIDDEN);
+                    // 인증되지 않은 ip에서 요청을 보낸 경우
+                    case "no_authorization_ip" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
+                    case "NotAllowIP" -> throw new TransferException(TransferErrorCode.NOT_ALLOW_IP);
+                    // 나머지 jwt 관련 오류
+                    default -> throw new TransferException(TransferErrorCode.EXCHANGE_BAD_REQUEST);
+                }
             }
         }
         finally {

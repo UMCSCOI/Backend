@@ -5,7 +5,6 @@ import com.example.scoi.domain.member.dto.MemberReqDTO;
 import com.example.scoi.domain.member.dto.MemberResDTO;
 import com.example.scoi.domain.member.entity.Member;
 import com.example.scoi.domain.member.entity.MemberApiKey;
-import com.example.scoi.domain.member.entity.MemberFcm;
 import com.example.scoi.domain.member.enums.ExchangeType;
 import com.example.scoi.domain.member.exception.MemberException;
 import com.example.scoi.domain.member.exception.code.MemberErrorCode;
@@ -16,8 +15,10 @@ import com.example.scoi.global.apiPayload.code.GeneralErrorCode;
 import com.example.scoi.global.client.BithumbClient;
 import com.example.scoi.global.client.UpbitClient;
 import com.example.scoi.global.redis.RedisUtil;
+import com.example.scoi.global.util.FcmUtil;
 import com.example.scoi.global.util.HashUtil;
 import com.example.scoi.global.util.JwtApiUtil;
+import com.google.firebase.messaging.FirebaseMessagingException;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class MemberService {
     private final UpbitClient upbitClient;
     private final MemberFcmRepository memberFcmRepository;
     private final RedisUtil redisUtil;
+    private final FcmUtil fcmUtil;
 
     // 인증 완료된 전화번호 접두사
     private static final String VERIFICATION_PREFIX = "verification:";
@@ -113,50 +115,6 @@ public class MemberService {
         member.updateSimplePassword(passwordEncoder.encode(newSimplePassword));
         member.resetLoginFailCount();
         return Optional.empty();
-    }
-
-    // 간편 비밀번호 재설정
-    @Transactional
-    public Void resetPassword(
-            MemberReqDTO.ResetPassword dto,
-            String phoneNumber
-    ) {
-
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        // 인증된 전화번호인지 확인 (verification:{verificationToken} 키로 조회)
-        String tokenKey = VERIFICATION_PREFIX + dto.verificationToken();
-        String verifiedPhoneNumber = redisUtil.get(tokenKey);
-        if (verifiedPhoneNumber == null || !verifiedPhoneNumber.equals(dto.phoneNumber())) {
-            throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
-        }
-
-        // 새 간편 비밀번호 검증
-        String newPassword;
-        try {
-            newPassword = new String(hashUtil.decryptAES(dto.newPassword()));
-
-            // 6자리 숫자가 아닌 경우
-            if (!newPassword.matches(SIMPLE_PASSWORD_REGEX)) {
-                throw new IllegalArgumentException();
-            }
-        } catch (GeneralSecurityException e ) {
-            Map<String, String> binding = new HashMap<>();
-            binding.put("password", "간편 비밀번호 복호화에 실패했습니다.");
-            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
-        } catch (IllegalArgumentException e) {
-            Map<String, String> binding = new HashMap<>();
-            binding.put("password", "6자리 숫자만 입력 가능합니다.");
-            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
-        }
-
-        // 간편 비밀번호 변경
-        member.updateSimplePassword(passwordEncoder.encode(newPassword));
-
-        // 로그인 횟수 -> 0
-        member.resetLoginFailCount();
-        return null;
     }
 
     // 거래소 목록 조회
@@ -290,9 +248,17 @@ public class MemberService {
         Member member = memberRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        // FCM 토큰 저장 (로그인 -> 추가, 디바이스당 추가)
-        MemberFcm memberFcm = MemberConverter.toMemberFcm(dto.token(), member);
-        memberFcmRepository.save(memberFcm);
+        // FCM 토큰 저장 (로그인 -> 추가, 현재 로그인 된 디바이스)
+        memberFcmRepository.findByMember(member)
+                .orElse(memberFcmRepository.save(MemberConverter.toMemberFcm(dto.token(), member)))
+                .updateFcmToken(dto.token());
+
+        try {
+            fcmUtil.subscribeNotificationForDepegging(List.of(dto.token()));
+            log.info("[ MemberService ]: 구독 완료, 토큰: {}", dto.token());
+        } catch (FirebaseMessagingException e){
+            log.warn("[ MemberService ]: 구독 실패, 토큰: {}", dto.token());
+        }
 
         return null;
     }
