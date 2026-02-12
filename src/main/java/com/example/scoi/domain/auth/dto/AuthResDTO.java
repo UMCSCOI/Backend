@@ -15,7 +15,8 @@ public class AuthResDTO {
 
     // SMS 검증 응답
     public record SmsVerifyResponse(
-            String verificationToken  // 인증 성공 시 발급되는 일회용 토큰 (유효시간: 10분)
+            String verificationToken,  // 인증 성공 시 발급되는 일회용 토큰 (유효시간: 10분)
+            boolean isExistingMember   // 기존 회원 여부 (true: 기존 회원 → 간편비밀번호 설정, false: 신규 회원 → 회원가입)
     ) {}
 
     // 회원가입 응답

@@ -30,12 +30,6 @@ public interface MemberControllerDocs {
     ApiResponse<Map<String, String>> changePassword(@Valid @RequestBody MemberReqDTO.ChangePassword dto, @AuthenticationPrincipal CustomUserDetails user) throws GeneralSecurityException;
 
     @Operation(
-            summary = "간편 비밀번호 재설정 API By 김주헌",
-            description = "비밀번호 분실 또는 5회 실패 시 재설정을 합니다."
-    )
-    ApiResponse<Void> resetPassword(@Valid @RequestBody MemberReqDTO.ResetPassword dto, @AuthenticationPrincipal CustomUserDetails user);
-
-    @Operation(
             summary = "거래소 목록 조회 API By 김주헌",
             description = "지원 거래소 목록과, 사용자 기준으로 지원 거래소와 연동 상태를 조회합니다."
     )

@@ -77,7 +77,7 @@ public class TransferConverter {
         return Recipient.builder()
                 .walletAddress(recipient.walletAddress())
                 .recipientKoName(recipient.recipientKoName())
-                .recipientType(recipient.memberType())
+                .recipientType(MemberType.from(recipient.memberType()))
 //                .recipientCorpKoName(recipient.corpKoreanName())
 //                .recipientCorpEnName(recipient.corpEnglishName())
                 .isFavorite(true)
@@ -123,7 +123,7 @@ public class TransferConverter {
     // 공통 수취인 정보 변환 로직 (중복 제거)
     private static TransferResDTO.RecipientDetailDTO toRecipientDetailDTO(TransferReqDTO.RecipientInformation info) {
         return TransferResDTO.RecipientDetailDTO.builder()
-                .recipientType(info.memberType())
+                .recipientType(MemberType.from(info.memberType()))
                 .recipientKoName(info.recipientKoName())
                 .recipientEnName(info.recipientEnName())
 //                .corpKoreanName(info.corpKoreanName())
@@ -162,7 +162,7 @@ public class TransferConverter {
                 .amount(Double.valueOf(dto.amount()))
                 .address(dto.address())
                 .exchangeName(String.valueOf(dto.exchangeName()))
-                .receiverType(MemberType.valueOf(mappedReceiverType))
+                .receiverType(mappedReceiverType)
                 .receiverKoName(dto.receiverKoName())
                 .receiverEnName(dto.receiverEnName())
 //                .receiverCorpKoName(dto.receiverCorpKoName()) // 법인일 때만 값이 들어있음
@@ -215,7 +215,7 @@ public class TransferConverter {
                 .walletAddress(request.address())
                 .recipientEnName(request.receiverEnName())
                 .recipientKoName(request.receiverKoName())
-                .recipientType(request.receiverType())
+                .recipientType(MemberType.from(request.receiverType()))
                 .member(member)
                 .build();
     }
@@ -264,36 +264,38 @@ public class TransferConverter {
         }
     }
 
-    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsUpbit(List<UpbitResDTO.WithdrawalAddressResponse> upbitResult) {
+    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsUpbit(List<UpbitResDTO.WithdrawalAddressResponse> upbitResult, CoinType coinType) {
         // 수취인이 없는 경우 빈 리스트 반환
         if (upbitResult == null) {
             return Collections.emptyList();
         }
 
         return upbitResult.stream()
+                .filter(item -> item.currency().equals(String.valueOf(coinType)))
                 .map(item -> TransferResDTO.WithdrawRecipients.builder()
                         .memberType(MemberType.from(item.beneficiary_type()))
                         .recipientKoName(item.beneficiary_name())
                         .recipientEnName(null)
                         .walletAddress(item.withdraw_address())
-                        .exchangeType(ExchangeType.valueOf(item.net_type()))
+                        .exchangeType(ExchangeType.fromString(item.exchange_name().toUpperCase()))
                         .currency(CoinType.valueOf(item.currency()))
                         .netType(NetworkType.valueOf(item.net_type()))
                         .build()).toList();
     }
-    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsBithumb(List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult) {
+    public static List<TransferResDTO.WithdrawRecipients> toWithdrawRecipientsBithumb(List<BithumbResDTO.WithdrawalAddressResponse> bithumbResult, CoinType coinType) {
         // 수취인이 없는 경우 빈 리스트 반환
         if (bithumbResult == null) {
             return Collections.emptyList();
         }
 
         return bithumbResult.stream()
+                .filter(item -> item.currency().equals(String.valueOf(coinType)))
                 .map(item -> TransferResDTO.WithdrawRecipients.builder()
                         .memberType(MemberType.from(item.owner_type()))
                         .recipientKoName(item.owner_ko_name())
                         .recipientEnName(item.owner_en_name())
                         .walletAddress(item.withdraw_address())
-                        .exchangeType(ExchangeType.valueOf(item.net_type()))
+                        .exchangeType(ExchangeType.fromString(item.exchange_name().toUpperCase()))
                         .currency(CoinType.valueOf(item.currency()))
                         .netType(NetworkType.valueOf(item.net_type()))
                         .build()).toList();

@@ -50,16 +50,6 @@ public class MemberController implements MemberControllerDocs{
         }
     }
 
-    // 간편 비밀번호 재설정
-    @PostMapping("/members/me/password/reset")
-    public ApiResponse<Void> resetPassword(
-            @Valid @RequestBody MemberReqDTO.ResetPassword dto,
-            @AuthenticationPrincipal CustomUserDetails user
-    ){
-        BaseSuccessCode code = MemberSuccessCode.RESET_SIMPLE_PASSWORD;
-        return ApiResponse.onSuccess(code, memberService.resetPassword(dto, user.getUsername()));
-    }
-
     // 거래소 목록 조회
     @GetMapping("/exchanges")
     public ApiResponse<List<MemberResDTO.ExchangeList>> getExchangeList(
