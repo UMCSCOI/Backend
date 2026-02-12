@@ -115,50 +115,6 @@ public class MemberService {
         return Optional.empty();
     }
 
-    // 간편 비밀번호 재설정
-    @Transactional
-    public Void resetPassword(
-            MemberReqDTO.ResetPassword dto,
-            String phoneNumber
-    ) {
-
-        Member member = memberRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        // 인증된 전화번호인지 확인 (verification:{verificationToken} 키로 조회)
-        String tokenKey = VERIFICATION_PREFIX + dto.verificationToken();
-        String verifiedPhoneNumber = redisUtil.get(tokenKey);
-        if (verifiedPhoneNumber == null || !verifiedPhoneNumber.equals(dto.phoneNumber())) {
-            throw new MemberException(MemberErrorCode.UNVERIFIED_PHONE_NUMBER);
-        }
-
-        // 새 간편 비밀번호 검증
-        String newPassword;
-        try {
-            newPassword = new String(hashUtil.decryptAES(dto.newPassword()));
-
-            // 6자리 숫자가 아닌 경우
-            if (!newPassword.matches(SIMPLE_PASSWORD_REGEX)) {
-                throw new IllegalArgumentException();
-            }
-        } catch (GeneralSecurityException e ) {
-            Map<String, String> binding = new HashMap<>();
-            binding.put("password", "간편 비밀번호 복호화에 실패했습니다.");
-            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
-        } catch (IllegalArgumentException e) {
-            Map<String, String> binding = new HashMap<>();
-            binding.put("password", "6자리 숫자만 입력 가능합니다.");
-            throw new MemberException(GeneralErrorCode.VALIDATION_FAILED, binding);
-        }
-
-        // 간편 비밀번호 변경
-        member.updateSimplePassword(passwordEncoder.encode(newPassword));
-
-        // 로그인 횟수 -> 0
-        member.resetLoginFailCount();
-        return null;
-    }
-
     // 거래소 목록 조회
     public List<MemberResDTO.ExchangeList> getExchangeList(
             String phoneNumber
