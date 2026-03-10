@@ -1,0 +1,76 @@
+name: SCOI CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # CI 서버 내부에서 테스트용 DB/Redis 컨테이너 실행
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: scoi
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 자바 설정 Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: application.yml 주입
+        shell: bash
+        run: |
+          mkdir -p src/main/resources
+          cat > src/main/resources/application.yml <<'EOF'
+          ${{ secrets.APPLICATION_YML }}
+          EOF
+
+      # firebase 파일 생성
+      - name: firebase json 주입
+        shell: bash
+        run: |
+          mkdir -p src/main/resources
+          cat > src/main/resources/firebase-scoi.json <<'EOF'
+          ${{ secrets.FIREBASE_JSON }}
+          EOF
+
+      - name: gradlew 실행 권한 부여
+        run: chmod +x gradlew
+
+      - name: gradle 빌드
+        run: ./gradlew build
+
+        # CI용
+        env:
+          DB_URL: jdbc:mysql://localhost:3306/scoi?serverTimezone=Asia/Seoul
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_KEY: scoi-test-key
+          JWT_SECRET: scoi-test-secret-keysdsdsdsdsdsdssdsdsdsdsdsdsdsdsdsdsdsdsdsdsds
+          COOLSMS_API_URL: test_coolsms_api_key
+          COOLSMS_API_SECRET: test_coolsms_secret_key
+          COOLSMS_API_KEY: test_coolsms_key
+          COOLSMS_FROM_NUMBER: 01000000000
