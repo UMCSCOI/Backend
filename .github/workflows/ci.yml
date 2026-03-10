@@ -43,7 +43,7 @@ jobs:
         run: |
           mkdir -p src/main/resources
           cat > src/main/resources/application.yml <<'EOF'
-          ${{ secrets.APPLICATION_YML }}
+          ${{ secrets.DEV_APPLICATION_YML }}
           EOF
 
       # firebase 파일 생성
