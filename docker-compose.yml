@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  scoi-backend:
+    image: ${DOCKER_USERNAME}/scoi-backend:latest
+    container_name: scoi-backend
+    ports:
+      - "8080:8080"
+
+    env_file:
+      - .env
+
+    depends_on:
+      - redis
+
+    networks:
+      - scoi-network
+
+    restart: always
+
+  redis:
+    image: redis:latest
+    container_name: scoi-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - scoi-network
+    restart: always
+
+networks:
+  scoi-network:
+    driver: bridge
