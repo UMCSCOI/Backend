@@ -24,7 +24,7 @@ reviews:
 
   # 관련 이슈/PR 자동 링크 (팀 규모가 작아 비활성화)
   related_issues: false
-  related_prs: true
+  related_prs: false
 
   # 레이블 자동 제안/적용 (수동으로 관리)
   suggested_labels: false
