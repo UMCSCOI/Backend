@@ -2,7 +2,7 @@
 *.yml
 *.properties
 # GitHub Actions workflow는 예외로 추적
-!.github/workflows/deploy.yml
+!.github/workflows/
 ### workflow.yml 제외 ###
 !workflow.yml
 
