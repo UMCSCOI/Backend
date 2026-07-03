@@ -1,0 +1,63 @@
+# 리뷰 언어 설정 - 한국어로 피드백을 받습니다
+language: "ko-KR"
+
+reviews:
+  # 리뷰 강도 설정
+  # assertive(꼼꼼) / chill(부드럽게) 중 선택
+  profile: "chill"
+
+  # true로 설정 시, 모든 리뷰 코멘트가 resolve되면 자동으로 승인(Approve)
+  request_changes_workflow: false
+
+  # PR 요약
+  high_level_summary: true       # PR 전반적인 변경 내용 요약
+  changed_files_summary: true    # 파일별 변경 내용 요약
+
+  # 워크스루를 접힌 상태로 표시해 PR 페이지가 너무 길어지는 것을 방지
+  collapse_walkthrough: true
+
+  # 코드 흐름을 시각적으로 파악할 수 있는 시퀀스 다이어그램 생성
+  sequence_diagrams: true
+
+  # 연결된 이슈를 분석해 리뷰에 맥락을 추가
+  assess_linked_issues: true
+
+  # 관련 이슈/PR 자동 링크 (팀 규모가 작아 비활성화)
+  related_issues: false
+  related_prs: false
+
+  # 레이블 자동 제안/적용 (수동으로 관리)
+  suggested_labels: false
+  auto_apply_labels: false
+
+  # 리뷰어 추천/자동 할당 (수동으로 지정)
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+
+  # -------------------------------------------------------------- #
+  #                       자동 리뷰 설정                             #
+  # -------------------------------------------------------------- #
+  auto_review:
+    # PR 생성 시 자동으로 리뷰 시작
+    enabled: true
+    # 기존 리뷰가 있는 PR에 새 커밋이 추가되면 변경분만 다시 리뷰
+    auto_incremental_review: true
+
+# ================================================================ #
+#                         채팅 설정                                  #
+# ================================================================ #
+chat:
+  # @coderabbitai 멘션 없이도 PR 코멘트에 자동으로 응답
+  auto_reply: true
+
+# ================================================================ #
+#                       지식 베이스 설정                              #
+# ================================================================ #
+knowledge_base:
+  # 리뷰 시 최신 문서나 정보를 웹에서 검색해 참고할 수 있도록 허용
+  web_search:
+    enabled: true
+
+  # 레포에 코딩 컨벤션이나 가이드라인 문서가 있다면 리뷰에 반영
+  code_guidelines:
+    enabled: true
