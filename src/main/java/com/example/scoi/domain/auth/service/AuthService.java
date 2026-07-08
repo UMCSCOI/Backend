@@ -65,9 +65,11 @@ public class AuthService {
     private static final String BLACKLIST_PREFIX = "blacklist:";
     private static final String SMS_COOLDOWN_PREFIX = "sms:cooldown:";
     private static final String SMS_REQUIRED_PREFIX = "sms_required:";
+    private static final String SMS_VERIFY_FAIL_PREFIX = "sms:verify:fail:";
 
     // 상수
     private static final int SMS_CODE_LENGTH = 6;
+    private static final int MAX_VERIFY_ATTEMPTS = 5;
     private static final long SMS_EXPIRATION_MINUTES = 5;
     private static final long VERIFICATION_EXPIRATION_MINUTES = 10;
     private static final long REFRESH_TOKEN_SLIDING_DAYS = 14;  // 비활성 기준 만료
@@ -99,7 +101,7 @@ public class AuthService {
                 );
                 CoolSmsDTO.SendRequest smsRequest = new CoolSmsDTO.SendRequest(message);
                 coolSmsClient.sendMessage(smsRequest);
-                log.info("SMS 발송 성공: phoneNumber={}, code={}", request.phoneNumber(), verificationCode);
+                log.info("SMS 발송 성공: phoneNumber={}", request.phoneNumber());
             } catch (Exception e) {
                 log.error("SMS 발송 실패: {}", e.getMessage());
                 throw new AuthException(AuthErrorCode.SMS_SEND_FAILED);
@@ -120,19 +122,37 @@ public class AuthService {
     public AuthResDTO.SmsVerifyResponse verifySms(AuthReqDTO.SmsVerifyRequest request) {
         // 1. Redis 조회
         String redisKey = SMS_PREFIX + request.phoneNumber();
+        String failKey = SMS_VERIFY_FAIL_PREFIX + request.phoneNumber();
         String storedCode = redisUtil.get(redisKey);
 
         if (storedCode == null) {
             throw new AuthException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
         }
 
-        // 2. 검증
+        // 2. 검증 (불일치 시 실패 카운터 증가 → 한도 초과 시 코드 무효화)
         if (!storedCode.equals(request.verificationCode())) {
-            throw new AuthException(AuthErrorCode.INVALID_VERIFICATION_CODE);
+            long failCount = redisUtil.increment(failKey, SMS_EXPIRATION_MINUTES, TimeUnit.MINUTES);
+
+            if (failCount >= MAX_VERIFY_ATTEMPTS) {
+                // 한도 초과: 코드와 카운터 삭제 → 새 코드 재요청 유도
+                redisUtil.delete(redisKey);
+                redisUtil.delete(failKey);
+                log.warn("SMS 인증 시도 횟수 초과: phoneNumber={}, failCount={}", request.phoneNumber(), failCount);
+                throw new AuthException(AuthErrorCode.VERIFICATION_ATTEMPTS_EXCEEDED);
+            }
+
+            long remainingAttempts = MAX_VERIFY_ATTEMPTS - failCount;
+            log.warn("SMS 인증번호 불일치: phoneNumber={}, failCount={}, remainingAttempts={}",
+                    request.phoneNumber(), failCount, remainingAttempts);
+            throw new AuthException(
+                    AuthErrorCode.INVALID_VERIFICATION_CODE,
+                    Map.of("remainingAttempts", String.valueOf(remainingAttempts))
+            );
         }
 
-        // 3. SMS 코드 삭제
+        // 3. SMS 코드 및 실패 카운터 삭제 (성공 시 초기화)
         redisUtil.delete(redisKey);
+        redisUtil.delete(failKey);
 
         // 4. Verification Token 발급
         String verificationToken = jwtUtil.createVerificationToken(request.phoneNumber());
@@ -151,7 +171,8 @@ public class AuthService {
     /**
      * Verification Token 검증 (범용)
      * SMS 인증 완료 후 발급된 토큰이 유효한지 검증합니다.
-     * 다른 도메인(회원가입, 비밀번호 찾기, 휴대폰 번호 변경 등)에서 재사용 가능합니다.
+     * 토큰은 소멸되지 않으며, TTL(10분) 동안 회원가입·로그인·비밀번호 재설정 등
+     * 여러 동작에서 반복 재사용 가능합니다. (매번 SMS 재인증을 요구하지 않기 위한 의도된 설계)
      *
      * @param verificationToken SMS 인증 완료 후 발급받은 토큰
      * @param phoneNumber 검증할 휴대폰 번호
@@ -179,7 +200,7 @@ public class AuthService {
     public Void resetPassword(
             AuthReqDTO.ResetPassword dto
     ) {
-        // Verification Token 검증 및 소멸 (SMS 인증 완료 확인)
+        // Verification Token 검증 (SMS 인증 완료 확인 / 토큰은 TTL 동안 재사용 가능)
         String phoneNumber = validateVerificationToken(dto.verificationToken(), dto.phoneNumber());
 
         // 사용자 가져오기
