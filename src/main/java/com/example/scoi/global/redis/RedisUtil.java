@@ -54,6 +54,22 @@ public class RedisUtil {
     }
 
     /**
+     * Redis 값을 원자적으로 1 증가시킵니다.
+     * 최초 생성(값이 1) 시에만 TTL을 설정하여 카운터 수명을 고정합니다.
+     * @return 증가 후의 값
+     */
+    public long increment(String key, long timeout, TimeUnit unit) {
+        validateInput(key);
+
+        Long count = redisTemplate.opsForValue().increment(key);
+        if (count != null && count == 1L) {
+            redisTemplate.expire(key, timeout, unit);
+        }
+        log.debug("Redis 증가: key={}, count={}", key, count);
+        return count == null ? 0L : count;
+    }
+
+    /**
      * Redis에서 데이터 삭제
      */
     public void delete(String key) {
