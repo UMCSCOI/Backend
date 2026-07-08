@@ -25,6 +25,9 @@ public enum AuthErrorCode implements BaseErrorCode {
     SMS_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS,
             "AUTH429_1",
             "잠시 후 다시 시도해주세요. (1분 후 재요청 가능)"),
+    VERIFICATION_ATTEMPTS_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS,
+            "AUTH429_2",
+            "인증 시도 횟수를 초과했습니다. 인증번호를 다시 요청해주세요."),
 
     // 회원가입/로그인 관련
     ALREADY_REGISTERED_PHONE(HttpStatus.CONFLICT,
