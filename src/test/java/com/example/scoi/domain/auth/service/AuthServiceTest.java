@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * {@link AuthService#verifySms} SMS 무차별 대입 방어 로직 단위 테스트.
+ * SMS 인증 무차별 대입 방어 로직 단위 테스트.
  * Spring 컨텍스트 없이 Mockito로 협력 객체를 스텁하여 분기별 동작을 검증한다.
  */
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +48,7 @@ class AuthServiceTest {
     private static final String CODE = "123456";
     private static final String SMS_KEY = "sms:" + PHONE;
     private static final String FAIL_KEY = "sms:verify:fail:" + PHONE;
+    private static final String COOLDOWN_KEY = "sms:cooldown:" + PHONE;
 
     private AuthReqDTO.SmsVerifyRequest request(String verificationCode) {
         return new AuthReqDTO.SmsVerifyRequest(PHONE, verificationCode);
@@ -127,6 +128,40 @@ class AuthServiceTest {
             // 코드 무효화: 코드·카운터 모두 삭제
             verify(redisUtil).delete(SMS_KEY);
             verify(redisUtil).delete(FAIL_KEY);
+        }
+    }
+
+    @Nested
+    @DisplayName("sendSms - SMS 인증번호 발송")
+    class SendSms {
+
+        @Test
+        @DisplayName("새 코드 발급 시 이전 실패 카운터를 초기화한다")
+        void resetsFailCounter() {
+            // given: 쿨다운 없음 (smsEnabled 기본값 false → 실제 발송 건너뜀)
+            when(redisUtil.exists(COOLDOWN_KEY)).thenReturn(false);
+
+            // when
+            authService.sendSms(new AuthReqDTO.SmsSendRequest(PHONE));
+
+            // then: 새 코드에는 새 시도 예산이 주어져야 한다
+            verify(redisUtil).set(eq(SMS_KEY), any(), eq(5L), eq(TimeUnit.MINUTES));
+            verify(redisUtil).delete(FAIL_KEY);
+        }
+
+        @Test
+        @DisplayName("쿨다운 중이면 SMS_COOLDOWN, 실패 카운터를 건드리지 않는다")
+        void cooldown() {
+            // given
+            when(redisUtil.exists(COOLDOWN_KEY)).thenReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> authService.sendSms(new AuthReqDTO.SmsSendRequest(PHONE)))
+                    .isInstanceOf(AuthException.class)
+                    .extracting(e -> ((AuthException) e).getCode())
+                    .isEqualTo(AuthErrorCode.SMS_COOLDOWN);
+
+            verify(redisUtil, never()).delete(FAIL_KEY);
         }
     }
 }

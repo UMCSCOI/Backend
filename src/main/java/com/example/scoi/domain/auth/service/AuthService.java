@@ -87,9 +87,10 @@ public class AuthService {
         // 1. 인증번호 생성 (6자리)
         String verificationCode = String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
 
-        // 2. Redis 저장
+        // 2. Redis 저장 (새 코드에는 새 시도 예산을 부여)
         String redisKey = SMS_PREFIX + request.phoneNumber();
         redisUtil.set(redisKey, verificationCode, SMS_EXPIRATION_MINUTES, TimeUnit.MINUTES);
+        redisUtil.delete(SMS_VERIFY_FAIL_PREFIX + request.phoneNumber());
 
         // 3. CoolSMS 발송
         if (smsEnabled) {
