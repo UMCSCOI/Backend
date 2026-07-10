@@ -65,8 +65,6 @@ public class WebSocketService {
             BigDecimal devNumerator = new BigDecimal(Math.abs(dto.tp() - baseline));
             BigDecimal dev = devNumerator.divide(BigDecimal.valueOf(Math.max(baseline, EPS)), RoundingMode.HALF_UP);
 
-            log.info("coin: {}, dev: {}, baseline: {}, tp: {}", code, dev, baseline, dto.tp());
-
             // duration 누적/리셋
             if (dev.compareTo(BigDecimal.valueOf(DEV_TH)) >= 0){
                 duration += deltaSec.doubleValue();
