@@ -35,7 +35,7 @@ public class UpbitTickerHandler extends BinaryWebSocketHandler {
             .setPropertyNamingStrategy(PropertyNamingStrategies.LOWER_CAMEL_CASE);
 
     private volatile long lastMessageTime;
-    private WebSocketSession currentSession;
+    private volatile WebSocketSession currentSession;
 
     @Override
     public void afterConnectionEstablished(

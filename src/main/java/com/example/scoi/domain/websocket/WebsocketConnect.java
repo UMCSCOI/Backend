@@ -64,7 +64,13 @@ public class WebsocketConnect {
 
     @Recover
     public void recover(Exception e) {
-        log.error("[ Websocket ]: 웹소켓 재연결이 최대 시도 횟수(10회)를 초과했습니다.");
+        log.error("[ Websocket ]: 웹소켓 재연결 최대 시도 횟수(10회) 초과");
+
+        // 2시간뒤 다시 시도
+        scheduler.schedule(() -> {
+            log.info("[ Websocket ]: 시스템 복구를 위해 웹소켓 재연결 사이클을 다시 시작합니다.");
+            selfProvider.getObject().connectWithRetry();
+        }, 2, TimeUnit.HOURS);
     }
 
     @EventListener
