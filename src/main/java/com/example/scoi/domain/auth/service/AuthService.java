@@ -197,7 +197,7 @@ public class AuthService {
     }
 
     // 간편 비밀번호 재설정
-    @jakarta.transaction.Transactional
+    @Transactional
     public Void resetPassword(
             AuthReqDTO.ResetPassword dto
     ) {
@@ -232,6 +232,9 @@ public class AuthService {
 
         // 로그인 횟수 -> 0
         member.resetLoginFailCount();
+
+        // RT 만료로 걸린 SMS 재인증 플래그 해제 (이미 SMS 인증을 통과했으므로 잠금 완전 해제)
+        redisUtil.delete(SMS_REQUIRED_PREFIX + phoneNumber);
         return null;
     }
 
@@ -481,19 +484,5 @@ public class AuthService {
         }
 
         log.info("로그아웃 성공: phoneNumber={}", phoneNumber);
-    }
-
-    // 임시
-    public String generateSmsToken(
-            String phoneNumber
-    ) {
-        // 4. Verification Token 발급
-        String verificationToken = jwtUtil.createVerificationToken(phoneNumber);
-
-        // 5. Redis 저장 (10분 TTL)
-        String tokenKey = VERIFICATION_PREFIX + verificationToken;
-        redisUtil.set(tokenKey, phoneNumber, VERIFICATION_EXPIRATION_MINUTES, TimeUnit.MINUTES);
-
-        return verificationToken;
     }
 }
