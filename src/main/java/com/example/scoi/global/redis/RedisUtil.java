@@ -3,9 +3,11 @@ package com.example.scoi.global.redis;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class RedisUtil {
 
     private final RedisTemplate<String, String> redisTemplate;
+    private final RedisScript<Long> incrementWithTtlScript;
 
     /**
      * Redis에 데이터 저장 (TTL 포함)
@@ -51,6 +54,24 @@ public class RedisUtil {
         }
         
         return redisTemplate.opsForValue().get(key);
+    }
+
+    /**
+     * Redis 값을 1 증가시킵니다.
+     * 증가와 TTL 설정이 한 번의 스크립트로 실행되므로, 중간 실패로 TTL 없는 키가 남지 않습니다.
+     * 최초 생성(값이 1) 시에만 TTL을 설정하여 카운터 수명을 고정합니다.
+     * @return 증가 후의 값
+     */
+    public long increment(String key, long timeout, TimeUnit unit) {
+        validateInput(key);
+
+        Long count = redisTemplate.execute(
+                incrementWithTtlScript,
+                List.of(key),
+                String.valueOf(unit.toMillis(timeout))
+        );
+        log.debug("Redis 증가: key={}, count={}", key, count);
+        return count == null ? 0L : count;
     }
 
     /**
